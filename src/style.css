@@ -1,0 +1,219 @@
+html, body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#renderCanvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+#fpsDisplay {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+}
+
+#miniMap {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+    height: 200px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 2px solid white;
+    border-radius: 5px;
+    display: none;
+}
+
+#playerMarker {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: red;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#playerDirection {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid red;
+    transform-origin: center bottom;
+}
+
+.bananaMarker {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background-color: yellow;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#mapToggleInfo {
+    position: absolute;
+    bottom: 230px;
+    right: 20px;
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: opacity 1s ease;
+}
+
+#mainMenuContainer {
+    transition: opacity 0.5s ease;
+}
+
+#mainMenuContainer h1 {
+    animation: titleGlow 2s infinite;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+@keyframes buttonPulse {
+    0% { transform: scale(1); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(76, 175, 80, 0.5); }
+    100% { transform: scale(1); box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+}
+
+#mainMenuContainer button {
+    animation: buttonPulse 2s infinite;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+#mainMenuContainer button:hover {
+    animation: none;
+    background-color: #45a049 !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(76, 175, 80, 0.6) !important;
+}
+
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background-color: transparent;
+    border: 2px solid rgb(255, 255, 255);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+#crosshair::after {
+    content: "";
+    width: 4px;
+    height: 4px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 50%;
+}
+
+#miniMapContainer {
+    transition: all 0.3s ease;
+}
+
+#miniMapContainer:hover {
+    transform: scale(1.1);
+}
+
+#playerMarker {
+    transition: all 0.1s ease;
+}
+
+/* Styles pour les contrôles mobiles */
+#mobile-controls {
+    pointer-events: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+#joystick-container {
+    transition: opacity 0.3s ease;
+}
+
+#joystick-knob {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+#action-buttons > div {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease, background-color 0.1s ease;
+}
+
+/* Masquer les contrôles mobiles sur les grands écrans */
+@media (min-width: 1025px) {
+    #mobile-controls {
+        display: none;
+    }
+}
+
+/* Ajustements pour les petits écrans */
+@media (max-width: 480px) {
+    #joystick-container {
+        width: 100px;
+        height: 100px;
+    }
+    
+    #joystick-knob {
+        width: 40px;
+        height: 40px;
+    }
+    
+    #action-buttons > div {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+    }
+}
+
+/* Ajustements pour le mode paysage sur mobile */
+@media (max-height: 480px) and (orientation: landscape) {
+    #joystick-container {
+        bottom: 10px;
+        left: 10px;
+        width: 80px;
+        height: 80px;
+    }
+    
+    #joystick-knob {
+        width: 32px;
+        height: 32px;
+    }
+    
+    #action-buttons {
+        bottom: 10px;
+        right: 10px;
+        flex-direction: row;
+    }
+    
+    #action-buttons > div {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}

@@ -1,0 +1,52 @@
+export const GAME_CONFIG = {
+    HERO: {
+        SCALE: 0.28,
+        SPEED: 0.05,
+        SPEED_BACKWARDS: 0.01,
+        ROTATION_SPEED: 0.1,
+        ELLIPSOID: {
+            SIZE: { x: 0.6, y: 1, z: 0.6 },
+            OFFSET: { x: 0, y: 1, z: 0 }
+        },
+        GROUND_CHECK_OFFSET: 0.1
+    },
+    CAMERA: {
+        INITIAL: {
+            BETA: Math.PI / 4,
+            RADIUS: 2.5,
+            HEIGHT_OFFSET: 1.5
+        },
+        LIMITS: {
+            BETA: {
+                LOWER: 0.1,
+                UPPER: Math.PI / 2
+            },
+            RADIUS: {
+                LOWER: 2,
+                UPPER: 4
+            }
+        },
+        SENSITIVITY: {
+            ANGULAR_X: 500,
+            ANGULAR_Y: 500
+        }
+    },
+    AUDIO: {
+        SHOTGUN: {
+            VOLUME: 0.7,
+            SPATIAL: false
+        },
+        MUSIC: {
+            VOLUME: 0.5,
+            SPATIAL: false
+        }
+    },
+    PARTICLES: {
+        MUZZLE_FLASH: {
+            COUNT: 50,
+            LIFETIME: { MIN: 0.02, MAX: 0.1 },
+            SIZE: { MIN: 0.1, MAX: 0.3 },
+            POWER: { MIN: 1, MAX: 2 }
+        }
+    }
+}; 
