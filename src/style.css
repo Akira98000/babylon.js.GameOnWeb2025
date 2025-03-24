@@ -4,12 +4,30 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    position: fixed;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: none;
 }
 
 #renderCanvas {
     width: 100%;
     height: 100%;
     touch-action: none;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+/* Force l'activation du GPU pour les animations et transformations */
+* {
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 #fpsDisplay {
