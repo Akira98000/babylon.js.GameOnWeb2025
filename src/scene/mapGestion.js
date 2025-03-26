@@ -6,8 +6,8 @@ export let mapPartsData = [];
 export async function loadMapParts(scene) {
   const basePath = "/map/";
   const partNames = [
-    "cityMap_part1_1.glb",
-    "citymap_part2_2.glb",
+    "CityMap_part1.glb",
+    "citymap_part2.glb",
     "citymap_part3.glb",
     "citymap_part4.glb"
   ];
