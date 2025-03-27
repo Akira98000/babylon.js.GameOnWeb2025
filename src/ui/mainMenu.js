@@ -7,33 +7,10 @@ import { LoadingScreen } from './loadingScreen.js';
 export class MainMenu {
     constructor(canvas) {
         this.canvas = canvas;
-        
-        // Optimisations pour les appareils mobiles et Safari
-        const engineOptions = {
+        this.engine = new BABYLON.Engine(canvas, true, {
             limitFPS: 60,
-            adaptToDeviceRatio: true,
-            antialias: false,
-            powerPreference: "high-performance",
-            failIfMajorPerformanceCaveat: false,
-            useHighPrecisionMatrix: false,
-            stencil: true,
-            disableWebGL2Support: true,
-            preserveDrawingBuffer: true
-        };
-        
-        this.engine = new BABYLON.Engine(canvas, true, engineOptions);
-        
-        // Correction pour Safari Mobile et iOS
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isSafari || isIOS) {
-            this.engine.renderEvenInBackground = true;
-            this.engine.forceWebGL1 = true;
-            // Désactiver certains éléments problématiques pour iOS/Safari
-            BABYLON.SceneLoader.CleanBoneMatrixWeights = true;
-            // Réduire la complexité des shaders
-            this.engine.getCaps().highPrecisionShaderSupported = false;
-        }
+            adaptToDeviceRatio: true
+        });
 
         this.scene = null;
         this.camera = null;
@@ -44,25 +21,16 @@ export class MainMenu {
         this.unicornMesh = null;
         this.salsaAnimation = null;
 
-        // Assurez-vous que le canvas a les bonnes dimensions
-        this._updateCanvasSize();
         this._createScene();
 
         const resizeHandler = () => {
             if (this.engine && !this.isDisposed) {
-                this._updateCanvasSize();
                 this.engine.resize();
             }
         };
         
         window.addEventListener('resize', resizeHandler);
         this.resizeHandler = resizeHandler;
-    }
-    
-    // Méthode pour mettre à jour la taille du canvas
-    _updateCanvasSize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
     }
 
     async _createScene() {

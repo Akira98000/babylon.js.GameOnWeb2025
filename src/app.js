@@ -23,86 +23,24 @@ let isGameLoading = false;
 
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
-  
-  // Assurez-vous que le canvas est correctement dimensionné
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  
-  // Initialiser le moteur avec des options optimisées pour mobile
-  const engineOptions = {
+  const engine = new BABYLON.Engine(canvas, true, {
     limitFPS: 60,
     adaptToDeviceRatio: true,
-    antialias: false,
-    powerPreference: "high-performance",
-    failIfMajorPerformanceCaveat: false,
-    useHighPrecisionMatrix: false,
-    stencil: true,
-    disableWebGL2Support: true,
-    preserveDrawingBuffer: true
-  };
+  });
+
+  // Créer et afficher le menu principal
+  mainMenu = new MainMenu(canvas);
   
-  try {
-    const engine = new BABYLON.Engine(canvas, true, engineOptions);
+  // Définir la fonction de callback pour le bouton Jouer
+  // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
+  mainMenu.onPlayButtonClicked = () => {
+    // Éviter les démarrages multiples
+    if (isGameLoading) return;
+    isGameLoading = true;
     
-    // Désactiver les shaders avancés sur Safari
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isSafari || isIOS) {
-      // Force le rendu
-      engine.renderEvenInBackground = true;
-      // Active le forceWebGL1 pour Safari/iOS
-      engine.forceWebGL1 = true;
-      // Désactiver certains éléments problématiques pour iOS/Safari
-      BABYLON.SceneLoader.CleanBoneMatrixWeights = true;
-      // Réduire la complexité des shaders
-      engine.getCaps().highPrecisionShaderSupported = false;
-    }
-    
-    // Vérifier si WebGL est disponible
-    if (!BABYLON.Engine.isSupported()) {
-      alert("Votre navigateur ne supporte pas WebGL, ce qui est nécessaire pour ce jeu.");
-      return;
-    }
-    
-    // Créer et afficher le menu principal
-    mainMenu = new MainMenu(canvas);
-    
-    // Définir la fonction de callback pour le bouton Jouer
-    mainMenu.onPlayButtonClicked = () => {
-      // Éviter les démarrages multiples
-      if (isGameLoading) return;
-      isGameLoading = true;
-      
-      // Démarrer le jeu
-      startGame(canvas, engine);
-    };
-  } catch (error) {
-    console.error("Erreur lors de l'initialisation du moteur Babylon.js:", error);
-    
-    // Afficher un message d'erreur à l'utilisateur
-    const errorMessage = document.createElement('div');
-    errorMessage.style.position = 'absolute';
-    errorMessage.style.top = '50%';
-    errorMessage.style.left = '50%';
-    errorMessage.style.transform = 'translate(-50%, -50%)';
-    errorMessage.style.color = 'white';
-    errorMessage.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    errorMessage.style.padding = '20px';
-    errorMessage.style.borderRadius = '5px';
-    errorMessage.style.textAlign = 'center';
-    errorMessage.style.maxWidth = '80%';
-    errorMessage.innerHTML = `
-      <h2>Erreur lors du chargement du jeu</h2>
-      <p>Nous n'avons pas pu charger le jeu. Veuillez essayer les solutions suivantes:</p>
-      <ul style="text-align: left;">
-        <li>Rafraîchissez la page</li>
-        <li>Utilisez un navigateur plus récent (Chrome, Firefox, Edge)</li>
-        <li>Activez l'accélération matérielle dans votre navigateur</li>
-        <li>Désactivez le mode économie d'énergie sur votre appareil</li>
-      </ul>
-    `;
-    document.body.appendChild(errorMessage);
-  }
+    // Démarrer le jeu
+    startGame(canvas, engine);
+  };
 
   // Fonction pour démarrer le jeu
   async function startGame(canvas, engine) {

@@ -23,30 +23,30 @@ export const GAME_CONFIG = {
             },
             RADIUS: {
                 LOWER: 2,
-                UPPER: 4
+                UPPER: 3
             }
         },
         SENSITIVITY: {
-            ANGULAR_X: 500,
-            ANGULAR_Y: 500
+            ANGULAR_X: 300,
+            ANGULAR_Y: 300
         }
     },
     AUDIO: {
         SHOTGUN: {
-            VOLUME: 0.7,
+            VOLUME: 0.4,
             SPATIAL: false
         },
         MUSIC: {
-            VOLUME: 0.5,
+            VOLUME: 0.3,
             SPATIAL: false
         }
     },
     PARTICLES: {
         MUZZLE_FLASH: {
-            COUNT: 50,
-            LIFETIME: { MIN: 0.02, MAX: 0.1 },
-            SIZE: { MIN: 0.1, MAX: 0.3 },
-            POWER: { MIN: 1, MAX: 2 }
+            COUNT: 20,
+            LIFETIME: { MIN: 0.02, MAX: 0.06 },
+            SIZE: { MIN: 0.05, MAX: 0.15 },
+            POWER: { MIN: 0.5, MAX: 1.0 }
         }
     }
 }; 

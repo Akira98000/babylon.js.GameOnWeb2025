@@ -1,5 +1,5 @@
 import * as BABYLON from "@babylonjs/core";
-import { setupMobileControls } from "./mobileControls.js";
+import { setupJoystickControls } from "./joystickControls.js";
 
 const isMobileDevice = () => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -7,19 +7,21 @@ const isMobileDevice = () => {
 };
 
 export function setupControls(scene, hero, animations, camera, canvas) {
-    if (isMobileDevice()) return setupMobileControls(scene, hero, animations, camera);
+    if (isMobileDevice()) return setupJoystickControls(scene, hero, animations, camera);
 
     const inputMap = {};
     scene.actionManager = new BABYLON.ActionManager(scene);
 
     const heroSpeed = 0.15;
-    const rotationSensitivity = 0.006;
-    const shootAnimationDuration = 350;
+    const rotationSensitivity = 0.005;
+    const shootAnimationDuration = 300;
     let animating = false;
     let sambaAnimating = false;
     let targetRotationY = Math.PI;
     let currentAnimation = animations.idleAnim;
     let lastShootTime = 0;
+    let lastMoveTime = 0;
+    const moveThrottle = 16;
 
     if (hero.rotationQuaternion) hero.rotationQuaternion = null;
     hero.rotation.y = targetRotationY;
@@ -34,9 +36,17 @@ export function setupControls(scene, hero, animations, camera, canvas) {
 
     canvas.onclick = () => canvas.requestPointerLock();
 
+    let lastPointerEvent = 0;
+    const pointerThrottle = 16;
+
     scene.onPointerObservable.add(pointerInfo => {
-        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && document.pointerLockElement === canvas) {
-            targetRotationY += pointerInfo.event.movementX * rotationSensitivity;
+        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && 
+            document.pointerLockElement === canvas) {
+            const now = Date.now();
+            if (now - lastPointerEvent >= pointerThrottle) {
+                targetRotationY += pointerInfo.event.movementX * rotationSensitivity;
+                lastPointerEvent = now;
+            }
         }
     });
 
@@ -75,44 +85,48 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     };
 
     scene.onBeforeRenderObservable.add(() => {
-        hero.rotation.y = BABYLON.Scalar.LerpAngle(hero.rotation.y, targetRotationY, 0.1);
-
-        const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
-        const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
-        let moveDirection = BABYLON.Vector3.Zero();
-
-        if (inputMap["z"]) moveDirection.subtractInPlace(forward);
-        if (inputMap["s"]) moveDirection.addInPlace(forward);
-        if (inputMap["d"]) moveDirection.subtractInPlace(right);
-        if (inputMap["q"]) moveDirection.addInPlace(right);
-
         const now = Date.now();
-        const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
-            now - lastShootTime < shootAnimationDuration;
+        if (now - lastMoveTime >= moveThrottle) {
+            hero.rotation.y = BABYLON.Scalar.LerpAngle(hero.rotation.y, targetRotationY, 0.1);
 
-        if (moveDirection.length() > 0) {
-            moveDirection.normalize();
-            hero.moveWithCollisions(moveDirection.scale(heroSpeed));
+            const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
+            const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
+            let moveDirection = BABYLON.Vector3.Zero();
 
-            if (!animating && !isShooting) {
-                animating = true;
-                changeAnimation(animations.walkAnim);
-            } else if (animating && !isShooting && currentAnimation !== animations.walkAnim) {
-                changeAnimation(animations.walkAnim);
+            if (inputMap["z"]) moveDirection.subtractInPlace(forward);
+            if (inputMap["s"]) moveDirection.addInPlace(forward);
+            if (inputMap["d"]) moveDirection.subtractInPlace(right);
+            if (inputMap["q"]) moveDirection.addInPlace(right);
+
+            const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
+                now - lastShootTime < shootAnimationDuration;
+
+            if (moveDirection.length() > 0) {
+                moveDirection.normalize();
+                hero.moveWithCollisions(moveDirection.scale(heroSpeed));
+
+                if (!animating && !isShooting) {
+                    animating = true;
+                    changeAnimation(animations.walkAnim);
+                } else if (animating && !isShooting && currentAnimation !== animations.walkAnim) {
+                    changeAnimation(animations.walkAnim);
+                }
+            } else if (animating && !isShooting) {
+                animating = false;
+                changeAnimation(animations.idleAnim);
             }
-        } else if (animating && !isShooting) {
-            animating = false;
-            changeAnimation(animations.idleAnim);
-        }
 
-        if (inputMap["b"] && !isShooting) {
-            if (!sambaAnimating) {
-                sambaAnimating = true;
-                changeAnimation(animations.sambaAnim);
+            if (inputMap["b"] && !isShooting) {
+                if (!sambaAnimating) {
+                    sambaAnimating = true;
+                    changeAnimation(animations.sambaAnim);
+                }
+            } else if (sambaAnimating && !isShooting && !animating) {
+                sambaAnimating = false;
+                changeAnimation(animations.idleAnim);
             }
-        } else if (sambaAnimating && !isShooting && !animating) {
-            sambaAnimating = false;
-            changeAnimation(animations.idleAnim);
+
+            lastMoveTime = now;
         }
 
         const cameraOffset = new BABYLON.Vector3(0, 2, 6);

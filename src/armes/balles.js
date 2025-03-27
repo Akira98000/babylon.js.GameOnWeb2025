@@ -3,8 +3,8 @@ import * as BABYLON from '@babylonjs/core'
 export const createBullet = (scene, startPosition, direction) => {
     // Créer une balle plus grosse et colorée
     const bullet = BABYLON.MeshBuilder.CreateSphere("bullet", {
-      diameter: 0.2, // Balle encore plus grosse pour mieux voir les couleurs
-      segments: 16
+      diameter: 0.15, // Réduit encore la taille
+      segments: 8 // Réduit la complexité géométrique
     }, scene);
     
     // Matériau coloré et brillant pour la balle
@@ -42,42 +42,39 @@ export const createBullet = (scene, startPosition, direction) => {
     const bulletDirection = direction.clone().normalize();
     
     // Traînée de particules colorées derrière la balle
-    const bulletTrail = new BABYLON.ParticleSystem("bulletTrail", 150, scene);
+    const bulletTrail = new BABYLON.ParticleSystem("bulletTrail", 50, scene); // Réduit à 50
     bulletTrail.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
     bulletTrail.emitter = bullet;
     bulletTrail.minEmitBox = new BABYLON.Vector3(0, 0, 0);
     bulletTrail.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
     
     // Utiliser la même couleur que la balle pour la traînée, mais avec une opacité plus élevée
-    bulletTrail.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 1.0);
-    bulletTrail.color2 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 1.0);
+    bulletTrail.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5); // Réduit l'opacité
+    bulletTrail.color2 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5);
     bulletTrail.colorDead = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0);
     
     // Augmenter la taille des particules de la traînée
-    bulletTrail.minSize = 0.1;
-    bulletTrail.maxSize = 0.2;
-    bulletTrail.minLifeTime = 0.2;
-    bulletTrail.maxLifeTime = 0.4;
-    bulletTrail.emitRate = 200; // Augmenter le taux d'émission
-    bulletTrail.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD; // Mode additif pour des couleurs plus vives
+    bulletTrail.minSize = 0.05;
+    bulletTrail.maxSize = 0.1;
+    bulletTrail.minLifeTime = 0.1;
+    bulletTrail.maxLifeTime = 0.2;
+    bulletTrail.emitRate = 50;
+    bulletTrail.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
     bulletTrail.gravity = new BABYLON.Vector3(0, 0, 0);
     
-    // Direction des particules pour créer une traînée
-    bulletTrail.direction1 = new BABYLON.Vector3(0, 0, -0.2);
-    bulletTrail.direction2 = new BABYLON.Vector3(0, 0, -0.2);
+    bulletTrail.direction1 = new BABYLON.Vector3(0, 0, -0.05);
+    bulletTrail.direction2 = new BABYLON.Vector3(0, 0, -0.05);
     
-    // Ajouter une légère dispersion pour un effet plus festif
-    bulletTrail.minEmitPower = 0.1;
-    bulletTrail.maxEmitPower = 0.3;
+    bulletTrail.minEmitPower = 0.02;
+    bulletTrail.maxEmitPower = 0.08;
     
-    // Ajouter une rotation aux particules
     bulletTrail.minAngularSpeed = 0;
-    bulletTrail.maxAngularSpeed = Math.PI;
+    bulletTrail.maxAngularSpeed = Math.PI / 4;
     
-    bulletTrail.updateSpeed = 0.01;
+    bulletTrail.updateSpeed = 0.03;
     bulletTrail.start();
     
-    const bulletLifetime = 3000; // Durée de vie plus longue
+    const bulletLifetime = 1500; // Réduit encore à 1.5 secondes
     let elapsedTime = 0;
     
     const bulletObserver = scene.onBeforeRenderObservable.add(() => {
@@ -95,36 +92,36 @@ export const createBullet = (scene, startPosition, direction) => {
       // Si la balle touche quelque chose ou dépasse sa durée de vie
       if ((hit.hit && hit.pickedMesh && hit.pickedMesh.name !== "bullet") || elapsedTime > bulletLifetime) {
         // Créer un simple système de particules pour l'explosion
-        const impactParticles = new BABYLON.ParticleSystem("impactParticles", 200, scene);
+        const impactParticles = new BABYLON.ParticleSystem("impactParticles", 50, scene); // Réduit à 50
         impactParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
         impactParticles.emitter = bullet.position.clone();
         
         // Utiliser la même couleur que la balle pour l'explosion, mais avec plusieurs teintes
-        impactParticles.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 1);
+        impactParticles.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5);
         impactParticles.color2 = new BABYLON.Color4(
           Math.min(randomColor.r + 0.2, 1), 
           Math.min(randomColor.g + 0.2, 1), 
           Math.min(randomColor.b + 0.2, 1), 
-          1
+          0.5
         );
         impactParticles.colorDead = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0);
         
         // Configurer les propriétés de l'explosion pour des couleurs plus vives
-        impactParticles.minSize = 0.1;
-        impactParticles.maxSize = 0.3;
-        impactParticles.minLifeTime = 0.5;
-        impactParticles.maxLifeTime = 1.0;
+        impactParticles.minSize = 0.05;
+        impactParticles.maxSize = 0.15;
+        impactParticles.minLifeTime = 0.2;
+        impactParticles.maxLifeTime = 0.4;
         impactParticles.emitRate = 0; // Ne pas émettre en continu
-        impactParticles.manualEmitCount = 200; // Émettre plus de particules
+        impactParticles.manualEmitCount = 50; // Émettre plus de particules
         impactParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD; // Mode additif pour des couleurs plus vives
-        impactParticles.gravity = new BABYLON.Vector3(0, -0.5, 0);
-        impactParticles.direction1 = new BABYLON.Vector3(-1, 1, -1);
-        impactParticles.direction2 = new BABYLON.Vector3(1, 1, 1);
-        impactParticles.minEmitPower = 1;
-        impactParticles.maxEmitPower = 3;
+        impactParticles.gravity = new BABYLON.Vector3(0, -0.3, 0);
+        impactParticles.direction1 = new BABYLON.Vector3(-0.5, 0.5, -0.5);
+        impactParticles.direction2 = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        impactParticles.minEmitPower = 0.5;
+        impactParticles.maxEmitPower = 1.5;
         impactParticles.minAngularSpeed = 0;
-        impactParticles.maxAngularSpeed = Math.PI * 2;
-        impactParticles.updateSpeed = 0.01;
+        impactParticles.maxAngularSpeed = Math.PI;
+        impactParticles.updateSpeed = 0.02;
         
         // Démarrer l'explosion
         impactParticles.start();
@@ -132,7 +129,7 @@ export const createBullet = (scene, startPosition, direction) => {
         // Nettoyer après un délai
         setTimeout(() => {
           impactParticles.dispose();
-        }, 1000);
+        }, 500); // Réduit à 500ms
         
         // Nettoyer la balle et sa traînée
         scene.onBeforeRenderObservable.remove(bulletObserver);

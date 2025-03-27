@@ -12,16 +12,13 @@ export class LevelManager {
             3: new Level3(scene)
         };
         
-        // Précharger les deux fichiers audio
-        this.standardAudio = new Audio("/map/sound_part4.mp3");
+        this.standardAudio = new Audio("/assets/salsa.mp3");
         this.standardAudio.loop = true;
         this.standardAudio.volume = 0;
-        
-        this.catastropheAudio = new Audio("/map/catastrophe.mp3");
+    
+        this.catastropheAudio = new Audio("/assets/catastrophe.mp3");
         this.catastropheAudio.loop = true;
         this.catastropheAudio.volume = 0;
-        
-        // Démarrer l'audio standard immédiatement
         this.currentAudio = this.standardAudio;
         
         // Utiliser une promesse pour s'assurer que l'audio est chargé avant de jouer

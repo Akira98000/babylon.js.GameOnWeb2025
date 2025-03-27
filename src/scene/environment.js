@@ -1,56 +1,36 @@
 import * as BABYLON from "@babylonjs/core";
 
 export function createEnvironment(scene) {
-  // Détection de Safari/iOS pour simplifier les matériaux
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const useLowEndSettings = isSafari || isIOS;
-
-  // Skybox avec matériau simplifié
   const skybox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 1000 }, scene);
   const skyboxMaterial = new BABYLON.StandardMaterial("skyBoxMaterial", scene);
   skyboxMaterial.backFaceCulling = false;
   skyboxMaterial.disableLighting = true;
   skyboxMaterial.reflectionTexture = null;
-  
-  // Réduire la complexité pour Safari/iOS
-  if (useLowEndSettings) {
-    skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-    skyboxMaterial.specularPower = 0;
-  }
-  
   skybox.material = skyboxMaterial;
 
-  // Lumières simplifiées
   const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
   const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(0, -1, 0), scene);
-  
-  // Utiliser ou non le spotlight selon la plateforme
-  let spotLight;
-  if (!useLowEndSettings) {
-    spotLight = new BABYLON.SpotLight(
-      "spotLight",
-      BABYLON.Vector3.Zero(),        
-      BABYLON.Vector3.Down(),          
-      Math.PI / 3,                 
-      2,                         
-      scene
-    );
-    spotLight.diffuse = new BABYLON.Color3(1, 1, 0.9);
-    spotLight.specular = new BABYLON.Color3(1, 1, 1);
-    spotLight.range = 100;
-  }
-  
+  const spotLight = new BABYLON.SpotLight(
+    "spotLight",
+    BABYLON.Vector3.Zero(),        
+    BABYLON.Vector3.Down(),          
+    Math.PI / 3,                 
+    2,                         
+    scene
+  );
+  spotLight.diffuse = new BABYLON.Color3(1, 1, 0.9);
+  spotLight.specular = new BABYLON.Color3(1, 1, 1);
+  spotLight.range = 100;
   scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
 
   const day = {
     clearColor: new BABYLON.Color4(1, 0.753, 0.796, 1),
     fogColor: new BABYLON.Color3(0, 0.753, 0.796),
     skyColor: new BABYLON.Color3(1, 1, 1),
-    fogDensity: useLowEndSettings ? 0.02 : 0.024,
+    fogDensity: 0.024,
     hemiIntensity: 0.6,
     dirIntensity: 1,
-    spotIntensity: useLowEndSettings ? 0 : 0,
+    spotIntensity: 0,
     hemiDiffuse: new BABYLON.Color3(1, 1, 1),
     hemiGround: new BABYLON.Color3(0.5, 0.5, 0.5),
     dirDiffuse: new BABYLON.Color3(1, 1, 1)
@@ -60,10 +40,10 @@ export function createEnvironment(scene) {
     clearColor: new BABYLON.Color4(0, 0, 0, 1),
     fogColor: new BABYLON.Color3(0, 0, 0.16),
     skyColor: new BABYLON.Color3(0, 0, 0.05),
-    fogDensity: useLowEndSettings ? 0.02 : 0.0234,
+    fogDensity: 0.0234,
     hemiIntensity: 0.1,
     dirIntensity: 0.3,
-    spotIntensity: useLowEndSettings ? 0 : 50,
+    spotIntensity: 50,
     hemiDiffuse: new BABYLON.Color3(1, 0.3, 0.3),
     hemiGround: new BABYLON.Color3(0.5, 0.2, 0.2),
     dirDiffuse: new BABYLON.Color3(1, 0.4, 0.4)
@@ -85,9 +65,7 @@ export function createEnvironment(scene) {
     hemiLight.groundColor = BABYLON.Color3.Lerp(day.hemiGround, night.hemiGround, t);
     dirLight.intensity = BABYLON.Scalar.Lerp(day.dirIntensity, night.dirIntensity, t);
     dirLight.diffuse = BABYLON.Color3.Lerp(day.dirDiffuse, night.dirDiffuse, t);
-    if (spotLight) {
-      spotLight.intensity = BABYLON.Scalar.Lerp(day.spotIntensity, night.spotIntensity, t);
-    }
+    spotLight.intensity = BABYLON.Scalar.Lerp(day.spotIntensity, night.spotIntensity, t);
   });
 }
 
