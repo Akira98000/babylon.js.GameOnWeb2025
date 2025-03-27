@@ -3,10 +3,11 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import { createMuzzleFlash, createConfetti } from '../effects/visualEffects';
 import { createBullet } from '../armes/balles';
 
+let isShooting = false;
+
 export const createPlayer = async (scene, camera, canvas) => {
     const heroResult = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'licorn.glb', scene);
     const hero = heroResult.meshes[0];
-
     hero.name = 'hero';
     hero.scaling.scaleInPlace(GAME_CONFIG.HERO.SCALE);
     hero.position = new BABYLON.Vector3(0, 0, 0);
@@ -16,9 +17,15 @@ export const createPlayer = async (scene, camera, canvas) => {
     hero.applyGravity = true;
     hero.isPickable = false;
 
+    const groundOffset = new BABYLON.Vector3(0, hero.ellipsoid.y, 0);
+    const groundRayLength = hero.ellipsoid.y + 0.1;
+    const shootOffset = new BABYLON.Vector3(0, 1.5, 0);
+    const MIN_HEIGHT = -1;
+    const gravityForce = scene.gravity.scale(0.015);
+
     const checkGrounded = () => {
-        const origin = hero.position.clone().add(new BABYLON.Vector3(0, hero.ellipsoid.y, 0));
-        const ray = new BABYLON.Ray(origin, BABYLON.Vector3.Down(), hero.ellipsoid.y + 0.1);
+        const origin = hero.position.clone().add(groundOffset);
+        const ray = new BABYLON.Ray(origin, BABYLON.Vector3.Down(), groundRayLength);
         return scene.pickWithRay(ray).hit;
     };
 
@@ -28,83 +35,56 @@ export const createPlayer = async (scene, camera, canvas) => {
         spatialSound: GAME_CONFIG.AUDIO.SHOTGUN.SPATIAL
     });
 
-    let isShooting = false;
     let lastShotTime = 0;
     const shootCooldown = 500;
     let isMoving = false;
-    let currentAnimation = null; 
+    let currentAnimation = null;
     let controlsRef = null;
-    
-    // Référence aux animations (sera initialisée dans handleShooting)
     let animationsRef = null;
 
-    // Fonction pour jouer l'animation de tir appropriée
+    const calcReturnDelay = (speedRatio) => Math.min(150, (1000 / speedRatio) / 4);
     const playShootAnimation = (animations, isMoving) => {
-        if (!animations) return;
-        
-        // Sélectionner l'animation appropriée selon l'état de mouvement
+        if (!animations) return false;
         const shootAnimation = isMoving ? animations.shotgunAnim : animations.shootStandingAnim;
-        if (!shootAnimation) return;
-        
-        // Déterminer l'animation à revenir après le tir
+        if (!shootAnimation) return false;
         const returnAnimation = isMoving ? animations.walkAnim : animations.idleAnim;
-        
-        // Utiliser la méthode immédiate pour toutes les animations de tir
+        const returnDelay = calcReturnDelay(shootAnimation.speedRatio);
+
         if (animations.immediateTransition) {
-            // Transition immédiate pour une réponse instantanée
             animations.immediateTransition(shootAnimation);
             currentAnimation = shootAnimation;
-            
-            // Calculer un délai de retour dynamique basé sur la vitesse d'animation
-            const returnDelay = Math.min(150, (1000 / shootAnimation.speedRatio) / 4);
-            
-            // Revenir à l'animation précédente après le délai
             setTimeout(() => {
                 if (returnAnimation) {
                     animations.immediateTransition(returnAnimation);
                     currentAnimation = returnAnimation;
                 }
             }, returnDelay);
-            
-            return true; // Indiquer que l'animation a été appliquée avec succès
-        } 
-        else if (controlsRef && controlsRef.changeAnimation) {
-            // Fallback sur changeAnimation si disponible
+            return true;
+        } else if (controlsRef && controlsRef.changeAnimation) {
             controlsRef.changeAnimation(shootAnimation);
-            
-            // Calcul du délai de retour
-            const returnDelay = Math.min(150, (1000 / shootAnimation.speedRatio) / 4);
             setTimeout(() => {
                 if (returnAnimation) {
                     controlsRef.changeAnimation(returnAnimation);
                 }
             }, returnDelay);
-            
-            return true; // Indiquer que l'animation a été appliquée avec succès
-        }
-        else if (animations.transitionToAnimation) {
-            // Dernier recours: transition standard
+            return true;
+        } else if (animations.transitionToAnimation) {
             const fromAnim = currentAnimation || (animations.walkAnim?.isPlaying ? animations.walkAnim : animations.idleAnim);
             animations.transitionToAnimation(fromAnim, shootAnimation);
             currentAnimation = shootAnimation;
-            
-            // Calcul du délai de retour
-            const returnDelay = Math.min(150, (1000 / shootAnimation.speedRatio) / 4);
             setTimeout(() => {
                 if (returnAnimation) {
                     animations.transitionToAnimation(shootAnimation, returnAnimation);
                     currentAnimation = returnAnimation;
                 }
             }, returnDelay);
-            
-            return true; // Indiquer que l'animation a été appliquée avec succès
+            return true;
         }
-        
-        return false; // Indiquer que l'animation n'a pas pu être appliquée
+        return false;
     };
-    
+
     const executeShot = (position, direction) => {
-        const bulletStartPosition = position.clone().add(new BABYLON.Vector3(0, 1.5, 0));
+        const bulletStartPosition = position.clone().add(shootOffset);
         shotgunSound.play();
         confetti.emitter = bulletStartPosition;
         confetti.start();
@@ -122,13 +102,8 @@ export const createPlayer = async (scene, camera, canvas) => {
                 const shootPosition = hero.position.clone();
                 if (animationsRef) {
                     const animationApplied = playShootAnimation(animationsRef, isMoving);
-                    if (animationApplied) {
-                        setTimeout(() => {
-                            executeShot(shootPosition, shootDirection);
-                        }, 16);
-                    } else {
-                        executeShot(shootPosition, shootDirection);
-                    }
+                    // Légère temporisation pour synchroniser l'animation et le tir
+                    setTimeout(() => executeShot(shootPosition, shootDirection), animationApplied ? 16 : 0);
                 } else {
                     executeShot(shootPosition, shootDirection);
                 }
@@ -143,25 +118,16 @@ export const createPlayer = async (scene, camera, canvas) => {
     };
 
     const handleShooting = (animations) => {
-        // Stocker la référence aux animations pour pouvoir l'utiliser dans onPointerDown
         animationsRef = animations;
-        
-        // Stocker la référence aux contrôles si elle n'est pas déjà définie
-        if (!controlsRef && animations.transitionToAnimation) {
-            if (scene.metadata && scene.metadata.controls) {
-                controlsRef = scene.metadata.controls;
-            }
+        if (!controlsRef && animations.transitionToAnimation && scene.metadata?.controls) {
+            controlsRef = scene.metadata.controls;
         }
-        
-        // Vérifier si le joueur est en mouvement
         isMoving = animations.walkAnim?.isPlaying || false;
     };
 
     scene.onBeforeRenderObservable.add(() => {
-        const MIN_HEIGHT = -1; // Hauteur minimale en dessous de laquelle le personnage ne peut pas descendre
-        
         if (!checkGrounded()) {
-            hero.moveWithCollisions(scene.gravity.scale(0.015));
+            hero.moveWithCollisions(gravityForce);
             if (hero.position.y < MIN_HEIGHT) {
                 hero.position.y = MIN_HEIGHT;
             }
@@ -170,9 +136,11 @@ export const createPlayer = async (scene, camera, canvas) => {
         }
     });
 
-    const crosshair = document.createElement("div");
-    crosshair.id = "crosshair";
-    document.body.appendChild(crosshair);
+    if (!document.getElementById("crosshair")) {
+        const crosshair = document.createElement("div");
+        crosshair.id = "crosshair";
+        document.body.appendChild(crosshair);
+    }
 
     return {
         hero,

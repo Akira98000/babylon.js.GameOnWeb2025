@@ -7,9 +7,9 @@ export async function loadMapParts(scene) {
   const basePath = "/map/";
   const partNames = [
     "citymap_part1opt.glb",
-    "citymap_part2.glb",
-    "citymap_part3.glb",
-    "citymap_part4.glb"
+    "citymap_part2opt.glb",
+    "citymap_part3opt.glb",
+    "citymap_part4opt.glb"
   ];
 
   mapPartsData = [];

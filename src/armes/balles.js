@@ -1,141 +1,169 @@
 import * as BABYLON from '@babylonjs/core'
 
 export const createBullet = (scene, startPosition, direction) => {
-    // Créer une balle plus grosse et colorée
-    const bullet = BABYLON.MeshBuilder.CreateSphere("bullet", {
-      diameter: 0.15, // Réduit encore la taille
-      segments: 8 // Réduit la complexité géométrique
-    }, scene);
+
+  const bullet = BABYLON.MeshBuilder.CreateCylinder("bullet", {
+        height: 0.03,
+        diameter: 0.05,
+        tessellation: 3
+  }, scene);
     
-    // Matériau coloré et brillant pour la balle
+    bullet.rotation.x = Math.PI / 2;
+    
     const bulletMaterial = new BABYLON.StandardMaterial("bulletMaterial", scene);
-    
-    // Choisir une couleur aléatoire vive pour chaque balle
-    // Utiliser des couleurs plus saturées
-    const colors = [
-        new BABYLON.Color3(1, 0, 0), // Rouge pur
-        new BABYLON.Color3(0, 1, 0), // Vert pur
-        new BABYLON.Color3(0, 0, 1), // Bleu pur
-        new BABYLON.Color3(1, 1, 0), // Jaune pur
-        new BABYLON.Color3(1, 0, 1), // Magenta pur
-        new BABYLON.Color3(0, 1, 1)  // Cyan pur
-    ];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-    // Rendre les couleurs plus vives
-    bulletMaterial.diffuseColor = randomColor;
-    bulletMaterial.emissiveColor = randomColor; // Utiliser la couleur complète pour l'émission
+    bulletMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7);
     bulletMaterial.specularColor = new BABYLON.Color3(1, 1, 1);
-    bulletMaterial.specularPower = 16; // Réduire pour un effet plus brillant
-    
-    // Ajouter un effet de brillance
-    bulletMaterial.useGlossinessFromSpecularMapAlpha = true;
-    bulletMaterial.useSpecularOverAlpha = true;
-    
-    // Augmenter la luminosité globale
-    bulletMaterial.ambientColor = randomColor.scale(0.5);
+    bulletMaterial.specularPower = 32; 
+    bulletMaterial.emissiveColor = new BABYLON.Color3(1, 0.3, 0);
+    bulletMaterial.freeze();
     
     bullet.material = bulletMaterial;
     bullet.position = startPosition.clone();
 
-    const speed = 15; // Vitesse légèrement réduite pour mieux voir les balles
+    const speed = 30;
     const bulletDirection = direction.clone().normalize();
     
-    // Traînée de particules colorées derrière la balle
-    const bulletTrail = new BABYLON.ParticleSystem("bulletTrail", 50, scene); // Réduit à 50
-    bulletTrail.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
-    bulletTrail.emitter = bullet;
-    bulletTrail.minEmitBox = new BABYLON.Vector3(0, 0, 0);
-    bulletTrail.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
+    const distortionBlur = new BABYLON.HighlightLayer("distortion", scene, {
+        mainTextureRatio: 0.1, 
+        blurHorizontalSize: 0.5,
+        blurVerticalSize: 0.5
+    });
+    distortionBlur.addMesh(bullet, new BABYLON.Color3(1, 0.5, 0));
+
+    const fireTrail = new BABYLON.ParticleSystem("fireTrail", 10, scene);
+    fireTrail.particleTexture = new BABYLON.Texture("/assets/fire.png", scene);
+    fireTrail.emitter = bullet;
+    fireTrail.minEmitBox = new BABYLON.Vector3(0, 0, 0);
+    fireTrail.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
     
-    // Utiliser la même couleur que la balle pour la traînée, mais avec une opacité plus élevée
-    bulletTrail.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5); // Réduit l'opacité
-    bulletTrail.color2 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5);
-    bulletTrail.colorDead = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0);
+    fireTrail.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
+    fireTrail.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+    fireTrail.colorDead = new BABYLON.Color4(0.7, 0, 0, 0);
     
-    // Augmenter la taille des particules de la traînée
-    bulletTrail.minSize = 0.05;
-    bulletTrail.maxSize = 0.1;
-    bulletTrail.minLifeTime = 0.1;
-    bulletTrail.maxLifeTime = 0.2;
-    bulletTrail.emitRate = 50;
-    bulletTrail.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
-    bulletTrail.gravity = new BABYLON.Vector3(0, 0, 0);
+    fireTrail.minSize = 0.2;
+    fireTrail.maxSize = 0.3;
+    fireTrail.minLifeTime = 0.02; 
+    fireTrail.maxLifeTime = 0.05;
+    fireTrail.emitRate = 30; 
+    fireTrail.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+    fireTrail.gravity = new BABYLON.Vector3(0, 0, 0);
     
-    bulletTrail.direction1 = new BABYLON.Vector3(0, 0, -0.05);
-    bulletTrail.direction2 = new BABYLON.Vector3(0, 0, -0.05);
+    fireTrail.direction1 = new BABYLON.Vector3(-0.05, -0.05, -0.05);
+    fireTrail.direction2 = new BABYLON.Vector3(0.05, 0.05, 0.05);
     
-    bulletTrail.minEmitPower = 0.02;
-    bulletTrail.maxEmitPower = 0.08;
+    fireTrail.minEmitPower = 0.2;
+    fireTrail.maxEmitPower = 0.4;
+    fireTrail.updateSpeed = 0.02; 
     
-    bulletTrail.minAngularSpeed = 0;
-    bulletTrail.maxAngularSpeed = Math.PI / 4;
+    const smokeTrail = new BABYLON.ParticleSystem("smokeTrail", 10, scene); 
+    smokeTrail.particleTexture = new BABYLON.Texture("/assets/smoke.png", scene);
+    smokeTrail.emitter = bullet;
+    smokeTrail.minEmitBox = new BABYLON.Vector3(0, 0, 0);
+    smokeTrail.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
     
-    bulletTrail.updateSpeed = 0.03;
-    bulletTrail.start();
+    smokeTrail.color1 = new BABYLON.Color4(0.3, 0.3, 0.3, 0.15); 
+    smokeTrail.color2 = new BABYLON.Color4(0.2, 0.2, 0.2, 0.1);
+    smokeTrail.colorDead = new BABYLON.Color4(0.1, 0.1, 0.1, 0);
     
-    const bulletLifetime = 1500; // Réduit encore à 1.5 secondes
+    smokeTrail.minSize = 0.3;
+    smokeTrail.maxSize = 0.5;
+    smokeTrail.minLifeTime = 0.2; 
+    smokeTrail.maxLifeTime = 0.3; 
+    smokeTrail.emitRate = 25; 
+    smokeTrail.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+    smokeTrail.gravity = new BABYLON.Vector3(0, 0.1, 0);
+    smokeTrail.updateSpeed = 0.02; 
+    
+    fireTrail.start();
+    smokeTrail.start();
+    
+    const bulletLifetime = 1000;
     let elapsedTime = 0;
     
+    const light = new BABYLON.PointLight("bulletLight", bullet.position, scene);
+    light.diffuse = new BABYLON.Color3(1, 0.5, 0);
+    light.intensity = 0.5; 
+    light.range = 0.5; 
+    
     const bulletObserver = scene.onBeforeRenderObservable.add(() => {
-      const movement = bulletDirection.scale(speed * scene.getEngine().getDeltaTime() / 1000);
-      bullet.position.addInPlace(movement);
-      
-      // Faire tourner la balle pour un effet plus dynamique
-      bullet.rotation.x += 0.1;
-      bullet.rotation.y += 0.1;
-      
-      elapsedTime += scene.getEngine().getDeltaTime();
-      const ray = new BABYLON.Ray(bullet.position, bulletDirection, 0.1);
-      const hit = scene.pickWithRay(ray);
-      
-      // Si la balle touche quelque chose ou dépasse sa durée de vie
-      if ((hit.hit && hit.pickedMesh && hit.pickedMesh.name !== "bullet") || elapsedTime > bulletLifetime) {
-        // Créer un simple système de particules pour l'explosion
-        const impactParticles = new BABYLON.ParticleSystem("impactParticles", 50, scene); // Réduit à 50
-        impactParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
-        impactParticles.emitter = bullet.position.clone();
+        const movement = bulletDirection.scale(speed * scene.getEngine().getDeltaTime() / 1000);
+        bullet.position.addInPlace(movement);
+        light.position = bullet.position;
         
-        // Utiliser la même couleur que la balle pour l'explosion, mais avec plusieurs teintes
-        impactParticles.color1 = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0.5);
-        impactParticles.color2 = new BABYLON.Color4(
-          Math.min(randomColor.r + 0.2, 1), 
-          Math.min(randomColor.g + 0.2, 1), 
-          Math.min(randomColor.b + 0.2, 1), 
-          0.5
-        );
-        impactParticles.colorDead = new BABYLON.Color4(randomColor.r, randomColor.g, randomColor.b, 0);
+        bullet.rotate(bulletDirection, 0.5, BABYLON.Space.WORLD);
         
-        // Configurer les propriétés de l'explosion pour des couleurs plus vives
-        impactParticles.minSize = 0.05;
-        impactParticles.maxSize = 0.15;
-        impactParticles.minLifeTime = 0.2;
-        impactParticles.maxLifeTime = 0.4;
-        impactParticles.emitRate = 0; // Ne pas émettre en continu
-        impactParticles.manualEmitCount = 50; // Émettre plus de particules
-        impactParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD; // Mode additif pour des couleurs plus vives
-        impactParticles.gravity = new BABYLON.Vector3(0, -0.3, 0);
-        impactParticles.direction1 = new BABYLON.Vector3(-0.5, 0.5, -0.5);
-        impactParticles.direction2 = new BABYLON.Vector3(0.5, 0.5, 0.5);
-        impactParticles.minEmitPower = 0.5;
-        impactParticles.maxEmitPower = 1.5;
-        impactParticles.minAngularSpeed = 0;
-        impactParticles.maxAngularSpeed = Math.PI;
-        impactParticles.updateSpeed = 0.02;
+        elapsedTime += scene.getEngine().getDeltaTime();
+        const ray = new BABYLON.Ray(bullet.position, bulletDirection, 0.1);
+        const hit = scene.pickWithRay(ray);
         
-        // Démarrer l'explosion
-        impactParticles.start();
-        
-        // Nettoyer après un délai
-        setTimeout(() => {
-          impactParticles.dispose();
-        }, 500); // Réduit à 500ms
-        
-        // Nettoyer la balle et sa traînée
-        scene.onBeforeRenderObservable.remove(bulletObserver);
-        bulletTrail.stop();
-        bulletTrail.dispose();
-        bullet.dispose();
-      }
+        if ((hit.hit && hit.pickedMesh && hit.pickedMesh.name !== "bullet") || elapsedTime > bulletLifetime) {
+            const explosion = new BABYLON.ParticleSystem("explosion", 75, scene); 
+            explosion.particleTexture = new BABYLON.Texture("/assets/explosion.png", scene);
+            explosion.emitter = bullet.position.clone();
+            
+            explosion.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
+            explosion.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+            explosion.colorDead = new BABYLON.Color4(0.2, 0.2, 0.2, 0);
+            
+            explosion.minSize = 0.3;
+            explosion.maxSize = 0.7; 
+            explosion.minLifeTime = 0.1; 
+            explosion.maxLifeTime = 0.2; 
+            
+            explosion.emitRate = 0;
+            explosion.manualEmitCount = 100; 
+            explosion.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+            explosion.gravity = new BABYLON.Vector3(0, 0.5, 0); 
+            
+            explosion.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
+            explosion.maxEmitBox = new BABYLON.Vector3(0.1, 0.1, 0.1);
+            explosion.direction1 = new BABYLON.Vector3(-1, -1, -1);
+            explosion.direction2 = new BABYLON.Vector3(1, 1, 1);
+            explosion.minEmitPower = 0.5;
+            explosion.maxEmitPower = 1; 
+            explosion.updateSpeed = 0.02; 
+            
+            const shockwave = new BABYLON.ParticleSystem("shockwave", 10, scene); 
+            shockwave.particleTexture = new BABYLON.Texture("/assets/shockwave.png", scene);
+            shockwave.emitter = bullet.position.clone();
+            shockwave.minEmitBox = new BABYLON.Vector3(0, 0, 0);
+            shockwave.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
+            
+            shockwave.color1 = new BABYLON.Color4(1, 0.5, 0, 0.15);
+            shockwave.color2 = new BABYLON.Color4(1, 0.2, 0, 0.15);
+            shockwave.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+            
+            shockwave.minSize = 0.1;
+            shockwave.maxSize = 0.5; 
+            shockwave.minLifeTime = 0.1;
+            shockwave.maxLifeTime = 0.2;
+            shockwave.emitRate = 0;
+            shockwave.manualEmitCount = 10; 
+            shockwave.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+            shockwave.updateSpeed = 0.02;
+            
+            const explosionLight = new BABYLON.PointLight("explosionLight", bullet.position, scene);
+            explosionLight.diffuse = new BABYLON.Color3(1, 0.5, 0);
+            explosionLight.intensity = 5; 
+            explosionLight.range = 3;
+            
+            explosion.start();
+            shockwave.start();
+            
+            setTimeout(() => {
+                explosion.dispose();
+                shockwave.dispose();
+                explosionLight.dispose();
+            }, 100);
+            
+            scene.onBeforeRenderObservable.remove(bulletObserver);
+            distortionBlur.dispose();
+            fireTrail.stop();
+            smokeTrail.stop();
+            fireTrail.dispose();
+            smokeTrail.dispose();
+            light.dispose();
+            bullet.dispose();
+        }
     });
 };

@@ -31,9 +31,8 @@ export const createConfetti = (scene) => {
         { color1: new BABYLON.Color4(1, 0, 0, 1), color2: new BABYLON.Color4(1, 0.3, 0.3, 1) },
         { color1: new BABYLON.Color4(0, 1, 0, 1), color2: new BABYLON.Color4(0.3, 1, 0.3, 1) }
     ];
-
     colors.forEach((color, index) => {
-        const confetti = new BABYLON.ParticleSystem("confetti" + index, 10, scene); 
+        const confetti = new BABYLON.ParticleSystem("confetti" + index, 25, scene); // Réduit à 25 par système
         confetti.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
         confetti.emitter = new BABYLON.Vector3(0, 0, 0);
         confetti.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
@@ -43,10 +42,10 @@ export const createConfetti = (scene) => {
         confetti.colorDead = new BABYLON.Color4(color.color1.r, color.color1.g, color.color1.b, 0);
         
         confetti.minSize = 0.05;
-        confetti.maxSize = 0.07;
-        confetti.minLifeTime = 0.2;
-        confetti.maxLifeTime = 0.7;
-        confetti.emitRate = 20;
+        confetti.maxSize = 0.15;
+        confetti.minLifeTime = 0.5;
+        confetti.maxLifeTime = 1.0;
+        confetti.emitRate = 50;
         confetti.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
         confetti.gravity = new BABYLON.Vector3(0, -0.5, 0);
         confetti.direction1 = new BABYLON.Vector3(-1, 1, -1);
@@ -82,7 +81,7 @@ export const createConfetti = (scene) => {
 };
 
 export const createEnvironmentParticles = (scene) => {
-    const envParticles = new BABYLON.ParticleSystem("particles", 50, scene); 
+    const envParticles = new BABYLON.ParticleSystem("particles", 200, scene); 
     envParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
     envParticles.emitter = new BABYLON.Vector3(0, 20, 0);
     envParticles.minEmitBox = new BABYLON.Vector3(-30, 10, -30); 
@@ -94,7 +93,7 @@ export const createEnvironmentParticles = (scene) => {
     envParticles.maxSize = 0.15;
     envParticles.minLifeTime = 2; 
     envParticles.maxLifeTime = 3;
-    envParticles.emitRate = 10; 
+    envParticles.emitRate = 25; 
     envParticles.gravity = new BABYLON.Vector3(0, -0.03, 0);
     envParticles.direction1 = new BABYLON.Vector3(-1, -1, -1);
     envParticles.direction2 = new BABYLON.Vector3(1, -1, 1);
