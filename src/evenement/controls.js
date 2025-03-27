@@ -4,7 +4,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     const inputMap = {};
     scene.actionManager = new BABYLON.ActionManager(scene);
 
-    const heroSpeed = 0.15;
+    const heroSpeed = 0.12;
     const rotationSensitivity = 0.005;
     const shootAnimationDuration = 300;
     let animating = false;
@@ -26,17 +26,51 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         inputMap[evt.sourceEvent.key.toLowerCase()] = false;
     }));
 
-    canvas.onclick = () => canvas.requestPointerLock();
+    const setupPointerLock = () => {
+        canvas.addEventListener('click', () => {
+            canvas.requestPointerLock = canvas.requestPointerLock ||
+                                      canvas.mozRequestPointerLock ||
+                                      canvas.webkitRequestPointerLock;
+            
+            if (canvas.requestPointerLock) {
+                canvas.requestPointerLock();
+            }
+        });
+
+        const pointerLockChange = () => {
+            const isLocked = document.pointerLockElement === canvas ||
+                           document.mozPointerLockElement === canvas ||
+                           document.webkitPointerLockElement === canvas;
+            
+            scene.metadata.isPointerLocked = isLocked;
+        };
+
+        const pointerLockError = () => {
+            console.warn("Erreur de verrouillage du pointeur");
+        };
+
+        document.addEventListener('pointerlockchange', pointerLockChange, false);
+        document.addEventListener('mozpointerlockchange', pointerLockChange, false);
+        document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
+        
+        document.addEventListener('pointerlockerror', pointerLockError, false);
+        document.addEventListener('mozpointerlockerror', pointerLockError, false);
+        document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+    };
+
+    setupPointerLock();
 
     let lastPointerEvent = 0;
     const pointerThrottle = 16;
 
     scene.onPointerObservable.add(pointerInfo => {
         if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && 
-            document.pointerLockElement === canvas) {
+            scene.metadata.isPointerLocked) {
             const now = Date.now();
             if (now - lastPointerEvent >= pointerThrottle) {
-                targetRotationY += pointerInfo.event.movementX * rotationSensitivity;
+                const event = pointerInfo.event;
+                const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                targetRotationY += movementX * rotationSensitivity;
                 lastPointerEvent = now;
             }
         }

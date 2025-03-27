@@ -4,7 +4,7 @@
 export const GAME_CONFIG = {
     HERO: {
         SCALE: 0.28,
-        SPEED: 0.05,
+        SPEED: 0.15,
         SPEED_BACKWARDS: 0.01,
         ROTATION_SPEED: 0.1,
         ELLIPSOID: {
