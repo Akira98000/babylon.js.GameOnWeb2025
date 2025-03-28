@@ -23,11 +23,27 @@ export async function loadMapParts(scene) {
         scene
       );
 
+      const meshesToMerge = [];
+
       result.meshes.forEach(mesh => {
         if (mesh.id !== result.meshes[0].id && mesh.isVisible) {
           mesh.checkCollisions = true;
+          mesh.freezeWorldMatrix(); // Optimisation
+          if (mesh.material) {
+            mesh.material.freeze(); // Optimisation
+          }
+          meshesToMerge.push(mesh);
+        } else if (!mesh.isVisible) {
+          mesh.dispose(); // Nettoyage
         }
       });
+
+      const merged = BABYLON.Mesh.MergeMeshes(meshesToMerge, true, true, undefined, false, true);
+      if (merged) {
+        merged.freezeWorldMatrix();
+        merged.checkCollisions = true;
+        if (merged.material) merged.material.freeze();
+      }
 
       const mainMesh = result.meshes[0];
       mainMesh.computeWorldMatrix(true);
@@ -39,59 +55,20 @@ export async function loadMapParts(scene) {
         boundingBox
       });
 
-      return mainMesh;
+      return merged || mainMesh;
     })
   );
 
+  // Positionnement des parties de la map
   parts.forEach(part => {
     part.position.set(0, 0, 0);
   });
 
+  // Nettoyage des anciennes lumières (si jamais il y en avait)
   scene.lights
     .filter(light => light.name.startsWith("spotLight_"))
     .forEach(light => light.dispose());
 
-  const lampNames = scene.meshes
-    .filter(mesh => mesh.name.startsWith("streetlight"))
-    .map(mesh => mesh.name);
-
-  lampNames.forEach((lampName) => {
-    const targetMesh = scene.getMeshByName(lampName);
-    if (targetMesh) {
-      targetMesh.computeWorldMatrix(true);
-      const boundingInfo = targetMesh.getBoundingInfo();
-      const max = boundingInfo.boundingBox.maximumWorld;
-      const min = boundingInfo.boundingBox.minimumWorld;
-      
-      const topPosition = new BABYLON.Vector3(
-        (min.x + max.x) / 2,
-        max.y,
-        (min.z + max.z) / 2
-      );
-      
-      const groundTarget = new BABYLON.Vector3(
-        topPosition.x - 0.5,
-        min.y - 2,
-        topPosition.z - 2.0
-      );
-
-      const direction = groundTarget.subtract(topPosition).normalize();
-
-      const spotLight = new BABYLON.SpotLight(
-        `spotLight_${lampName}`,
-        topPosition,
-        direction,
-        Math.PI, 
-        2,
-        scene
-      );
-
-      spotLight.intensity = 50;
-      spotLight.range = 300;
-      spotLight.diffuse = new BABYLON.Color3(1, 1, 0.9);
-      spotLight.specular = new BABYLON.Color3(1, 1, 1);
-    } else {
-      console.warn(`Lampadaire introuvable: ${lampName}`);
-    }
-  });
+  // Gèle tous les meshes actifs (optimisation)
+  scene.freezeActiveMeshes();
 }

@@ -230,6 +230,50 @@ const initBabylon = async () => {
             scene.debugLayer.show();
           }
         }
+        
+        // Touche pour activer/désactiver la tempête
+        if (event.key.toLowerCase() === 't') {
+          if (scene.toggleStorm) {
+            const isActive = scene.toggleStorm();
+            
+            // Afficher un message temporaire indiquant l'état de la tempête
+            const stormStatusMsg = document.createElement('div');
+            stormStatusMsg.id = 'stormStatusMsg';
+            stormStatusMsg.style.position = 'absolute';
+            stormStatusMsg.style.top = '20%';
+            stormStatusMsg.style.left = '50%';
+            stormStatusMsg.style.transform = 'translate(-50%, -50%)';
+            stormStatusMsg.style.color = '#ffffff';
+            stormStatusMsg.style.fontSize = '24px';
+            stormStatusMsg.style.fontWeight = 'bold';
+            stormStatusMsg.style.textShadow = '2px 2px 4px #000000';
+            stormStatusMsg.style.padding = '10px';
+            stormStatusMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            stormStatusMsg.style.borderRadius = '5px';
+            stormStatusMsg.style.zIndex = '1000';
+            stormStatusMsg.style.opacity = '1';
+            stormStatusMsg.style.transition = 'opacity 1s ease-in-out';
+            stormStatusMsg.textContent = isActive ? 'Tempête activée' : 'Tempête désactivée';
+            
+            // Supprimer le message précédent s'il existe
+            const existingMsg = document.getElementById('stormStatusMsg');
+            if (existingMsg) {
+              document.body.removeChild(existingMsg);
+            }
+            
+            document.body.appendChild(stormStatusMsg);
+            
+            // Faire disparaître le message après 2 secondes
+            setTimeout(() => {
+              stormStatusMsg.style.opacity = '0';
+              setTimeout(() => {
+                if (document.body.contains(stormStatusMsg)) {
+                  document.body.removeChild(stormStatusMsg);
+                }
+              }, 1000);
+            }, 2000);
+          }
+        }
       });
       
       // Démarrer la boucle de rendu

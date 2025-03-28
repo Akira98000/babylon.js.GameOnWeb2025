@@ -197,6 +197,10 @@ export function instructions() {
         { label: 'K', type: 'action' }
     ], 'Interagir'));
     
+    actionSection.appendChild(createControlLine([
+        { label: 'T', type: 'action' }
+    ], 'Activer/Désactiver la tempête'));
+    
     controlsContent.appendChild(actionSection);
     
     // Ajouter au body
