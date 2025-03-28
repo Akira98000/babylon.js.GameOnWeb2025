@@ -5,7 +5,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     scene.actionManager = new BABYLON.ActionManager(scene);
 
     const heroSpeed = 0.15;
-    const rotationSensitivity = 0.005;
+    const rotationSensitivity = 0.008;
     const shootAnimationDuration = 300;
     let animating = false;
     let sambaAnimating = false;
@@ -13,7 +13,8 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     let currentAnimation = animations.idleAnim;
     let lastShootTime = 0;
     let lastMoveTime = 0;
-    const moveThrottle = 16;
+    const moveThrottle = 8;
+    const rotationLerpFactor = 0.25;
 
     if (hero.rotationQuaternion) hero.rotationQuaternion = null;
     hero.rotation.y = targetRotationY;
@@ -25,11 +26,11 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, evt => {
         inputMap[evt.sourceEvent.key.toLowerCase()] = false;
     }));
-
+    
     canvas.onclick = () => canvas.requestPointerLock();
 
     let lastPointerEvent = 0;
-    const pointerThrottle = 16;
+    const pointerThrottle = 8;
 
     scene.onPointerObservable.add(pointerInfo => {
         if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && 
@@ -79,7 +80,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     scene.onBeforeRenderObservable.add(() => {
         const now = Date.now();
         if (now - lastMoveTime >= moveThrottle) {
-            hero.rotation.y = BABYLON.Scalar.LerpAngle(hero.rotation.y, targetRotationY, 0.1);
+            hero.rotation.y = BABYLON.Scalar.LerpAngle(hero.rotation.y, targetRotationY, rotationLerpFactor);
 
             const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
             const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
@@ -123,8 +124,9 @@ export function setupControls(scene, hero, animations, camera, canvas) {
 
         const cameraOffset = new BABYLON.Vector3(0, 2, 6);
         const rotatedOffset = BABYLON.Vector3.TransformCoordinates(cameraOffset, BABYLON.Matrix.RotationY(hero.rotation.y));
-        camera.position = BABYLON.Vector3.Lerp(camera.position, hero.position.add(rotatedOffset), 0.1);
-        camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), hero.position.add(new BABYLON.Vector3(0, 1.5, 0)), 0.1));
+        const cameraLerpFactor = 0.15;
+        camera.position = BABYLON.Vector3.Lerp(camera.position, hero.position.add(rotatedOffset), cameraLerpFactor);
+        camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), hero.position.add(new BABYLON.Vector3(0, 1.5, 0)), cameraLerpFactor));
     });
 
     scene.metadata.executeShot = (position, direction) => {
