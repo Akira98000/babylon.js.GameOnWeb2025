@@ -4,7 +4,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     const inputMap = {};
     scene.actionManager = new BABYLON.ActionManager(scene);
 
-    const heroSpeed = 0.12;
+    const heroSpeed = 0.15;
     const rotationSensitivity = 0.005;
     const shootAnimationDuration = 300;
     let animating = false;

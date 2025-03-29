@@ -1,5 +1,4 @@
 export function instructions() {
-    // Créer le conteneur principal
     const instructions = document.createElement('div');
     Object.assign(instructions.style, {
         position: 'absolute',
@@ -21,7 +20,7 @@ export function instructions() {
     });
 
     const keyStyle = {
-        default: { 
+        default: {
             backgroundColor: 'rgba(40, 40, 40, 0.8)',
             border: '1px solid rgba(80, 80, 80, 0.8)',
             borderBottom: '3px solid rgba(30, 30, 30, 0.8)',
@@ -40,18 +39,18 @@ export function instructions() {
             margin: '2px',
             transition: 'all 0.1s ease'
         },
-        movement: { 
+        movement: {
             backgroundColor: 'rgba(70, 130, 180, 0.8)',
             borderColor: 'rgba(100, 160, 210, 0.8)',
             borderBottomColor: 'rgba(50, 100, 150, 0.8)'
         },
-        action: { 
-            backgroundColor: 'rgba(220, 100, 100, 0.8)', 
+        action: {
+            backgroundColor: 'rgba(220, 100, 100, 0.8)',
             borderColor: 'rgba(250, 130, 130, 0.8)',
             borderBottomColor: 'rgba(180, 70, 70, 0.8)'
         },
-        mouse: { 
-            backgroundColor: 'rgba(100, 180, 100, 0.8)', 
+        mouse: {
+            backgroundColor: 'rgba(100, 180, 100, 0.8)',
             borderColor: 'rgba(130, 210, 130, 0.8)',
             borderBottomColor: 'rgba(70, 150, 70, 0.8)'
         }
@@ -68,7 +67,7 @@ export function instructions() {
     instructions.appendChild(titleBar);
 
     const toggleButton = document.createElement('div');
-    toggleButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 13H5v-2h14v2z" fill="white"/></svg>';
+    toggleButton.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19 13H13v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="white"/></svg>';
     Object.assign(toggleButton.style, {
         cursor: 'pointer',
         display: 'flex',
@@ -79,18 +78,19 @@ export function instructions() {
         borderRadius: '4px',
         transition: 'background-color 0.2s ease'
     });
-    
-    let isMinimized = false;
+
+    let isMinimized = true;
     const controlsContent = document.createElement('div');
-    
+    controlsContent.style.display = 'none'; // minimisé par défaut
+
     toggleButton.addEventListener('mouseover', () => {
         toggleButton.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
     });
-    
+
     toggleButton.addEventListener('mouseout', () => {
         toggleButton.style.backgroundColor = 'transparent';
     });
-    
+
     toggleButton.addEventListener('click', () => {
         isMinimized = !isMinimized;
         if (isMinimized) {
@@ -103,10 +103,9 @@ export function instructions() {
             instructions.style.transform = 'translateY(0)';
         }
     });
-    
+
     titleBar.appendChild(toggleButton);
 
-    // Conteneur pour les contrôles
     Object.assign(controlsContent.style, {
         padding: '15px'
     });
@@ -121,7 +120,6 @@ export function instructions() {
                 keyElement.style[prop] = value;
             });
         }
-        
         return keyElement;
     }
 
@@ -132,7 +130,7 @@ export function instructions() {
             alignItems: 'center',
             marginBottom: '12px'
         });
-        
+
         const keysContainer = document.createElement('div');
         Object.assign(keysContainer.style, {
             display: 'flex',
@@ -140,21 +138,21 @@ export function instructions() {
             marginRight: '12px',
             minWidth: '110px'
         });
-        
+
         keyConfig.forEach(config => {
-            const { label, type } = typeof config === 'string' 
-                ? { label: config, type: 'default' } 
+            const { label, type } = typeof config === 'string'
+                ? { label: config, type: 'default' }
                 : config;
             keysContainer.appendChild(createKey(label, type));
         });
-        
+
         const descElement = document.createElement('div');
         descElement.textContent = description;
         Object.assign(descElement.style, {
             flexGrow: '1',
             fontSize: '13px'
         });
-        
+
         line.appendChild(keysContainer);
         line.appendChild(descElement);
         return line;
@@ -164,43 +162,40 @@ export function instructions() {
     Object.assign(movementSection.style, {
         marginBottom: '15px'
     });
-    
-    // Touches de mouvement
+
     movementSection.appendChild(createControlLine([
         { label: 'Z', type: 'movement' },
         { label: 'Q', type: 'movement' },
         { label: 'S', type: 'movement' },
         { label: 'D', type: 'movement' }
     ], 'Se déplacer'));
-    
+
     movementSection.appendChild(createControlLine([
         { label: '🖱️', type: 'mouse' }
     ], 'Orienter la caméra'));
-    
+
     controlsContent.appendChild(movementSection);
-    
+
     const actionSection = document.createElement('div');
     Object.assign(actionSection.style, {
         marginBottom: '15px'
     });
-    
-    // Touches d'action
+
     actionSection.appendChild(createControlLine([
         { label: 'Clic', type: 'mouse' }
     ], 'Tirer'));
-    
+
     actionSection.appendChild(createControlLine([
         { label: 'B', type: 'action' }
     ], 'Samba'));
-    
+
     actionSection.appendChild(createControlLine([
         { label: 'K', type: 'action' }
     ], 'Interagir'));
-    
+
     controlsContent.appendChild(actionSection);
-    
-    // Ajouter au body
+
     document.body.appendChild(instructions);
-  
+
     return instructions;
 }

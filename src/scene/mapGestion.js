@@ -5,7 +5,7 @@ export let mapPartsData = [];
 
 export async function loadMapParts(scene) {
   const basePath = "/map/";
-  const partNames = ["test.glb"];
+  const partNames = ["test.glb","test3.glb","test2.glb","test4.glb"];
   mapPartsData = [];
 
   const parts = await Promise.all(
@@ -60,6 +60,5 @@ export async function loadMapParts(scene) {
   parts.forEach(part => {
     part.position.set(0, 0, 0);
   });
-
 
 }

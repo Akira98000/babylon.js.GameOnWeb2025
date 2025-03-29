@@ -25,7 +25,7 @@ export function createEnvironment(scene) {
 
   const day = {
     clearColor: new BABYLON.Color4(1, 0.753, 0.796, 1),
-    fogColor: new BABYLON.Color3(0, 0.753, 0.796),
+    fogColor:  new BABYLON.Color3(1, 0.753, 0.796),
     skyColor: new BABYLON.Color3(1, 1, 1),
     fogDensity: 0.024,
     hemiIntensity: 0.6,
