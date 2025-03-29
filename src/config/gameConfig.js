@@ -1,7 +1,10 @@
+// L'ESPACE CENTRALISEE DES CONFIGURATION DU JEU
+// LES CONFIGURATION SONT REGROUPEES PAR CATEGORIE
+
 export const GAME_CONFIG = {
     HERO: {
         SCALE: 0.28,
-        SPEED: 0.05,
+        SPEED: 0.15,
         SPEED_BACKWARDS: 0.01,
         ROTATION_SPEED: 0.1,
         ELLIPSOID: {
@@ -27,8 +30,8 @@ export const GAME_CONFIG = {
             }
         },
         SENSITIVITY: {
-            ANGULAR_X: 500,
-            ANGULAR_Y: 450
+            ANGULAR_X: 300,
+            ANGULAR_Y: 300
         }
     },
     AUDIO: {
