@@ -24,7 +24,7 @@ export const setupCamera = (scene, canvas) => {
     camera.useNaturalPinchZoom = false;
     camera.wheelPrecision = 1000000;
     camera.minZ = 0.1;
-    camera.maxZ = 100;
+    camera.maxZ = 50;
     camera.attachControl(canvas, true);
     return camera;
 };
