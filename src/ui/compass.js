@@ -237,7 +237,6 @@ const addCompassStyles = () => {
     document.head.appendChild(compassStyle);
 };
 
-// Fonction principale qui crée la boussole et ajoute les styles
 export const setupCompass = () => {
     addCompassStyles();
     return createCompass();
