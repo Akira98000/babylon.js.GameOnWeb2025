@@ -95,16 +95,12 @@ html, body {
 }
 
 #mainMenuContainer button {
-    animation: buttonPulse 2s infinite;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
 
 #mainMenuContainer button:hover {
-    animation: none;
-    background-color: #45a049 !important;
-    transform: scale(1.1) !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(76, 175, 80, 0.6) !important;
+    background-color: rgba(120, 120, 120, 0.5) !important;
 }
 
 #crosshair {
