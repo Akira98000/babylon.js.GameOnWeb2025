@@ -177,7 +177,7 @@ export class MainMenu {
 
         // Titre des crédits
         const creditsTitle = document.createElement('h2');
-        creditsTitle.textContent = 'Crédits';
+        creditsTitle.textContent = 'Credits';
         Object.assign(creditsTitle.style, {
             fontSize: '2.5rem',
             marginBottom: '1.5rem',
@@ -240,7 +240,7 @@ export class MainMenu {
 
         // Bouton de retour
         const backButton = document.createElement('button');
-        backButton.innerHTML = '&larr; Retour';
+        backButton.innerHTML = '&larr; Back';
         Object.assign(backButton.style, {
             backgroundColor: 'rgba(100, 100, 100, 0.3)',
             color: 'white',
@@ -280,7 +280,7 @@ export class MainMenu {
         contentContainer.appendChild(creditsContainer);
 
         const gameSubtitle = document.createElement('div');
-        gameSubtitle.textContent = 'Jeu réalisé pour le GameOnWeb 2025 - Dreamland';
+        gameSubtitle.textContent = 'GameOnWeb 2025 : Dreamland Theme';
         Object.assign(gameSubtitle.style, {
             position: 'absolute', bottom: '2rem', left: '2rem', color: 'white', fontSize: '1rem'
         });
