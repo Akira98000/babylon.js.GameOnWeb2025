@@ -13,7 +13,9 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     let currentAnimation = animations.idleAnim;
     let lastShootTime = 0;
     let lastMoveTime = 0;
+    let lastPointerEvent = 0;
     const moveThrottle = 16;
+    const pointerThrottle = 16;
 
     if (hero.rotationQuaternion) hero.rotationQuaternion = null;
     hero.rotation.y = targetRotationY;
@@ -26,46 +28,41 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         inputMap[evt.sourceEvent.key.toLowerCase()] = false;
     }));
 
-    const setupPointerLock = () => {
-        canvas.addEventListener('click', () => {
-            canvas.requestPointerLock = canvas.requestPointerLock ||
-                                      canvas.mozRequestPointerLock ||
-                                      canvas.webkitRequestPointerLock;
-            
-            if (canvas.requestPointerLock) {
-                canvas.requestPointerLock();
-            }
-        });
-
-        const pointerLockChange = () => {
-            const isLocked = document.pointerLockElement === canvas ||
-                           document.mozPointerLockElement === canvas ||
-                           document.webkitPointerLockElement === canvas;
-            
-            scene.metadata.isPointerLocked = isLocked;
-        };
-
-        const pointerLockError = () => {
-            console.warn("Erreur de verrouillage du pointeur");
-        };
-
-        document.addEventListener('pointerlockchange', pointerLockChange, false);
-        document.addEventListener('mozpointerlockchange', pointerLockChange, false);
-        document.addEventListener('webkitpointerlockchange', pointerLockChange, false);
-        
-        document.addEventListener('pointerlockerror', pointerLockError, false);
-        document.addEventListener('mozpointerlockerror', pointerLockError, false);
-        document.addEventListener('webkitpointerlockerror', pointerLockError, false);
+    // Fonction pour vérifier si une action est autorisée par le tutoriel
+    const isActionAllowed = (action) => {
+        if (scene.metadata.tutorial && scene.metadata.tutorial.isVisible) {
+            return scene.metadata.tutorial.isActionAllowed(action);
+        }
+        return true; // Si pas de tutoriel actif, toutes les actions sont autorisées
     };
 
-    setupPointerLock();
+    scene.onPointerDown = (evt) => {
+        if (evt.button === 0) {
+            if (document.pointerLockElement !== canvas) {
+                canvas.requestPointerLock = canvas.requestPointerLock || canvas.msRequestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock;
+                if (canvas.requestPointerLock) {
+                    canvas.requestPointerLock();
+                }
+            }
 
-    let lastPointerEvent = 0;
-    const pointerThrottle = 16;
+            if (isActionAllowed('shoot')) {
+                scene.metadata.executeShot?.(hero.position, camera.getForwardRay().direction);
+            }
+        }
+    };
+
+    document.addEventListener("pointerlockchange", lockChangeAlert, false);
+    document.addEventListener("mozpointerlockchange", lockChangeAlert, false);
+    document.addEventListener("webkitpointerlockchange", lockChangeAlert, false);
+
+    function lockChangeAlert() {
+        scene.metadata.isPointerLocked = document.pointerLockElement === canvas || document.mozPointerLockElement === canvas || document.webkitPointerLockElement === canvas;
+    }
 
     scene.onPointerObservable.add(pointerInfo => {
         if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE && 
-            scene.metadata.isPointerLocked) {
+            scene.metadata.isPointerLocked &&
+            isActionAllowed('look')) {
             const now = Date.now();
             if (now - lastPointerEvent >= pointerThrottle) {
                 const event = pointerInfo.event;
@@ -119,10 +116,10 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
             let moveDirection = BABYLON.Vector3.Zero();
 
-            if (inputMap["z"]) moveDirection.subtractInPlace(forward);
-            if (inputMap["s"]) moveDirection.addInPlace(forward);
-            if (inputMap["d"]) moveDirection.subtractInPlace(right);
-            if (inputMap["q"]) moveDirection.addInPlace(right);
+            if (inputMap["z"] && isActionAllowed('moveForward')) moveDirection.subtractInPlace(forward);
+            if (inputMap["s"] && isActionAllowed('moveBackward')) moveDirection.addInPlace(forward);
+            if (inputMap["d"] && isActionAllowed('moveRight')) moveDirection.subtractInPlace(right);
+            if (inputMap["q"] && isActionAllowed('moveLeft')) moveDirection.addInPlace(right);
 
             const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
                 now - lastShootTime < shootAnimationDuration;
@@ -142,7 +139,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
                 changeAnimation(animations.idleAnim);
             }
 
-            if (inputMap["b"] && !isShooting) {
+            if (inputMap["b"] && isActionAllowed('dance') && !isShooting) {
                 if (!sambaAnimating) {
                     sambaAnimating = true;
                     changeAnimation(animations.sambaAnim);

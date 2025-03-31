@@ -759,20 +759,15 @@ export class MainMenu {
 
     _showUsernameForm() {
         if (this.buttonsContainer && this.usernameFormContainer) {
-            // Masquer les boutons avec animation
             this.buttonsContainer.style.opacity = '0';
             this.buttonsContainer.style.transform = 'translateY(-20px)';
             
             setTimeout(() => {
                 this.buttonsContainer.style.display = 'none';
-                
-                // Afficher le formulaire avec animation
                 this.usernameFormContainer.style.display = 'flex';
                 setTimeout(() => {
                     this.usernameFormContainer.style.opacity = '1';
                     this.usernameFormContainer.style.transform = 'translateY(0)';
-                    
-                    // Focus sur le champ de saisie
                     const usernameInput = document.getElementById('usernameInput');
                     if (usernameInput) {
                         usernameInput.focus();
@@ -816,8 +811,6 @@ export class MainMenu {
         setTimeout(() => {
             if (this.usernameFormContainer) this.usernameFormContainer.style.display = 'none';
             if (this.buttonsContainer) this.buttonsContainer.style.display = 'none';
-            
-            // Cacher l'image de fond et préparer la zone 3D
             if (this.imageElement) {
                 this.imageElement.style.display = 'none';
             }
@@ -850,11 +843,8 @@ export class MainMenu {
 
     _hideCharacterSelection() {
         if (this.characterSelectionContainer) {
-            // Masquer le sélecteur de personnage avec animation
             this.characterSelectionContainer.style.opacity = '0';
             this.characterSelectionContainer.style.transform = 'translateY(-20px)';
-            
-            // Nettoyer la scène 3D
             if (this.characterPreviewScene) {
                 this.characterPreviewScene.dispose();
                 this.characterPreviewScene = null;

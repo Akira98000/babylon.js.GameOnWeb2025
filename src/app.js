@@ -16,6 +16,8 @@ import { createMiniMap } from "./ui/miniMap.js";
 import { MainMenu } from "./ui/mainMenu.js";
 import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
+import { Tutorial } from "./ui/tutorial.js";
+import { WelcomePage } from "./ui/welcomePage.js";
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -28,7 +30,6 @@ const initBabylon = async () => {
     adaptToDeviceRatio: true,
   });
 
-  // Créer et afficher le menu principal
   mainMenu = new MainMenu(canvas);
   
   // Définir la fonction de callback pour le bouton Jouer
@@ -188,6 +189,34 @@ const initBabylon = async () => {
       const instruction = instructions();
       const miniMap = createMiniMap();
       const compass = setupCompass();
+      const tutorial = new Tutorial(scene);
+      
+      // Variables pour le tutoriel
+      let mouseMoved = false;
+      let currentMouseX = 0;
+      
+      scene.onPointerObservable.add((pointerInfo) => {
+        if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE) {
+          mouseMoved = true;
+          currentMouseX = pointerInfo.event.clientX;
+        }
+      });
+
+      // Créer et afficher la page d'accueil, puis afficher le tutoriel une fois terminé
+      const welcomePage = new WelcomePage(() => {
+        setTimeout(() => {
+          tutorial.show();
+        }, 500);
+      });
+      
+      // Afficher la page d'accueil après un court délai
+      setTimeout(() => {
+        welcomePage.show();
+      }, 1000);
+
+      // Stocker la référence au tutoriel dans les métadonnées de la scène pour y accéder depuis les contrôles
+      scene.metadata.tutorial = tutorial;
+      
       const mapBounds = {
         minX: -90,
         maxX: 90,
@@ -237,15 +266,23 @@ const initBabylon = async () => {
         scene.render();
         player.handleShooting(animations);
         
+        // Mettre à jour le tutoriel
+        if (tutorial.isVisible) {
+          tutorial.update(controls.inputMap, mouseMoved, player.isShooting, currentMouseX);
+          
+          // Réinitialiser le flag mouseMoved après chaque frame
+          mouseMoved = false;
+        }
+        
         if (player.hero && levelManager) {
           levelManager.checkProximity(player.hero.position);
         }
         if (player.hero) {
-            miniMap.updatePlayerPosition(player.hero.position, player.hero.rotation.y, mapBounds);
-            compass.update(player.hero.rotation.y);
+          miniMap.updatePlayerPosition(player.hero.position, player.hero.rotation.y, mapBounds);
+          compass.update(player.hero.rotation.y);
         }
         if (levelManager.currentLevel === 2) {
-            miniMap.updateBananaMarkers(levelManager.levels[2].bananas, mapBounds);
+          miniMap.updateBananaMarkers(levelManager.levels[2].bananas, mapBounds);
         }
         
         // Mettre à jour directement le FPS avec la valeur du moteur

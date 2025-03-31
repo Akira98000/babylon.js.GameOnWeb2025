@@ -145,6 +145,9 @@ export const createPlayer = async (scene, camera, canvas) => {
     return {
         hero,
         handleShooting,
-        executeShot
+        executeShot,
+        get isShooting() {
+            return isShooting;
+        }
     };
 };
