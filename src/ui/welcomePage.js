@@ -13,6 +13,11 @@ export class WelcomePage {
                 title: "Prêt à jouer ?",
                 text: "Collectez des objets, découvrez des easter eggs et explorez le monde qui vous entoure. Des PNJ seront là pour vous aider dans votre aventure.",
                 image: "/image/banana.png"
+            },
+            {
+                title: "Manette PS4 supportée !",
+                text: "Connectez votre manette PS4 pour jouer ! Utilisez le joystick gauche pour vous déplacer, le joystick droit pour regarder autour de vous. Appuyez sur X, R1 ou R2 pour tirer et Triangle pour danser.",
+                image: "/image/controller.svg" 
             }
         ];
         this._createUI();
@@ -38,37 +43,31 @@ export class WelcomePage {
             backdropFilter: 'blur(5px)'
         });
 
-        // Conteneur central responsive
         const centerContainer = document.createElement('div');
         Object.assign(centerContainer.style, {
             width: '90%',
-            maxWidth: '600px', // Réduit de 800px à 600px
+            maxWidth: '600px', 
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: 'clamp(15px, 3vw, 25px)', // Padding responsive
+            padding: 'clamp(15px, 3vw, 25px)', 
             boxSizing: 'border-box',
             position: 'relative',
             borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
-            maxHeight: '80vh', // Empêche de dépasser 80% de la hauteur de l'écran
-            overflowY: 'auto' // Permet de scroller si contenu trop grand
+            maxHeight: '80vh', 
         });
 
-        // Section de contenu
         const contentBox = document.createElement('div');
         Object.assign(contentBox.style, {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            padding: 'clamp(10px, 2vw, 20px)', // Padding responsive
+            padding: 'clamp(10px, 2vw, 20px)', 
             borderRadius: '8px',
             marginBottom: '15px',
             width: '100%'
         });
 
-        // Titre secondaire
         const subTitleElement = document.createElement('h2');
         Object.assign(subTitleElement.style, {
-            fontSize: 'clamp(1.3rem, 3vw, 1.6rem)', // Taille responsive
+            fontSize: 'clamp(1.3rem, 3vw, 1.6rem)', 
             marginBottom: '10px',
             fontWeight: 'bold',
             textAlign: 'center'
@@ -78,7 +77,7 @@ export class WelcomePage {
         // Texte descriptif
         const textElement = document.createElement('p');
         Object.assign(textElement.style, {
-            fontSize: 'clamp(0.9rem, 2vw, 1rem)', // Taille responsive
+            fontSize: 'clamp(0.9rem, 2vw, 1rem)', 
             lineHeight: '1.4',
             marginBottom: '15px',
             color: 'rgba(255, 255, 255, 0.8)'
@@ -90,7 +89,7 @@ export class WelcomePage {
         Object.assign(imageElement.style, {
             width: '100%',
             height: 'auto',
-            maxHeight: '200px', // Réduit de 300px à 200px
+            maxHeight: '200px', 
             objectFit: 'cover',
             borderRadius: '6px',
             display: 'block',
@@ -99,16 +98,15 @@ export class WelcomePage {
         });
         this.imageElement = imageElement;
 
-        // Bouton de navigation principal
         const continueButton = document.createElement('button');
         continueButton.textContent = 'Commencer';
         Object.assign(continueButton.style, {
             backgroundColor: 'rgba(100, 100, 100, 0.3)',
             color: 'white',
             border: 'none',
-            padding: 'clamp(10px, 2vw, 15px) clamp(15px, 3vw, 30px)', // Padding responsive
-            width: 'clamp(180px, 50%, 250px)', // Largeur responsive
-            fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', // Taille responsive
+            padding: 'clamp(10px, 2vw, 15px) clamp(15px, 3vw, 30px)',
+            width: 'clamp(180px, 50%, 250px)', 
+            fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', 
             fontWeight: 'bold',
             borderRadius: '12px',
             cursor: 'pointer',
@@ -135,12 +133,11 @@ export class WelcomePage {
             }
         });
 
-        // Indicateurs de page (petits points)
         const pageIndicators = document.createElement('div');
         Object.assign(pageIndicators.style, {
             display: 'flex',
             justifyContent: 'center',
-            gap: '6px', // Réduit de 8px à 6px
+            gap: '6px', 
             marginTop: '15px'
         });
 
@@ -148,8 +145,8 @@ export class WelcomePage {
         for (let i = 0; i < this.pages.length; i++) {
             const indicator = document.createElement('div');
             Object.assign(indicator.style, {
-                width: '8px', // Réduit de 10px à 8px
-                height: '8px', // Réduit de 10px à 8px
+                width: '8px', 
+                height: '8px',
                 borderRadius: '50%',
                 backgroundColor: i === 0 ? '#86a8e7' : 'rgba(255, 255, 255, 0.3)',
                 transition: 'background-color 0.3s'
@@ -158,12 +155,11 @@ export class WelcomePage {
             pageIndicators.appendChild(indicator);
         }
 
-        // Copyright
         const copyright = document.createElement('div');
         copyright.textContent = '© Team BabyGame - UnicA';
         Object.assign(copyright.style, {
             color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: 'clamp(0.7rem, 1.5vw, 0.9rem)', // Taille responsive
+            fontSize: 'clamp(0.7rem, 1.5vw, 0.9rem)', 
             marginTop: '15px'
         });
 
@@ -175,38 +171,29 @@ export class WelcomePage {
         centerContainer.appendChild(continueButton);
         centerContainer.appendChild(pageIndicators);
         centerContainer.appendChild(copyright);
-
         this.welcomeContainer.appendChild(centerContainer);
         document.body.appendChild(this.welcomeContainer);
-
-        // Stocker le bouton pour pouvoir mettre à jour son texte
         this.continueButton = continueButton;
-
-        // Initialisation du contenu
         this.updateContent();
 
-        // Adaptation supplémentaire pour petits écrans
         const mediaQuery = window.matchMedia('(max-height: 600px)');
         const handleScreenSizeChange = (e) => {
             if (e.matches) {
-                // Petits écrans
                 centerContainer.style.maxHeight = '90vh';
                 imageElement.style.maxHeight = '150px';
             } else {
-                // Écrans normaux
                 centerContainer.style.maxHeight = '80vh';
                 imageElement.style.maxHeight = '200px';
             }
         };
         mediaQuery.addEventListener('change', handleScreenSizeChange);
-        handleScreenSizeChange(mediaQuery); // Appliquer immédiatement
+        handleScreenSizeChange(mediaQuery); 
     }
 
     updateContent() {
         const page = this.pages[this.currentPage];
         const isLastPage = this.currentPage === this.pages.length - 1;
         
-        // Animation d'apparition
         this.subTitleElement.style.opacity = "0";
         this.textElement.style.opacity = "0";
         this.imageElement.style.opacity = "0";
@@ -215,11 +202,8 @@ export class WelcomePage {
             this.subTitleElement.textContent = page.title;
             this.textElement.textContent = page.text;
             this.imageElement.src = page.image;
-            
-            // Mettre à jour le texte du bouton pour le dernier écran
             this.continueButton.textContent = isLastPage ? "Commencer l'aventure" : "Suivant";
             
-            // Mettre à jour les indicateurs de page
             for (let i = 0; i < this.pageIndicators.length; i++) {
                 this.pageIndicators[i].style.backgroundColor = 
                     i === this.currentPage ? '#86a8e7' : 'rgba(255, 255, 255, 0.3)';

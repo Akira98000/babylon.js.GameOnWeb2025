@@ -263,36 +263,53 @@ export class Level3 {
         container.style.flexDirection = "column";
         container.style.justifyContent = "center";
         container.style.alignItems = "center";
+        container.style.backdropFilter = "blur(5px)";
+        container.style.transition = "opacity 0.5s ease";
         
         // Créer l'élément de texte
         const textElement = document.createElement("div");
         textElement.innerHTML = text;
         textElement.style.color = "white";
-        textElement.style.fontFamily = "Arial, sans-serif";
+        textElement.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
         textElement.style.fontSize = "28px";
         textElement.style.textAlign = "center";
         textElement.style.maxWidth = "80%";
         textElement.style.padding = "30px";
         textElement.style.margin = "0 auto";
         textElement.style.marginBottom = "40px";
+        textElement.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+        textElement.style.borderRadius = "10px";
+        textElement.style.border = "1px solid rgba(255, 255, 255, 0.1)";
+        textElement.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.5)";
+        textElement.style.letterSpacing = "0.5px";
+        textElement.style.lineHeight = "1.5";
         
         const okButton = document.createElement("button");
         okButton.textContent = "OK";
-        okButton.style.padding = "10px 30px";
+        okButton.style.padding = "12px 35px";
         okButton.style.fontSize = "20px";
-        okButton.style.backgroundColor = "#4CAF50";
+        okButton.style.backgroundColor = "#4a90e2";
         okButton.style.color = "white";
         okButton.style.border = "none";
         okButton.style.borderRadius = "5px";
         okButton.style.cursor = "pointer";
         okButton.style.marginTop = "30px";
-        okButton.style.display = "none"; 
+        okButton.style.display = "none";
+        okButton.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        okButton.style.fontWeight = "bold";
+        okButton.style.letterSpacing = "1px";
+        okButton.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
+        okButton.style.transition = "all 0.2s ease";
         
         okButton.onmouseover = function() {
-            this.style.backgroundColor = "#45a049";
+            this.style.backgroundColor = "#3a7bc8";
+            this.style.transform = "translateY(-2px)";
+            this.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.4)";
         };
         okButton.onmouseout = function() {
-            this.style.backgroundColor = "#4CAF50";
+            this.style.backgroundColor = "#4a90e2";
+            this.style.transform = "translateY(0)";
+            this.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.3)";
         };
         
         okButton.onclick = () => {
@@ -306,6 +323,22 @@ export class Level3 {
         
         container.textElement = textElement;
         container.okButton = okButton;
+        
+        // Ajouter animation d'apparition
+        if (!document.getElementById("storyMessageStyles")) {
+            const style = document.createElement("style");
+            style.id = "storyMessageStyles";
+            style.textContent = `
+                @keyframes fadeInScale {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to { opacity: 1; transform: scale(1); }
+                }
+                #${id} > div {
+                    animation: fadeInScale 0.8s ease-out;
+                }
+            `;
+            document.head.appendChild(style);
+        }
         
         return container;
     }

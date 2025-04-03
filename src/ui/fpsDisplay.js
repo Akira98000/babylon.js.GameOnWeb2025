@@ -109,12 +109,61 @@ export function setupHUD() {
         margin: "0 5px"
     });
     hudContainer.insertBefore(separator, pingContainer);
+    
+    // Indicateur de manette
+    const gamepadContainer = document.createElement("div");
+    Object.assign(gamepadContainer.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+    });
+    
+    const gamepadIcon = document.createElement("div");
+    gamepadIcon.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.5,7 L17.5,11 L15.5,11 L15.5,13 L13.5,13 L13.5,11 L11.5,11 L11.5,13 L9.5,13 L9.5,11 L7.5,11 L7.5,7 C7.5,5.9 8.4,5 9.5,5 L15.5,5 C16.6,5 17.5,5.9 17.5,7 Z M22,9 L22,15 C22,16.66 20.66,18 19,18 C18.07,18 17.22,17.59 16.63,16.92 L15.15,15 L9.85,15 L8.37,16.92 C7.78,17.59 6.93,18 6,18 C4.34,18 3,16.66 3,15 L3,9 C3,7.34 4.34,6 6,6 C6.93,6 7.78,6.41 8.37,7.08 L9.85,9 L15.15,9 L16.63,7.08 C17.22,6.41 18.07,6 19,6 C20.66,6 22,7.34 22,9 Z M5,10 L4,10 L4,12 L2,12 L2,13 L4,13 L4,15 L5,15 L5,13 L7,13 L7,12 L5,12 L5,10 Z M19,10 C18.45,10 18,10.45 18,11 C18,11.55 18.45,12 19,12 C19.55,12 20,11.55 20,11 C20,10.45 19.55,10 19,10 Z M19,8 C18.45,8 18,8.45 18,9 C18,9.55 18.45,10 19,10 C19.55,10 20,9.55 20,9 C20,8.45 19.55,8 19,8 Z" fill="rgba(255, 255, 255, 0.7)"/>
+    </svg>`;
+    Object.assign(gamepadIcon.style, {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "16px",
+        height: "16px",
+        minWidth: "16px",
+        position: "relative",
+        overflow: "visible",
+        opacity: "0.5"
+    });
+    gamepadContainer.appendChild(gamepadIcon);
+    
+    const gamepadStatus = document.createElement("div");
+    gamepadStatus.id = "gamepad-status";
+    gamepadStatus.textContent = "Aucune manette";
+    Object.assign(gamepadStatus.style, {
+        fontWeight: "bold",
+        minWidth: "70px",
+        color: "rgba(255, 255, 255, 0.5)"
+    });
+    gamepadContainer.appendChild(gamepadStatus);
+    
+    const gamepadSeparator = document.createElement("div");
+    Object.assign(gamepadSeparator.style, {
+        width: "1px",
+        height: "15px",
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+        margin: "0 5px"
+    });
+    
+    // Ajouter l'indicateur de manette au HUD
+    hudContainer.appendChild(gamepadSeparator);
+    hudContainer.appendChild(gamepadContainer);
 
     document.body.appendChild(hudContainer);
 
     hudContainer.fpsValue = fpsValue;
     hudContainer.pingValue = pingValue;
     hudContainer.networkBars = Array.from(networkBars.children);
+    hudContainer.gamepadStatus = gamepadStatus;
+    hudContainer.gamepadIcon = gamepadIcon;
 
     hudContainer.updateFPS = function(fps) {
         fpsValue.textContent = `${Math.round(fps)} FPS`;
@@ -166,6 +215,20 @@ export function setupHUD() {
         });
     };
 
+    hudContainer.updateGamepadStatus = function(connected, gamepadName = "") {
+        if (connected) {
+            gamepadStatus.textContent = "Manette PS4";
+            gamepadStatus.style.color = "#7FFF7F";
+            gamepadIcon.querySelector("path").setAttribute("fill", "#7FFF7F");
+            gamepadIcon.style.opacity = "1";
+        } else {
+            gamepadStatus.textContent = "Aucune manette";
+            gamepadStatus.style.color = "rgba(255, 255, 255, 0.5)";
+            gamepadIcon.querySelector("path").setAttribute("fill", "rgba(255, 255, 255, 0.7)");
+            gamepadIcon.style.opacity = "0.5";
+        }
+    };
+
     return hudContainer;
 }
 
@@ -185,11 +248,17 @@ export function initializeHUDUpdates(hud) {
     const pingUpdateInterval = setInterval(() => {
         const ping = getNetworkPing();
         hud.updatePing(ping);
+        
+        // Vérifier l'état de la manette
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const hasGamepad = gamepads && gamepads.some(pad => pad && pad.connected);
+        hud.updateGamepadStatus(hasGamepad);
     }, 2000);
 
     return {
         setFPS: (value) => hud.updateFPS(value),
         setPing: (value) => hud.updatePing(value),
+        setGamepadStatus: (connected, name) => hud.updateGamepadStatus(connected, name),
         stop: () => clearInterval(pingUpdateInterval)
     };
 }
