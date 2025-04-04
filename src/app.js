@@ -11,6 +11,7 @@ import { loadMapParts } from "./scene/mapGestion.js";
 import { initializeAnimations } from "./joueur/animations.js";
 import { createEnvironment } from "./scene/environment.js";
 import { setupControls } from "./evenement/controls.js";
+import { setupTouchControls } from "./evenement/touchControls.js";
 import { LevelManager } from "./levels/levelManager.js";
 import { createMiniMap } from "./ui/miniMap.js"; 
 import { MainMenu } from "./ui/mainMenu.js";
@@ -24,6 +25,20 @@ let mainMenu = null;
 let loadingScreen = null;
 let isGameLoading = false;
 let gameStarted = false;
+
+// Fonction pour détecter les appareils mobiles
+const isMobileDevice = () => {
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+    (window.innerWidth <= 768) || 
+    ('ontouchstart' in window) || 
+    (navigator.maxTouchPoints > 0)
+  );
+};
+
+// Variable globale pour indiquer si on est sur mobile
+const isOnMobile = isMobileDevice();
+console.log("Est sur mobile:", isOnMobile);
 
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
@@ -47,19 +62,28 @@ const initBabylon = async () => {
     }
   });
 
-  mainMenu = new MainMenu(canvas);
-  
-  // Définir la fonction de callback pour le bouton Jouer
-  // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
-  mainMenu.onPlayButtonClicked = () => {
-    // Éviter les démarrages multiples
-    if (isGameLoading) return;
+  // Si on est sur mobile, on démarre directement le jeu sans passer par le menu
+  if (isOnMobile) {
+    console.log("Appareil mobile détecté: démarrage direct du jeu");
     isGameLoading = true;
     gameStarted = true;
+    startGame(canvas, engine, true);
+  } else {
+    // Création du menu principal uniquement sur desktop
+    mainMenu = new MainMenu(canvas);
     
-    // Démarrer le jeu
-    startGame(canvas, engine);
-  };
+    // Définir la fonction de callback pour le bouton Jouer
+    // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
+    mainMenu.onPlayButtonClicked = () => {
+      // Éviter les démarrages multiples
+      if (isGameLoading) return;
+      isGameLoading = true;
+      gameStarted = true;
+      
+      // Démarrer le jeu
+      startGame(canvas, engine);
+    };
+  }
 
   // Fonction pour démarrer le jeu
   async function startGame(canvas, engine, skipIntro = false) {
@@ -69,6 +93,7 @@ const initBabylon = async () => {
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
       scene.metadata = {};
+      scene.metadata.isMobile = isOnMobile; // Ajouter l'info mobile aux métadonnées
       
       // Créer un écran de chargement indépendant si nécessaire
       // (dans notre cas, il est déjà géré par le menu principal)
@@ -202,6 +227,27 @@ const initBabylon = async () => {
       const controls = setupControls(scene, player.hero, animations, camera, canvas);
       scene.metadata.controls = controls;
       
+      // Configurer les contrôles tactiles si on est sur mobile
+      let touchControls = null;
+      if (isOnMobile) {
+        touchControls = setupTouchControls(scene, canvas);
+        scene.metadata.touchControls = touchControls;
+        
+        // Fusionner les inputs du tactile et du clavier
+        const originalInputMap = controls.inputMap;
+        const touchInputMap = touchControls.getInputMap();
+        
+        // Wrapper l'inputMap pour combiner les deux sources d'input
+        const combinedInputMap = new Proxy({}, {
+          get: function(target, prop) {
+            return originalInputMap[prop] || touchInputMap[prop] || false;
+          }
+        });
+        
+        // Remplacer l'inputMap original par le combiné
+        controls.inputMap = combinedInputMap;
+      }
+      
       // Stocker la référence au player pour permettre aux contrôles mobiles d'y accéder
       scene.metadata.player = player;
       
@@ -266,9 +312,9 @@ const initBabylon = async () => {
         }
       });
 
-      // Si on est en mode développement avec raccourci, on skip le tutoriel
-      if (skipIntro) {
-        console.log("Mode développement: skip du tutoriel et de la page d'accueil");
+      // Si on est en mode développement avec raccourci ou sur mobile, on skip le tutoriel
+      if (skipIntro || isOnMobile) {
+        console.log("Mode développement ou mobile: skip du tutoriel et de la page d'accueil");
         // Marquer le tutoriel comme complété pour éviter qu'il ne s'affiche
         tutorial.isCompleted = true;
       } else {
@@ -283,6 +329,40 @@ const initBabylon = async () => {
         setTimeout(() => {
           welcomePage.show();
         }, 1000);
+      }
+
+      // Ajouter la prise en charge des écrans tactiles pour le jeu
+      if (isOnMobile) {
+        // Gérer les clics/touches sur l'écran pour tirer
+        canvas.addEventListener('touchstart', (event) => {
+          event.preventDefault(); // Empêche le double-clic sur mobile
+          
+          // Si le tutoriel est visible et attend un appui sur espace, on simule cet appui
+          if (tutorial.isVisible && (tutorial.currentStep === 4 || tutorial.currentStep === 6)) {
+            // Simuler l'appui sur espace
+            controls.inputMap[" "] = true;
+            controls.inputMap["space"] = true;
+            
+            // Réinitialiser l'état après un court délai
+            setTimeout(() => {
+              controls.inputMap[" "] = false;
+              controls.inputMap["space"] = false;
+            }, 100);
+          }
+          
+          // Continuer avec le tir
+          if (isActionAllowed('shoot')) {
+            scene.metadata.executeShot?.(player.hero.position, camera.getForwardRay().direction);
+          }
+        });
+
+        // Fonction auxiliaire pour vérifier si une action est autorisée
+        function isActionAllowed(action) {
+          if (scene.metadata.tutorial && scene.metadata.tutorial.isVisible) {
+            return scene.metadata.tutorial.isActionAllowed(action);
+          }
+          return true;
+        }
       }
 
       // Stocker la référence au tutoriel dans les métadonnées de la scène pour y accéder depuis les contrôles
