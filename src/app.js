@@ -11,7 +11,6 @@ import { loadMapParts } from "./scene/mapGestion.js";
 import { initializeAnimations } from "./joueur/animations.js";
 import { createEnvironment } from "./scene/environment.js";
 import { setupControls } from "./evenement/controls.js";
-import { setupTouchControls } from "./evenement/touchControls.js";
 import { LevelManager } from "./levels/levelManager.js";
 import { createMiniMap } from "./ui/miniMap.js"; 
 import { MainMenu } from "./ui/mainMenu.js";
@@ -26,19 +25,6 @@ let loadingScreen = null;
 let isGameLoading = false;
 let gameStarted = false;
 
-// Fonction pour détecter les appareils mobiles
-const isMobileDevice = () => {
-  return (
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-    (window.innerWidth <= 768) || 
-    ('ontouchstart' in window) || 
-    (navigator.maxTouchPoints > 0)
-  );
-};
-
-const isOnMobile = isMobileDevice();
-console.log("Est sur mobile:", isOnMobile);
-
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
   const engine = new BABYLON.Engine(canvas, true, {
@@ -46,6 +32,7 @@ const initBabylon = async () => {
     adaptToDeviceRatio: true,
   });
 
+  // Ajouter un gestionnaire d'événements pour la touche "-" afin de sauter directement au jeu
   window.addEventListener('keydown', (event) => {
     if (event.key === '-' && !gameStarted) {
       console.log("Mode développement activé: démarrage rapide du jeu");
@@ -60,30 +47,19 @@ const initBabylon = async () => {
     }
   });
 
-  if (isOnMobile) {
-    console.log("Appareil mobile détecté: démarrage direct du jeu");
+  mainMenu = new MainMenu(canvas);
+  
+  // Définir la fonction de callback pour le bouton Jouer
+  // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
+  mainMenu.onPlayButtonClicked = () => {
+    // Éviter les démarrages multiples
+    if (isGameLoading) return;
     isGameLoading = true;
     gameStarted = true;
-    // Créer un écran de chargement même pour les appareils mobiles
-    loadingScreen = new LoadingScreen();
-    document.body.appendChild(loadingScreen.getElement());
-    startGame(canvas, engine, true);
-  } else {
-    // Création du menu principal uniquement sur desktop
-    mainMenu = new MainMenu(canvas);
     
-    // Définir la fonction de callback pour le bouton Jouer
-    // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
-    mainMenu.onPlayButtonClicked = () => {
-      // Éviter les démarrages multiples
-      if (isGameLoading) return;
-      isGameLoading = true;
-      gameStarted = true;
-      
-      // Démarrer le jeu
-      startGame(canvas, engine);
-    };
-  }
+    // Démarrer le jeu
+    startGame(canvas, engine);
+  };
 
   // Fonction pour démarrer le jeu
   async function startGame(canvas, engine, skipIntro = false) {
@@ -93,7 +69,6 @@ const initBabylon = async () => {
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
       scene.metadata = {};
-      scene.metadata.isMobile = isOnMobile; // Ajouter l'info mobile aux métadonnées
       
       // Créer un écran de chargement indépendant si nécessaire
       // (dans notre cas, il est déjà géré par le menu principal)
@@ -165,12 +140,6 @@ const initBabylon = async () => {
               (completedWeight / totalWeight) * 100,
               task.description
             );
-          } else if (loadingScreen && skipIntro) {
-            // Utiliser l'écran de chargement indépendant pour mobile
-            loadingScreen.updateProgress(
-              (completedWeight / totalWeight) * 100,
-              task.description
-            );
           }
           
           // Pour la tâche du joueur, nous avons besoin de la caméra
@@ -199,14 +168,6 @@ const initBabylon = async () => {
                 ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
                 : "Finalisation..."
             );
-          } else if (loadingScreen && skipIntro) {
-            // Utiliser l'écran de chargement indépendant pour mobile
-            loadingScreen.updateProgress(
-              progress,
-              i < loadingTasks.length - 1 
-                ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
-                : "Finalisation..."
-            );
           }
           
           // Petite pause pour permettre à l'interface de se mettre à jour
@@ -223,11 +184,6 @@ const initBabylon = async () => {
               (completedWeight / totalWeight) * 100,
               `Erreur: ${task.name} - Tentative de continuer...`
             );
-          } else if (loadingScreen && skipIntro) {
-            loadingScreen.updateProgress(
-              (completedWeight / totalWeight) * 100,
-              `Erreur: ${task.name} - Tentative de continuer...`
-            );
           }
           
           // Pause avant de continuer
@@ -240,41 +196,11 @@ const initBabylon = async () => {
       // Afficher un message de finalisation
       if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
         mainMenu.loadingScreen.updateProgress(100, "Démarrage du jeu...");
-      } else if (loadingScreen && skipIntro) {
-        loadingScreen.updateProgress(100, "Démarrage du jeu...");
-        // Supprimer l'écran de chargement après un court délai
-        setTimeout(() => {
-          if (loadingScreen) {
-            loadingScreen.hide();
-            loadingScreen = null;
-          }
-        }, 1000);
       }
       
       // Configurer les contrôles après avoir chargé le joueur et les animations
       const controls = setupControls(scene, player.hero, animations, camera, canvas);
       scene.metadata.controls = controls;
-      
-      // Configurer les contrôles tactiles si on est sur mobile
-      let touchControls = null;
-      if (isOnMobile) {
-        touchControls = setupTouchControls(scene, canvas);
-        scene.metadata.touchControls = touchControls;
-        
-        // Fusionner les inputs du tactile et du clavier
-        const originalInputMap = controls.inputMap;
-        const touchInputMap = touchControls.getInputMap();
-        
-        // Wrapper l'inputMap pour combiner les deux sources d'input
-        const combinedInputMap = new Proxy({}, {
-          get: function(target, prop) {
-            return originalInputMap[prop] || touchInputMap[prop] || false;
-          }
-        });
-        
-        // Remplacer l'inputMap original par le combiné
-        controls.inputMap = combinedInputMap;
-      }
       
       // Stocker la référence au player pour permettre aux contrôles mobiles d'y accéder
       scene.metadata.player = player;
@@ -340,9 +266,9 @@ const initBabylon = async () => {
         }
       });
 
-      // Si on est en mode développement avec raccourci ou sur mobile, on skip le tutoriel
-      if (skipIntro || isOnMobile) {
-        console.log("Mode développement ou mobile: skip du tutoriel et de la page d'accueil");
+      // Si on est en mode développement avec raccourci, on skip le tutoriel
+      if (skipIntro) {
+        console.log("Mode développement: skip du tutoriel et de la page d'accueil");
         // Marquer le tutoriel comme complété pour éviter qu'il ne s'affiche
         tutorial.isCompleted = true;
       } else {
@@ -357,40 +283,6 @@ const initBabylon = async () => {
         setTimeout(() => {
           welcomePage.show();
         }, 1000);
-      }
-
-      // Ajouter la prise en charge des écrans tactiles pour le jeu
-      if (isOnMobile) {
-        // Gérer les clics/touches sur l'écran pour tirer
-        canvas.addEventListener('touchstart', (event) => {
-          event.preventDefault(); // Empêche le double-clic sur mobile
-          
-          // Si le tutoriel est visible et attend un appui sur espace, on simule cet appui
-          if (tutorial.isVisible && (tutorial.currentStep === 4 || tutorial.currentStep === 6)) {
-            // Simuler l'appui sur espace
-            controls.inputMap[" "] = true;
-            controls.inputMap["space"] = true;
-            
-            // Réinitialiser l'état après un court délai
-            setTimeout(() => {
-              controls.inputMap[" "] = false;
-              controls.inputMap["space"] = false;
-            }, 100);
-          }
-          
-          // Continuer avec le tir
-          if (isActionAllowed('shoot')) {
-            scene.metadata.executeShot?.(player.hero.position, camera.getForwardRay().direction);
-          }
-        });
-
-        // Fonction auxiliaire pour vérifier si une action est autorisée
-        function isActionAllowed(action) {
-          if (scene.metadata.tutorial && scene.metadata.tutorial.isVisible) {
-            return scene.metadata.tutorial.isActionAllowed(action);
-          }
-          return true;
-        }
       }
 
       // Stocker la référence au tutoriel dans les métadonnées de la scène pour y accéder depuis les contrôles
