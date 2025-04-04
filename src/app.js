@@ -36,7 +36,6 @@ const isMobileDevice = () => {
   );
 };
 
-// Variable globale pour indiquer si on est sur mobile
 const isOnMobile = isMobileDevice();
 console.log("Est sur mobile:", isOnMobile);
 
@@ -47,7 +46,6 @@ const initBabylon = async () => {
     adaptToDeviceRatio: true,
   });
 
-  // Ajouter un gestionnaire d'événements pour la touche "-" afin de sauter directement au jeu
   window.addEventListener('keydown', (event) => {
     if (event.key === '-' && !gameStarted) {
       console.log("Mode développement activé: démarrage rapide du jeu");
@@ -62,11 +60,13 @@ const initBabylon = async () => {
     }
   });
 
-  // Si on est sur mobile, on démarre directement le jeu sans passer par le menu
   if (isOnMobile) {
     console.log("Appareil mobile détecté: démarrage direct du jeu");
     isGameLoading = true;
     gameStarted = true;
+    // Créer un écran de chargement même pour les appareils mobiles
+    loadingScreen = new LoadingScreen();
+    document.body.appendChild(loadingScreen.getElement());
     startGame(canvas, engine, true);
   } else {
     // Création du menu principal uniquement sur desktop
@@ -165,6 +165,12 @@ const initBabylon = async () => {
               (completedWeight / totalWeight) * 100,
               task.description
             );
+          } else if (loadingScreen && skipIntro) {
+            // Utiliser l'écran de chargement indépendant pour mobile
+            loadingScreen.updateProgress(
+              (completedWeight / totalWeight) * 100,
+              task.description
+            );
           }
           
           // Pour la tâche du joueur, nous avons besoin de la caméra
@@ -193,6 +199,14 @@ const initBabylon = async () => {
                 ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
                 : "Finalisation..."
             );
+          } else if (loadingScreen && skipIntro) {
+            // Utiliser l'écran de chargement indépendant pour mobile
+            loadingScreen.updateProgress(
+              progress,
+              i < loadingTasks.length - 1 
+                ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
+                : "Finalisation..."
+            );
           }
           
           // Petite pause pour permettre à l'interface de se mettre à jour
@@ -209,6 +223,11 @@ const initBabylon = async () => {
               (completedWeight / totalWeight) * 100,
               `Erreur: ${task.name} - Tentative de continuer...`
             );
+          } else if (loadingScreen && skipIntro) {
+            loadingScreen.updateProgress(
+              (completedWeight / totalWeight) * 100,
+              `Erreur: ${task.name} - Tentative de continuer...`
+            );
           }
           
           // Pause avant de continuer
@@ -221,6 +240,15 @@ const initBabylon = async () => {
       // Afficher un message de finalisation
       if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
         mainMenu.loadingScreen.updateProgress(100, "Démarrage du jeu...");
+      } else if (loadingScreen && skipIntro) {
+        loadingScreen.updateProgress(100, "Démarrage du jeu...");
+        // Supprimer l'écran de chargement après un court délai
+        setTimeout(() => {
+          if (loadingScreen) {
+            loadingScreen.hide();
+            loadingScreen = null;
+          }
+        }, 1000);
       }
       
       // Configurer les contrôles après avoir chargé le joueur et les animations
