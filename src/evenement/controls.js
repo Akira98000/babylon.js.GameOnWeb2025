@@ -6,6 +6,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     scene.actionManager = new BABYLON.ActionManager(scene);
 
     const heroBaseSpeed = 0.12;
+    const heroStrafeSpeed = 0.08; 
     const targetFPS = 60;
     const rotationSensitivity = 0.005;
     const shootAnimationDuration = GAME_CONFIG.ANIMATIONS?.SHOOT?.DURATION || 300;
@@ -149,24 +150,27 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         // Direction latérale perpendiculaire à la direction d'avancement
         const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
         
-        let moveDirection = BABYLON.Vector3.Zero();
+        let forwardMovement = BABYLON.Vector3.Zero();
+        let strafeMovement = BABYLON.Vector3.Zero();
 
         // Mouvement en avant/arrière sans changer la rotation du personnage
-        if (inputMap["z"] && isActionAllowed('moveForward')) moveDirection.subtractInPlace(forward);
-        if (inputMap["s"] && isActionAllowed('moveBackward')) moveDirection.addInPlace(forward);
+        if (inputMap["z"] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
+        if (inputMap["s"] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
         
         // Mouvement latéral (strafe) sans changer la rotation du personnage
-        if (inputMap["d"] && isActionAllowed('moveRight')) moveDirection.subtractInPlace(right);
-        if (inputMap["q"] && isActionAllowed('moveLeft')) moveDirection.addInPlace(right);
+        if (inputMap["d"] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
+        if (inputMap["q"] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
 
         const now = Date.now();
         const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
             now - lastShootTime < shootAnimationDuration;
 
-        if (moveDirection.length() > 0 && !animating && !isShooting) {
+        const isMoving = forwardMovement.length() > 0 || strafeMovement.length() > 0;
+
+        if (isMoving && !animating && !isShooting) {
             animating = true;
             changeAnimation(animations.walkAnim);
-        } else if (moveDirection.length() === 0 && animating && !isShooting && !sambaAnimating) {
+        } else if (!isMoving && animating && !isShooting && !sambaAnimating) {
             animating = false;
             changeAnimation(animations.idleAnim);
         }
@@ -186,28 +190,41 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
             
             let moveDirection = BABYLON.Vector3.Zero();
+            let forwardMovement = BABYLON.Vector3.Zero();
+            let strafeMovement = BABYLON.Vector3.Zero();
 
             // Mouvement en avant/arrière sans changer la rotation du personnage
-            if (inputMap["z"] && isActionAllowed('moveForward')) moveDirection.subtractInPlace(forward);
-            if (inputMap["s"] && isActionAllowed('moveBackward')) moveDirection.addInPlace(forward);
+            if (inputMap["z"] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
+            if (inputMap["s"] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
             
             // Mouvement latéral (strafe) sans changer la rotation du personnage
-            if (inputMap["d"] && isActionAllowed('moveRight')) moveDirection.subtractInPlace(right);
-            if (inputMap["q"] && isActionAllowed('moveLeft')) moveDirection.addInPlace(right);
+            if (inputMap["d"] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
+            if (inputMap["q"] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
 
             const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
                 now - lastShootTime < shootAnimationDuration;
 
-            if (moveDirection.length() > 0) {
-                moveDirection.normalize();
+            if (forwardMovement.length() > 0 || strafeMovement.length() > 0) {
+                // Normaliser les vecteurs de mouvement s'ils ne sont pas nuls
+                if (forwardMovement.length() > 0) {
+                    forwardMovement.normalize();
+                }
+                
+                if (strafeMovement.length() > 0) {
+                    strafeMovement.normalize();
+                }
                 
                 // Calcul de la vitesse ajustée en fonction du taux de rafraîchissement
                 const deltaTime = scene.getEngine().getDeltaTime() / 1000;
                 const fpsRatio = targetFPS * deltaTime;
-                const adjustedSpeed = heroBaseSpeed * fpsRatio;
+                const adjustedForwardSpeed = heroBaseSpeed * fpsRatio;
+                const adjustedStrafeSpeed = heroStrafeSpeed * fpsRatio;
+                
+                // Appliquer les vitesses différentes selon la direction
+                const movement = forwardMovement.scale(adjustedForwardSpeed).add(strafeMovement.scale(adjustedStrafeSpeed));
                 
                 // Déplacement fluide et immédiat sans modifier la rotation
-                hero.moveWithCollisions(moveDirection.scale(adjustedSpeed));
+                hero.moveWithCollisions(movement);
 
                 if (!animating && !isShooting) {
                     animating = true;

@@ -225,29 +225,6 @@ const initBabylon = async () => {
       const compass = setupCompass();
       const tutorial = new Tutorial(scene);
       
-      // Création d'un bouton pour revenir au menu principal
-      const resetButton = document.createElement('button');
-      resetButton.id = 'resetMenuButton';
-      resetButton.textContent = 'Menu Principal';
-      resetButton.style.position = 'absolute';
-      resetButton.style.top = '10px';
-      resetButton.style.right = '10px';
-      resetButton.style.padding = '8px 12px';
-      resetButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-      resetButton.style.color = 'white';
-      resetButton.style.border = '1px solid #fff';
-      resetButton.style.borderRadius = '4px';
-      resetButton.style.cursor = 'pointer';
-      resetButton.style.zIndex = '1000';
-      resetButton.style.fontSize = '14px';
-      resetButton.style.fontFamily = 'Arial, sans-serif';
-      document.body.appendChild(resetButton);
-      
-      resetButton.addEventListener('click', () => {
-        localStorage.removeItem('gameStarted');
-        alert('Retour au menu principal. La page va se recharger.');
-        window.location.reload();
-      });
       
       // Variables pour le tutoriel
       let mouseMoved = false;

@@ -16,17 +16,14 @@ export const createPlayer = async (scene, camera, canvas) => {
     hero.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0);
     hero.applyGravity = true;
     hero.isPickable = false;
+    hero.renderingGroupId = 1; 
     
-    // Optimisation pour des animations plus fluides
-    hero.renderingGroupId = 1; // Prioriser le rendu du héros
-    
-    // Appliquer un matériau avancé pour de meilleures performances
     for (let child of heroResult.meshes) {
         if (child.material) {
-            child.material.freeze(); // Optimisation des performances
+            child.material.freeze(); 
         }
     }
-
+    
     const groundOffset = new BABYLON.Vector3(0, hero.ellipsoid.y, 0);
     const groundRayLength = hero.ellipsoid.y + 0.1;
     const shootOffset = new BABYLON.Vector3(0, 1.5, 0);
