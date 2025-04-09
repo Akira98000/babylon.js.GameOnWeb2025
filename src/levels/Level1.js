@@ -6,34 +6,23 @@ export class Level1 {
         this.isCompleted = false;
         this.isPlayerNearDog = false;
         this.playerIsMoving = false;
-        this.onComplete = null; // Callback à appeler lorsque le niveau est terminé
+        this.onComplete = null; 
         this.messageElement = this._createMessage("Press 'K' to adopt the dog", "proximityMessage");
         this.keyHandler = this._handleKeyPress.bind(this);
     }
 
     async init() {
         if (this.dog) return;
-        const dogResult = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'dog.glb', this.scene);
+        const dogResult = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'Dogtest.glb', this.scene);
         this.dog = dogResult.meshes[0];
         this.dog.name = 'levelDog';
-        this.dog.scaling.set(0.4, 0.4, 0.4);
+        this.dog.scaling.set(0.9,0.9,0.9);
         this.dog.position.set(-60, 0, -10);
-
-        // Chargement et lancement des animations
         this.dogAnimations = this._getDogAnimations();
         this._tryStartAnimation(this.dogAnimations.idle);
-
-        // Définition de la zone de proximité
         this.proximityArea = this._createProximityArea(this.dog.position);
-
-        // Gestion du clavier
         window.addEventListener("keydown", this.keyHandler);
-
-        // Indicateur de position du chien
         this._createDogPointer();
-        
-
-        // Vérification des animations après le chargement
         if (!this.dogAnimations.idle || !this.dogAnimations.walk) {
             setTimeout(() => {
                 this.dogAnimations = this._getDogAnimations();
@@ -44,8 +33,8 @@ export class Level1 {
 
     _getDogAnimations() {
         return {
-            idle: this.scene.getAnimationGroupByName("AnimalArmature|Idle_Eating"),
-            walk: this.scene.getAnimationGroupByName("AnimalArmature|Walk")
+            idle: this.scene.getAnimationGroupByName("Idle_2"),
+            walk: this.scene.getAnimationGroupByName("Run")
         };
     }
 
@@ -81,10 +70,11 @@ export class Level1 {
                 if (!this.isCompleted || !this.dog) return;
 
                 const targetPosition = hero.position.clone();
-                const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
-                const right = new BABYLON.Vector3(Math.sin(hero.rotation.y - Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
-                targetPosition.subtractInPlace(forward.scale(1.2));
-                targetPosition.subtractInPlace(right.scale(0.8));
+                // Utiliser uniquement le vecteur "right" pour positionner le chien toujours à droite
+                const right = new BABYLON.Vector3(Math.sin(hero.rotation.y - Math.PI / 2), 0, Math.cos(hero.rotation.y - Math.PI / 2));
+                
+                // Positionner le chien à une distance fixe sur le côté droit
+                targetPosition.addInPlace(right.scale(0.5));
 
                 const isPlayerMoving = this._detectPlayerMovement(hero);
 
@@ -101,7 +91,7 @@ export class Level1 {
                     }
                 }
 
-                this.dog.position = BABYLON.Vector3.Lerp(this.dog.position, targetPosition, 0.06);
+                this.dog.position = BABYLON.Vector3.Lerp(this.dog.position, targetPosition, 0.26);
                 this._rotateDogToHero(hero.rotation.y);
             });
         }
