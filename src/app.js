@@ -18,33 +18,16 @@ import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
 import { Tutorial } from "./ui/tutorial.js";
 import { WelcomePage } from "./ui/welcomePage.js";
-import { GamepadHelp } from "./ui/gamepadHelp.js";
 
 let mainMenu = null;
 let loadingScreen = null;
 let isGameLoading = false;
-let gameStarted = false;
 
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
   const engine = new BABYLON.Engine(canvas, true, {
     limitFPS: 60,
     adaptToDeviceRatio: true,
-  });
-
-  // Ajouter un gestionnaire d'événements pour la touche "-" afin de sauter directement au jeu
-  window.addEventListener('keydown', (event) => {
-    if (event.key === '-' && !gameStarted) {
-      console.log("Mode développement activé: démarrage rapide du jeu");
-      if (mainMenu) {
-        mainMenu.hide();
-      }
-      if (!isGameLoading) {
-        isGameLoading = true;
-        gameStarted = true;
-        startGame(canvas, engine, true);
-      }
-    }
   });
 
   mainMenu = new MainMenu(canvas);
@@ -55,14 +38,13 @@ const initBabylon = async () => {
     // Éviter les démarrages multiples
     if (isGameLoading) return;
     isGameLoading = true;
-    gameStarted = true;
     
     // Démarrer le jeu
     startGame(canvas, engine);
   };
 
   // Fonction pour démarrer le jeu
-  async function startGame(canvas, engine, skipIntro = false) {
+  async function startGame(canvas, engine) {
     try {
       // Initialiser le jeu
       const scene = new BABYLON.Scene(engine);
@@ -135,7 +117,7 @@ const initBabylon = async () => {
         const task = loadingTasks[i];
         try {
           // Mettre à jour le texte de l'étape de chargement
-          if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
+          if (mainMenu && mainMenu.loadingScreen) {
             mainMenu.loadingScreen.updateProgress(
               (completedWeight / totalWeight) * 100,
               task.description
@@ -161,7 +143,7 @@ const initBabylon = async () => {
           const progress = (completedWeight / totalWeight) * 100;
           
           // Mettre à jour la barre de progression
-          if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
+          if (mainMenu && mainMenu.loadingScreen) {
             mainMenu.loadingScreen.updateProgress(
               progress,
               i < loadingTasks.length - 1 
@@ -171,15 +153,13 @@ const initBabylon = async () => {
           }
           
           // Petite pause pour permettre à l'interface de se mettre à jour
-          if (!skipIntro) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+          await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
           console.error(`Erreur lors du chargement de ${task.name}:`, error);
           
           // Afficher l'erreur dans l'écran de chargement
-          if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
+          if (mainMenu && mainMenu.loadingScreen) {
             mainMenu.loadingScreen.updateProgress(
               (completedWeight / totalWeight) * 100,
               `Erreur: ${task.name} - Tentative de continuer...`
@@ -187,14 +167,12 @@ const initBabylon = async () => {
           }
           
           // Pause avant de continuer
-          if (!skipIntro) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
       
       // Afficher un message de finalisation
-      if (mainMenu && mainMenu.loadingScreen && !skipIntro) {
+      if (mainMenu && mainMenu.loadingScreen) {
         mainMenu.loadingScreen.updateProgress(100, "Démarrage du jeu...");
       }
       
@@ -208,52 +186,10 @@ const initBabylon = async () => {
       // Configurer l'interface utilisateur
       const fpsDisplay = setupHUD();
       const hudControls = initializeHUDUpdates(fpsDisplay);
-      
-      // Stocker les références au HUD pour que d'autres composants puissent les utiliser
-      scene.metadata.hudControls = hudControls;
-      
       const instruction = instructions();
       const miniMap = createMiniMap();
       const compass = setupCompass();
       const tutorial = new Tutorial(scene);
-      
-      // Créer l'aide pour les manettes
-      const gamepadHelp = new GamepadHelp();
-      
-      // Créer un bouton pour ouvrir l'aide manette
-      const gamepadHelpButton = document.createElement('button');
-      Object.assign(gamepadHelpButton.style, {
-          position: 'absolute',
-          bottom: '20px',
-          right: '20px',
-          padding: '10px 15px',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-          fontSize: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          zIndex: '1500',
-          boxShadow: '0 2px 5px rgba(0, 0, 0, 0.3)',
-          transition: 'background-color 0.2s'
-      });
-      
-      gamepadHelpButton.innerHTML = '<span style="font-size: 20px;">🎮</span> Aide Manette';
-      gamepadHelpButton.addEventListener('mouseenter', () => {
-          gamepadHelpButton.style.backgroundColor = 'rgba(20, 20, 20, 0.9)';
-      });
-      gamepadHelpButton.addEventListener('mouseleave', () => {
-          gamepadHelpButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-      });
-      gamepadHelpButton.addEventListener('click', () => {
-          gamepadHelp.toggle();
-      });
-      
-      document.body.appendChild(gamepadHelpButton);
       
       // Variables pour le tutoriel
       let mouseMoved = false;
@@ -266,24 +202,17 @@ const initBabylon = async () => {
         }
       });
 
-      // Si on est en mode développement avec raccourci, on skip le tutoriel
-      if (skipIntro) {
-        console.log("Mode développement: skip du tutoriel et de la page d'accueil");
-        // Marquer le tutoriel comme complété pour éviter qu'il ne s'affiche
-        tutorial.isCompleted = true;
-      } else {
-        // Créer et afficher la page d'accueil, puis afficher le tutoriel une fois terminé
-        const welcomePage = new WelcomePage(() => {
-          setTimeout(() => {
-            tutorial.show();
-          }, 500);
-        });
-        
-        // Afficher la page d'accueil après un court délai
+      // Créer et afficher la page d'accueil, puis afficher le tutoriel une fois terminé
+      const welcomePage = new WelcomePage(() => {
         setTimeout(() => {
-          welcomePage.show();
-        }, 1000);
-      }
+          tutorial.show();
+        }, 500);
+      });
+      
+      // Afficher la page d'accueil après un court délai
+      setTimeout(() => {
+        welcomePage.show();
+      }, 1000);
 
       // Stocker la référence au tutoriel dans les métadonnées de la scène pour y accéder depuis les contrôles
       scene.metadata.tutorial = tutorial;
@@ -329,10 +258,6 @@ const initBabylon = async () => {
           } else {
             scene.debugLayer.show();
           }
-        }
-        // Ajouter une touche pour ouvrir l'aide manette (touche G)
-        if (event.key.toLowerCase() === 'g') {
-          gamepadHelp.toggle();
         }
       });
       
