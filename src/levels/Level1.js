@@ -22,7 +22,6 @@ export class Level1 {
         this._tryStartAnimation(this.dogAnimations.idle);
         this.proximityArea = this._createProximityArea(this.dog.position);
         window.addEventListener("keydown", this.keyHandler);
-        this._createDogPointer();
         if (!this.dogAnimations.idle || !this.dogAnimations.walk) {
             setTimeout(() => {
                 this.dogAnimations = this._getDogAnimations();
@@ -63,19 +62,14 @@ export class Level1 {
         this._displayMessage("Level 1 Completed! Dog adopted!", "green", 3000);
         window.removeEventListener("keydown", this.keyHandler);
 
-        // Faire suivre le chien par le héros
         const hero = this.scene.getMeshByName("hero");
         if (hero && this.dog) {
             this.scene.onBeforeRenderObservable.add(() => {
                 if (!this.isCompleted || !this.dog) return;
 
                 const targetPosition = hero.position.clone();
-                // Utiliser uniquement le vecteur "right" pour positionner le chien toujours à droite
                 const right = new BABYLON.Vector3(Math.sin(hero.rotation.y - Math.PI / 2), 0, Math.cos(hero.rotation.y - Math.PI / 2));
-                
-                // Positionner le chien à une distance fixe sur le côté droit
                 targetPosition.addInPlace(right.scale(0.5));
-
                 const isPlayerMoving = this._detectPlayerMovement(hero);
 
                 if (isPlayerMoving !== this.playerIsMoving) {

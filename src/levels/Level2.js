@@ -9,16 +9,14 @@ export class Level2 {
         this.proximityThreshold = 5;
         this._messageElement = this._createMessage("Appuyez sur F pour devenir ami", "bananaProximityMessage");
         this._keyHandler = this._handleKeyDown.bind(this);
-        this.onComplete = null; // Callback à appeler lorsque le niveau est terminé
+        this.onComplete = null; 
     }
 
     async init() {
         const positions = [
             new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(1, 0, 0),
-            new BABYLON.Vector3(2, 0, 0)
-            //new BABYLON.Vector3(-40, 0, -90),
-            //new BABYLON.Vector3(-90, 0, 50)
+            new BABYLON.Vector3(-40, 0, -90),
+            new BABYLON.Vector3(-90, 0, 40)
         ];
         
 

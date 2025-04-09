@@ -23,7 +23,7 @@ export const GAME_CONFIG = {
         LIMITS: {
             BETA: {
                 LOWER: 0.1,
-                UPPER: Math.PI / 2
+                UPPER: Math.PI * 0.9
             },
             RADIUS: {
                 LOWER: 2,
@@ -35,10 +35,10 @@ export const GAME_CONFIG = {
             ANGULAR_Y: 300
         },
         FOLLOW: {
-            POSITION_LERP: 0.2,   // Vitesse de suivi de position (plus élevé = plus réactif) 
-            TARGET_LERP: 0.2,     // Vitesse de suivi de cible (plus élevé = plus réactif)
-            HEIGHT_OFFSET: 2,     // Hauteur de la caméra par rapport au personnage
-            DISTANCE: 6           // Distance derrière le personnage
+            POSITION_LERP: 0.2,  
+            TARGET_LERP: 0.2,    
+            HEIGHT_OFFSET: 2.05,    
+            DISTANCE: 3        
         }
     },
     AUDIO: {
