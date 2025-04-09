@@ -5,7 +5,8 @@ export const GAME_CONFIG = {
     HERO: {
         SCALE: 0.28,
         SPEED: 0.15,
-        SPEED_BACKWARDS: 0.01,
+        SPEED_BACKWARDS: 0.1,
+        SPEED_STRAFE: 0.12,
         ROTATION_SPEED: 0.1,
         ELLIPSOID: {
             SIZE: { x: 0.6, y: 1, z: 0.6 },
@@ -32,6 +33,12 @@ export const GAME_CONFIG = {
         SENSITIVITY: {
             ANGULAR_X: 300,
             ANGULAR_Y: 300
+        },
+        FOLLOW: {
+            POSITION_LERP: 0.2,   // Vitesse de suivi de position (plus élevé = plus réactif) 
+            TARGET_LERP: 0.2,     // Vitesse de suivi de cible (plus élevé = plus réactif)
+            HEIGHT_OFFSET: 2,     // Hauteur de la caméra par rapport au personnage
+            DISTANCE: 6           // Distance derrière le personnage
         }
     },
     AUDIO: {
@@ -50,6 +57,17 @@ export const GAME_CONFIG = {
             LIFETIME: { MIN: 0.02, MAX: 0.06 },
             SIZE: { MIN: 0.05, MAX: 0.15 },
             POWER: { MIN: 0.5, MAX: 1.0 }
+        }
+    },
+    ANIMATIONS: {
+        SHOOT: {
+            DURATION: 300,
+            COOLDOWN: 500,
+            TRANSITION_SPEED: 1.5
+        },
+        MOVEMENT: {
+            TRANSITION_SPEED: 2.0,
+            RESPONSIVENESS: 8 // Valeur en ms pour le throttle des mouvements (plus petite = plus réactive)
         }
     }
 }; 

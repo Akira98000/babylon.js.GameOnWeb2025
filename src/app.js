@@ -26,34 +26,51 @@ let isGameLoading = false;
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
   const engine = new BABYLON.Engine(canvas, true, {
-    limitFPS: 60,
     adaptToDeviceRatio: true,
   });
 
-  mainMenu = new MainMenu(canvas);
+  // Vérifier si le jeu a déjà été démarré
+  const gameStarted = localStorage.getItem('gameStarted');
   
-  // Définir la fonction de callback pour le bouton Jouer
-  // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
-  mainMenu.onPlayButtonClicked = () => {
-    // Éviter les démarrages multiples
-    if (isGameLoading) return;
-    isGameLoading = true;
-    
-    // Démarrer le jeu
+  if (gameStarted === 'true') {
+    // Si le jeu a déjà été démarré, passer directement au chargement
     startGame(canvas, engine);
-  };
+  } else {
+    // Sinon, afficher le menu principal
+    mainMenu = new MainMenu(canvas);
+    
+    // Définir la fonction de callback pour le bouton Jouer
+    // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
+    mainMenu.onPlayButtonClicked = () => {
+      // Éviter les démarrages multiples
+      if (isGameLoading) return;
+      isGameLoading = true;
+      
+      // Stocker dans localStorage que le jeu a été démarré
+      localStorage.setItem('gameStarted', 'true');
+      
+      // Démarrer le jeu
+      startGame(canvas, engine);
+    };
+  }
 
   // Fonction pour démarrer le jeu
   async function startGame(canvas, engine) {
     try {
+      // Marquer que le jeu est en cours de chargement
+      isGameLoading = true;
+      
       // Initialiser le jeu
       const scene = new BABYLON.Scene(engine);
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
       scene.metadata = {};
       
-      // Créer un écran de chargement indépendant si nécessaire
-      // (dans notre cas, il est déjà géré par le menu principal)
+      // Créer un écran de chargement indépendant si le menu principal n'existe pas
+      if (!mainMenu || !mainMenu.loadingScreen) {
+        loadingScreen = new LoadingScreen(canvas);
+        loadingScreen.show();
+      }
       
       // Liste des tâches de chargement avec leur poids relatif et descriptions
       const loadingTasks = [
@@ -117,12 +134,19 @@ const initBabylon = async () => {
         const task = loadingTasks[i];
         try {
           // Mettre à jour le texte de l'étape de chargement
-          if (mainMenu && mainMenu.loadingScreen) {
-            mainMenu.loadingScreen.updateProgress(
-              (completedWeight / totalWeight) * 100,
-              task.description
-            );
-          }
+          const updateLoadingProgress = (progress, description) => {
+            if (mainMenu && mainMenu.loadingScreen) {
+              mainMenu.loadingScreen.updateProgress(progress, description);
+            } else if (loadingScreen) {
+              loadingScreen.updateProgress(progress, description);
+            }
+          };
+          
+          // Mettre à jour la progression
+          updateLoadingProgress(
+            (completedWeight / totalWeight) * 100,
+            task.description
+          );
           
           // Pour la tâche du joueur, nous avons besoin de la caméra
           let result;
@@ -143,14 +167,12 @@ const initBabylon = async () => {
           const progress = (completedWeight / totalWeight) * 100;
           
           // Mettre à jour la barre de progression
-          if (mainMenu && mainMenu.loadingScreen) {
-            mainMenu.loadingScreen.updateProgress(
-              progress,
-              i < loadingTasks.length - 1 
-                ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
-                : "Finalisation..."
-            );
-          }
+          updateLoadingProgress(
+            progress,
+            i < loadingTasks.length - 1 
+              ? "Chargement terminé : " + task.description.replace("Chargement ", "").replace("...", "")
+              : "Finalisation..."
+          );
           
           // Petite pause pour permettre à l'interface de se mettre à jour
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -164,6 +186,11 @@ const initBabylon = async () => {
               (completedWeight / totalWeight) * 100,
               `Erreur: ${task.name} - Tentative de continuer...`
             );
+          } else if (loadingScreen) {
+            loadingScreen.updateProgress(
+              (completedWeight / totalWeight) * 100,
+              `Erreur: ${task.name} - Tentative de continuer...`
+            );
           }
           
           // Pause avant de continuer
@@ -174,6 +201,13 @@ const initBabylon = async () => {
       // Afficher un message de finalisation
       if (mainMenu && mainMenu.loadingScreen) {
         mainMenu.loadingScreen.updateProgress(100, "Démarrage du jeu...");
+      } else if (loadingScreen) {
+        loadingScreen.updateProgress(100, "Démarrage du jeu...");
+      }
+      
+      // Masquer l'écran de chargement indépendant si utilisé
+      if (loadingScreen) {
+        loadingScreen.hide();
       }
       
       // Configurer les contrôles après avoir chargé le joueur et les animations
@@ -190,6 +224,30 @@ const initBabylon = async () => {
       const miniMap = createMiniMap();
       const compass = setupCompass();
       const tutorial = new Tutorial(scene);
+      
+      // Création d'un bouton pour revenir au menu principal
+      const resetButton = document.createElement('button');
+      resetButton.id = 'resetMenuButton';
+      resetButton.textContent = 'Menu Principal';
+      resetButton.style.position = 'absolute';
+      resetButton.style.top = '10px';
+      resetButton.style.right = '10px';
+      resetButton.style.padding = '8px 12px';
+      resetButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      resetButton.style.color = 'white';
+      resetButton.style.border = '1px solid #fff';
+      resetButton.style.borderRadius = '4px';
+      resetButton.style.cursor = 'pointer';
+      resetButton.style.zIndex = '1000';
+      resetButton.style.fontSize = '14px';
+      resetButton.style.fontFamily = 'Arial, sans-serif';
+      document.body.appendChild(resetButton);
+      
+      resetButton.addEventListener('click', () => {
+        localStorage.removeItem('gameStarted');
+        alert('Retour au menu principal. La page va se recharger.');
+        window.location.reload();
+      });
       
       // Variables pour le tutoriel
       let mouseMoved = false;
@@ -224,18 +282,52 @@ const initBabylon = async () => {
         maxZ: 90
       };
       
-      // Afficher les informations de la carte
       const mapToggleInfo = document.createElement('div');
       mapToggleInfo.id = 'mapToggleInfo';
       mapToggleInfo.textContent = 'Appuyez sur M pour afficher/masquer la carte';
       document.body.appendChild(mapToggleInfo);
       
+      const cameraResetInfo = document.createElement('div');
+      cameraResetInfo.id = 'cameraResetInfo';
+      cameraResetInfo.textContent = 'Appuyez sur R pour réinitialiser la caméra';
+      cameraResetInfo.style.position = 'absolute';
+      cameraResetInfo.style.bottom = '260px';
+      cameraResetInfo.style.right = '20px';
+      cameraResetInfo.style.color = 'white';
+      cameraResetInfo.style.fontFamily = 'Arial, sans-serif';
+      cameraResetInfo.style.fontSize = '14px';
+      cameraResetInfo.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+      cameraResetInfo.style.padding = '5px 10px';
+      cameraResetInfo.style.borderRadius = '5px';
+      cameraResetInfo.style.transition = 'opacity 1s ease';
+      document.body.appendChild(cameraResetInfo);
+      
+      // Ajouter des instructions de déplacement
+      const movementInfo = document.createElement('div');
+      movementInfo.id = 'movementInfo';
+      movementInfo.innerHTML = 'Contrôles: <br>Z: Avancer<br>S: Se retourner et reculer<br>Q: Tourner et avancer à gauche<br>D: Tourner et avancer à droite<br>Souris: Contrôler la caméra<br>R: Réinitialiser caméra';
+      movementInfo.style.position = 'absolute';
+      movementInfo.style.bottom = '340px';
+      movementInfo.style.right = '20px';
+      movementInfo.style.color = 'white';
+      movementInfo.style.fontFamily = 'Arial, sans-serif';
+      movementInfo.style.fontSize = '14px';
+      movementInfo.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+      movementInfo.style.padding = '5px 10px';
+      movementInfo.style.borderRadius = '5px';
+      movementInfo.style.transition = 'opacity 1s ease';
+      document.body.appendChild(movementInfo);
+      
       setTimeout(() => {
         mapToggleInfo.style.opacity = '0';
+        cameraResetInfo.style.opacity = '0';
+        movementInfo.style.opacity = '0';
         setTimeout(() => {
           mapToggleInfo.style.display = 'none';
+          cameraResetInfo.style.display = 'none';
+          movementInfo.style.display = 'none';
         }, 1000);
-      }, 5000);
+      }, 8000);
       
       // Configurer les contrôles supplémentaires
       if (scene.metadata.controls) {
@@ -258,6 +350,12 @@ const initBabylon = async () => {
           } else {
             scene.debugLayer.show();
           }
+        }
+        
+        // Ajouter une touche pour réinitialiser le localStorage (retour au menu principal)
+        if (event.key.toLowerCase() === 'l' && event.ctrlKey) {
+          localStorage.removeItem('gameStarted');
+          alert('LocalStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
         }
       });
       

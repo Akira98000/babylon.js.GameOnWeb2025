@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-export const transitionToAnimation = (fromAnim, toAnim, transitionTime = 0.25) => {
+export const transitionToAnimation = (fromAnim, toAnim, transitionTime = 0.05) => {
   if (!fromAnim || !toAnim || fromAnim === toAnim) return;
   
   const isPriority = toAnim.name.includes("pistol");
@@ -18,7 +18,7 @@ export const transitionToAnimation = (fromAnim, toAnim, transitionTime = 0.25) =
   toAnim.start(loop, 1.0, toAnim.from, toAnim.to, false);
   toAnim.setWeightForAllAnimatables(initialWeight);
   
-  const frames = 30 * actualTransitionTime;
+  const frames = 60 * actualTransitionTime;
   const keys = [
     { frame: 0, value: initialWeight },
     { frame: frames * 0.2, value: 0.8 },
@@ -75,7 +75,6 @@ export const initializeAnimations = (scene) => {
   const availableAnimations = scene.animationGroups.map(ag => ag.name);
   console.log("Animation groups disponibles:", availableAnimations);
   
-  // Récupère et regroupe les animations dans un objet
   const animations = {
     walkAnim: scene.getAnimationGroupByName("running"),
     walkBackAnim: scene.getAnimationGroupByName("walkback"),
@@ -93,7 +92,6 @@ export const initializeAnimations = (scene) => {
     console.warn("Certaines animations n'ont pas été chargées correctement", missingAnims);
   }
   
-  // Configuration spécifique pour certaines animations
   if (animations.shotgunAnim) {
     animations.shotgunAnim.speedRatio = 2.0;
     if (animations.shotgunAnim.targetedAnimations?.length) {
@@ -108,7 +106,6 @@ export const initializeAnimations = (scene) => {
     }
   }
   
-  // Arrête les animations (sauf l'idle qui sera démarrée)
   ["walkAnim", "walkBackAnim", "sambaAnim", "shotgunAnim", "shootStandingAnim"].forEach(key => {
     if (animations[key]) {
       animations[key].stop();
@@ -120,7 +117,6 @@ export const initializeAnimations = (scene) => {
     animations.idleAnim.start(true, 1.0, animations.idleAnim.from, animations.idleAnim.to, false);
   }
   
-  // Wrapper pour simplifier l'utilisation de immediateTransition
   const immediateTransitionWrapper = (toAnim) => immediateTransition(animations, toAnim);
   
   return {

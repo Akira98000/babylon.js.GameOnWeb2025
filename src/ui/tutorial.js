@@ -19,34 +19,34 @@ export class Tutorial {
                 checkComplete: (inputMap) => this._checkKeyHold(inputMap["z"])
             },
             {
-                instruction: "Pour aller à gauche, maintenez Q",
+                instruction: "Pour tourner et avancer à gauche, maintenez Q",
                 key: ["Q"],
                 checkComplete: (inputMap) => this._checkKeyHold(inputMap["q"])
             },
             {
-                instruction: "Pour reculer, maintenez S",
+                instruction: "Pour vous retourner et reculer, maintenez S",
                 key: ["S"],
                 checkComplete: (inputMap) => this._checkKeyHold(inputMap["s"])
             },
             {
-                instruction: "Pour aller à droite, maintenez D",
+                instruction: "Pour tourner et avancer à droite, maintenez D",
                 key: ["D"],
                 checkComplete: (inputMap) => this._checkKeyHold(inputMap["d"])
             },
             {
-                instruction: "Pour aller a la direction souhaitée, déplacez la souris. Appuyez sur ESPACE pour continuer.",
-                key: ["🖱️ ← →", "ESPACE"],
+                instruction: "Pour tirer, cliquez avec le bouton gauche de la souris. Appuyez sur ESPACE pour continuer.",
+                key: ["🖱️ CLIC", "ESPACE"],
+                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
+            },
+            {
+                instruction: "Déplacez la souris pour contrôler la caméra. Appuyez sur ESPACE pour continuer.",
+                key: ["🖱️ ←→", "ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             },
             {
                 instruction: "Pour danser la samba, maintenez B",
                 key: ["B"],
                 checkComplete: (inputMap) => this._checkKeyHold(inputMap["b"])
-            },
-            {
-                instruction: "Pour tirer, cliquez avec le bouton gauche. Appuyez sur ESPACE pour continuer.",
-                key: ["Clic", "ESPACE"],
-                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             }
         ];
         this._createUI();
@@ -83,24 +83,17 @@ export class Tutorial {
     isActionAllowed(action) {
         if (!this.isVisible) return true;
         
-        if (this.currentStep === 4 || this.currentStep === 6) {
-            return true;
-        }
+        const allowedActions = {
+            0: ['moveForward', 'turnLeft', 'turnRight', 'turnBack'],
+            1: ['moveLeft', 'turnLeft'],
+            2: ['moveBackward', 'turnBack'],
+            3: ['moveRight', 'turnRight'],
+            4: ['look', 'shoot'],
+            5: ['look'],
+            6: ['dance']
+        };
         
-        switch (action) {
-            case 'moveForward':
-                return this.currentStep === 0;
-            case 'moveLeft':
-                return this.currentStep === 1;
-            case 'moveBackward':
-                return this.currentStep === 2;
-            case 'moveRight':
-                return this.currentStep === 3;
-            case 'dance':
-                return this.currentStep === 5;
-            default:
-                return false;
-        }
+        return allowedActions[this.currentStep]?.includes(action) || false;
     }
 
     _createUI() {

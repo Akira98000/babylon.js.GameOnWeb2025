@@ -42,24 +42,22 @@ export class WelcomePage {
         const centerContainer = document.createElement('div');
         Object.assign(centerContainer.style, {
             width: '90%',
-            maxWidth: '600px', // Réduit de 800px à 600px
+            maxWidth: '600px', 
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: 'clamp(15px, 3vw, 25px)', // Padding responsive
+            padding: 'clamp(15px, 3vw, 25px)', 
             boxSizing: 'border-box',
             position: 'relative',
             borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
-            maxHeight: '80vh', // Empêche de dépasser 80% de la hauteur de l'écran
-            overflowY: 'auto' // Permet de scroller si contenu trop grand
+            maxHeight: '80vh', 
         });
 
         // Section de contenu
         const contentBox = document.createElement('div');
         Object.assign(contentBox.style, {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            padding: 'clamp(10px, 2vw, 20px)', // Padding responsive
+            backgroundColor: 'rgba(255, 255, 255, 0)',
+            padding: 'clamp(10px, 2vw, 20px)', 
             borderRadius: '8px',
             marginBottom: '15px',
             width: '100%'

@@ -213,3 +213,17 @@ html, body {
         font-size: 20px;
     }
 }
+
+/* Ajouter cette classe pour améliorer les transitions visuelles */
+.smooth-transition {
+    transition: transform 0.1s linear;
+}
+
+/* Assurer que le personnage a un style approprié pour des animations fluides */
+canvas {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+}

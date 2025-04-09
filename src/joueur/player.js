@@ -16,12 +16,23 @@ export const createPlayer = async (scene, camera, canvas) => {
     hero.ellipsoidOffset = new BABYLON.Vector3(0, 0.5, 0);
     hero.applyGravity = true;
     hero.isPickable = false;
+    
+    // Optimisation pour des animations plus fluides
+    hero.renderingGroupId = 1; // Prioriser le rendu du héros
+    
+    // Appliquer un matériau avancé pour de meilleures performances
+    for (let child of heroResult.meshes) {
+        if (child.material) {
+            child.material.freeze(); // Optimisation des performances
+        }
+    }
 
     const groundOffset = new BABYLON.Vector3(0, hero.ellipsoid.y, 0);
     const groundRayLength = hero.ellipsoid.y + 0.1;
     const shootOffset = new BABYLON.Vector3(0, 1.5, 0);
     const MIN_HEIGHT = -1;
-    const gravityForce = scene.gravity.scale(0.015);
+    const gravityBaseForce = scene.gravity.scale(0.015);
+    const targetFPS = 60;
 
     const checkGrounded = () => {
         const origin = hero.position.clone().add(groundOffset);
@@ -36,51 +47,41 @@ export const createPlayer = async (scene, camera, canvas) => {
     });
 
     let lastShotTime = 0;
-    const shootCooldown = 500;
+    const shootCooldown = GAME_CONFIG.ANIMATIONS?.SHOOT?.COOLDOWN || 500;
     let isMoving = false;
     let currentAnimation = null;
     let controlsRef = null;
     let animationsRef = null;
+    let shootEndObserver = null;
 
-    const calcReturnDelay = (speedRatio) => Math.min(150, (1000 / speedRatio) / 4);
-    const playShootAnimation = (animations, isMoving) => {
-        if (!animations) return false;
+    const playShootAnimation = (animations, isMoving, shootPosition, shootDirection) => {
+        if (!animations || !animations.transitionToAnimation) return false;
+
         const shootAnimation = isMoving ? animations.shotgunAnim : animations.shootStandingAnim;
         if (!shootAnimation) return false;
-        const returnAnimation = isMoving ? animations.walkAnim : animations.idleAnim;
-        const returnDelay = calcReturnDelay(shootAnimation.speedRatio);
 
-        if (animations.immediateTransition) {
-            animations.immediateTransition(shootAnimation);
-            currentAnimation = shootAnimation;
-            setTimeout(() => {
-                if (returnAnimation) {
-                    animations.immediateTransition(returnAnimation);
-                    currentAnimation = returnAnimation;
-                }
-            }, returnDelay);
-            return true;
-        } else if (controlsRef && controlsRef.changeAnimation) {
-            controlsRef.changeAnimation(shootAnimation);
-            setTimeout(() => {
-                if (returnAnimation) {
-                    controlsRef.changeAnimation(returnAnimation);
-                }
-            }, returnDelay);
-            return true;
-        } else if (animations.transitionToAnimation) {
-            const fromAnim = currentAnimation || (animations.walkAnim?.isPlaying ? animations.walkAnim : animations.idleAnim);
-            animations.transitionToAnimation(fromAnim, shootAnimation);
-            currentAnimation = shootAnimation;
-            setTimeout(() => {
-                if (returnAnimation) {
-                    animations.transitionToAnimation(shootAnimation, returnAnimation);
-                    currentAnimation = returnAnimation;
-                }
-            }, returnDelay);
-            return true;
+        const returnAnimation = isMoving ? animations.walkAnim : animations.idleAnim;
+        const fromAnim = currentAnimation || (animations.walkAnim?.isPlaying ? animations.walkAnim : animations.idleAnim);
+
+        if (shootEndObserver) {
+            shootAnimation.onAnimationEndObservable.remove(shootEndObserver);
+            shootEndObserver = null;
         }
-        return false;
+
+        executeShot(shootPosition, shootDirection);
+
+        animations.transitionToAnimation(fromAnim, shootAnimation);
+        currentAnimation = shootAnimation;
+
+        shootEndObserver = shootAnimation.onAnimationEndObservable.addOnce(() => {
+            if (returnAnimation && currentAnimation === shootAnimation) {
+                animations.transitionToAnimation(shootAnimation, returnAnimation);
+                currentAnimation = returnAnimation;
+            }
+            shootEndObserver = null;
+        });
+
+        return true;
     };
 
     const executeShot = (position, direction) => {
@@ -92,18 +93,47 @@ export const createPlayer = async (scene, camera, canvas) => {
         createBullet(scene, bulletStartPosition, direction);
     };
 
+    if (!document.getElementById("crosshair")) {
+        const crosshair = document.createElement("div");
+        crosshair.id = "crosshair";
+        document.body.appendChild(crosshair);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes crosshairFlash {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.5); opacity: 0.8; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            .crosshair-flash {
+                animation: crosshairFlash 0.2s ease-out;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const flashCrosshair = () => {
+        const crosshair = document.getElementById("crosshair");
+        if (crosshair) {
+            crosshair.classList.remove('crosshair-flash');
+            void crosshair.offsetWidth;
+            crosshair.classList.add('crosshair-flash');
+        }
+    };
+
     scene.onPointerDown = (evt) => {
         if (evt.button === 0) {
             isShooting = true;
             const currentTime = Date.now();
+            
+            flashCrosshair();
+            
             if (currentTime - lastShotTime > shootCooldown) {
                 lastShotTime = currentTime;
                 const shootDirection = camera.getForwardRay().direction.normalize();
                 const shootPosition = hero.position.clone();
                 if (animationsRef) {
-                    const animationApplied = playShootAnimation(animationsRef, isMoving);
-                    // Légère temporisation pour synchroniser l'animation et le tir
-                    setTimeout(() => executeShot(shootPosition, shootDirection), animationApplied ? 16 : 0);
+                    playShootAnimation(animationsRef, isMoving, shootPosition, shootDirection);
                 } else {
                     executeShot(shootPosition, shootDirection);
                 }
@@ -127,7 +157,12 @@ export const createPlayer = async (scene, camera, canvas) => {
 
     scene.onBeforeRenderObservable.add(() => {
         if (!checkGrounded()) {
-            hero.moveWithCollisions(gravityForce);
+            // Ajustement de la gravité en fonction du taux de rafraîchissement
+            const deltaTime = scene.getEngine().getDeltaTime() / 1000;
+            const fpsRatio = targetFPS * deltaTime;
+            const adjustedGravity = gravityBaseForce.scale(fpsRatio);
+            
+            hero.moveWithCollisions(adjustedGravity);
             if (hero.position.y < MIN_HEIGHT) {
                 hero.position.y = MIN_HEIGHT;
             }
@@ -135,12 +170,6 @@ export const createPlayer = async (scene, camera, canvas) => {
             hero.position.y = 0.1;
         }
     });
-
-    if (!document.getElementById("crosshair")) {
-        const crosshair = document.createElement("div");
-        crosshair.id = "crosshair";
-        document.body.appendChild(crosshair);
-    }
 
     return {
         hero,
