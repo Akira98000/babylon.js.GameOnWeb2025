@@ -9,9 +9,9 @@ export class Level3 {
         this.rainbows = [];
         this.messageElement = this._createMessage("", "storyMessage");
         this.colorToCollect = 6; 
-        this.originalMaterials = new Map(); // Stocker les matériaux originaux
+        this.originalMaterials = new Map();
         this.blackAndWhitePostProcess = null;
-        this.colorIntensity = 0; // 0 = noir et blanc, 1 = couleur complète
+        this.colorIntensity = 0; 
     }
 
     async init() {
@@ -22,21 +22,15 @@ export class Level3 {
             }
         });
         
-        // Convertir la scène en noir et blanc
         this._applyBlackAndWhiteEffect();
-        
-        // Stocker les matériaux originaux et les remplacer par du noir et blanc
         this._storeAndConvertMaterials();
-
         this._displayStoryMessage();
         this._createColorCollectibles();
     }
     
     _applyBlackAndWhiteEffect() {
-        // Créer un post-process noir et blanc
         const camera = this.scene.getCameraByName("camera");
         if (camera) {
-            // Créer un shader personnalisé pour l'effet noir et blanc
             BABYLON.Effect.ShadersStore["blackAndWhiteFragmentShader"] = `
                 #ifdef GL_ES
                 precision highp float;
@@ -54,7 +48,6 @@ export class Level3 {
                 }
             `;
             
-            // Créer le post-process avec notre shader
             this.blackAndWhitePostProcess = new BABYLON.PostProcess(
                 "BlackAndWhite", 
                 "blackAndWhite", 
@@ -64,7 +57,6 @@ export class Level3 {
                 camera
             );
             
-            // Définir l'intensité de couleur initiale (0 = noir et blanc)
             this.blackAndWhitePostProcess.onApply = (effect) => {
                 effect.setFloat("colorIntensity", this.colorIntensity);
             };
@@ -72,20 +64,18 @@ export class Level3 {
     }
     
     _storeAndConvertMaterials() {
-        // Parcourir tous les meshes de la scène
         this.scene.meshes.forEach(mesh => {
             if (mesh.material) {
-                // Stocker le matériau original
-                this.originalMaterials.set(mesh.id, mesh.material);
+                // Stocker le matériau original pour pouvoir le restaurer plus tard
+                this.originalMaterials.set(mesh.id, mesh.material.clone());
                 
                 // Ne pas convertir les orbes de couleur
                 if (!mesh.name.includes("colorCollectible")) {
-                    // Créer un nouveau matériau noir et blanc
-                    const bwMaterial = new BABYLON.StandardMaterial(`bw_${mesh.material.name}`, this.scene);
+                    const bwMaterial = new BABYLON.StandardMaterial(`bw_${mesh.material.name || mesh.id}`, this.scene);
                     
+                    // Gestion des matériaux avec texture
                     if (mesh.material.diffuseTexture) {
                         bwMaterial.diffuseTexture = mesh.material.diffuseTexture.clone();
-                        // Appliquer un filtre noir et blanc à la texture
                         bwMaterial.diffuseTexture.onLoad = () => {
                             BABYLON.Effect.ShadersStore[`grayscale_${mesh.id}FragmentShader`] = `
                                 #ifdef GL_ES
@@ -113,17 +103,31 @@ export class Level3 {
                             bwMaterial.diffuseTexture.postProcess = effect;
                         };
                     } else {
-                        // Sans texture, convertir la couleur directement
+                        // Gestion des matériaux avec couleur
                         const color = mesh.material.diffuseColor || new BABYLON.Color3(0.5, 0.5, 0.5);
                         const gray = (color.r * 0.3 + color.g * 0.59 + color.b * 0.11);
                         bwMaterial.diffuseColor = new BABYLON.Color3(gray, gray, gray);
                     }
                     
-                    // Copier les autres propriétés importantes
+                    // Copier les autres propriétés importantes du matériau
                     bwMaterial.alpha = mesh.material.alpha;
                     bwMaterial.backFaceCulling = mesh.material.backFaceCulling;
                     
-                    // Appliquer le nouveau matériau
+                    // Copier les propriétés d'émission et de spécularité si elles existent
+                    if (mesh.material.emissiveColor) {
+                        const emissiveColor = mesh.material.emissiveColor;
+                        const emissiveGray = (emissiveColor.r * 0.3 + emissiveColor.g * 0.59 + emissiveColor.b * 0.11);
+                        bwMaterial.emissiveColor = new BABYLON.Color3(emissiveGray, emissiveGray, emissiveGray);
+                    }
+                    
+                    if (mesh.material.specularColor) {
+                        const specularColor = mesh.material.specularColor;
+                        const specularGray = (specularColor.r * 0.3 + specularColor.g * 0.59 + specularColor.b * 0.11);
+                        bwMaterial.specularColor = new BABYLON.Color3(specularGray, specularGray, specularGray);
+                        bwMaterial.specularPower = mesh.material.specularPower || 64;
+                    }
+                    
+                    // Appliquer le nouveau matériau en noir et blanc
                     mesh.material = bwMaterial;
                 }
             }
@@ -131,10 +135,21 @@ export class Level3 {
     }
     
     _restoreColors(intensity) {
-        // Mettre à jour l'intensité des couleurs dans le post-process
         this.colorIntensity = intensity;
         
-        // Restaurer partiellement les matériaux originaux en fonction de l'intensité
+        // Mise à jour du post-process pour la transition progressive
+        if (this.blackAndWhitePostProcess) {
+            this.blackAndWhitePostProcess.onApply = (effect) => {
+                effect.setFloat("colorIntensity", this.colorIntensity);
+            };
+        }
+        
+        // Si toutes les couleurs sont collectées (intensité = 1.0), supprimer le post-process
+        if (intensity >= 1.0 && this.blackAndWhitePostProcess) {
+            this.blackAndWhitePostProcess.dispose();
+            this.blackAndWhitePostProcess = null;
+        }
+        
         this.originalMaterials.forEach((originalMaterial, meshId) => {
             const mesh = this.scene.getMeshByID(meshId);
             if (mesh && !mesh.name.includes("colorCollectible")) {
@@ -142,12 +157,11 @@ export class Level3 {
                     // Restaurer complètement le matériau original
                     mesh.material = originalMaterial;
                 } else {
-                    // Ajuster l'intensité des couleurs dans le matériau actuel
+                    // Transition progressive entre noir et blanc et couleur
                     if (mesh.material.diffuseColor && originalMaterial.diffuseColor) {
                         const originalColor = originalMaterial.diffuseColor;
                         const gray = (originalColor.r * 0.3 + originalColor.g * 0.59 + originalColor.b * 0.11);
                         const grayColor = new BABYLON.Color3(gray, gray, gray);
-                        
                         mesh.material.diffuseColor = BABYLON.Color3.Lerp(
                             grayColor,
                             originalColor,
@@ -161,12 +175,12 @@ export class Level3 {
     
     _createColorCollectibles() {
         const positions = [
-            //new BABYLON.Vector3(100, 1, 100),  // Coin Nord-Est
-            //new BABYLON.Vector3(-100, 1, 100), // Coin Nord-Ouest
-            //new BABYLON.Vector3(-100, 1, -100), // Coin Sud-Ouest
-            //new BABYLON.Vector3(100, 1, -100), // Coin Sud-Est
-            //new BABYLON.Vector3(0, 1, 100),    // Nord
-            //new BABYLON.Vector3(0, 1, -100)     // Sud
+            //new BABYLON.Vector3(100, 1, 100),  
+            //new BABYLON.Vector3(-100, 1, 100),
+            //new BABYLON.Vector3(-100, 1, -100),
+            //new BABYLON.Vector3(100, 1, -100), 
+            //new BABYLON.Vector3(0, 1, 100),   
+            //new BABYLON.Vector3(0, 1, -100)
             new BABYLON.Vector3(0, 0, 0),
             new BABYLON.Vector3(0, 0, 1),
             new BABYLON.Vector3(0, 0, 2),
@@ -286,14 +300,14 @@ export class Level3 {
         
         const rainbow = BABYLON.MeshBuilder.CreateTube(`rainbow${index}`, {
             path: points,
-            radius: 1.5, // Augmenter l'épaisseur du tube
-            tessellation: 16, // Augmenter la qualité
+            radius: 1.5, 
+            tessellation: 16, 
             updatable: true
         }, this.scene);
         
         const material = new BABYLON.StandardMaterial(`rainbowMaterial${index}`, this.scene);
         material.diffuseColor = color;
-        material.emissiveColor = color.scale(0.7); // Augmenter la luminosité
+        material.emissiveColor = color.scale(0.7); 
         material.alpha = 0.8;
         rainbow.material = material;
         
@@ -329,46 +343,101 @@ export class Level3 {
     
     _displayStoryMessage() {
         const storyText = "La ville a perdu ses couleurs ! Récupérez les 6 orbes de couleur dispersées dans la ville pour créer des arcs-en-ciel et redonner vie à ce monde terne.";
-        this.messageElement.textElement.innerHTML = "";
+        
+        // S'assurer que messageElement est correctement initialisé
+        if (!this.messageElement) {
+            this.messageElement = this._createMessage("", "storyMessage");
+        }
+        
+        // Vérifier si title et icon existent
+        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
+            this.messageElement.title.textContent = "Monde Sans Couleurs";
+        }
+        
+        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
+            this.messageElement.icon.textContent = "🎨";
+        }
+        
+        if (this.messageElement.textElement) {
+            this.messageElement.textElement.innerHTML = "";
+        }
+        
         this.messageElement.style.display = "flex";
-        let index = 0;
-        const textInterval = setInterval(() => {
-            if (index < storyText.length) {
-                this.messageElement.textElement.innerHTML += storyText.charAt(index);
-                index++;
-            } else {
-                clearInterval(textInterval);
-                this.messageElement.okButton.style.display = "block";
-                setTimeout(() => {
-                    if (this.messageElement.style.display !== "none") {
-                        this._fadeOutElement(this.messageElement);
-                    }
-                }, 10000);
+        this.messageElement.style.opacity = "0";
+        
+        // Animation d'entrée
+        let opacity = 0;
+        const fadeInterval = setInterval(() => {
+            opacity += 0.05;
+            if (opacity >= 1) {
+                opacity = 1;
+                clearInterval(fadeInterval);
+                this._animateText(storyText);
             }
-        }, 50);
+            this.messageElement.style.opacity = opacity;
+        }, 20);
     }
     
     _displayCompletionMessage() {
+        // Forcer la restauration complète des couleurs immédiatement
+        this.forceRestoreColors();
+        
         const completionText = "Magnifique ! Vous avez restauré les couleurs de la ville. Les arcs-en-ciel brillent de mille feux et la vie reprend son cours normal.";
-        this.messageElement.textElement.innerHTML = "";
+        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
+            this.messageElement.title.textContent = "Mission Accomplie !";
+        }
+        
+        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
+            this.messageElement.icon.textContent = "✨";
+        }
+        
+        if (this.messageElement.textElement) {
+            this.messageElement.textElement.innerHTML = "";
+        }
         this.messageElement.style.display = "flex";
+        this.messageElement.style.opacity = "0";
+        
+        let opacity = 0;
+        const fadeInterval = setInterval(() => {
+            opacity += 0.05;
+            if (opacity >= 1) {
+                opacity = 1;
+                clearInterval(fadeInterval);
+                this._animateText(completionText);
+            }
+            this.messageElement.style.opacity = opacity;
+        }, 20);
+        
+        // Animation confetti
+        this._createConfetti();
+    }
+    
+    _animateText(text) {
         let index = 0;
         const textInterval = setInterval(() => {
-            if (index < completionText.length) {
-                this.messageElement.textElement.innerHTML += completionText.charAt(index);
+            if (index < text.length) {
+                this.messageElement.textElement.innerHTML += text.charAt(index);
                 index++;
             } else {
                 clearInterval(textInterval);
                 this.messageElement.okButton.style.display = "block";
+                this.messageElement.okButton.style.opacity = "0";
+                this.messageElement.okButton.style.transform = "translateY(20px)";
                 
                 setTimeout(() => {
-                    if (this.messageElement.style.display !== "none") {
-                        this._fadeOutElement(this.messageElement);
-                        this.isCompleted = true;
-                    }
-                }, 10000);
+                    this.messageElement.okButton.style.opacity = "1";
+                    this.messageElement.okButton.style.transform = "translateY(0)";
+                    setTimeout(() => {
+                        if (this.messageElement.style.display !== "none") {
+                            this._fadeOutElement(this.messageElement);
+                            if (this.messageElement.title.textContent === "Mission Accomplie !") {
+                                this.isCompleted = true;
+                            }
+                        }
+                    }, 15000);
+                }, 300);
             }
-        }, 50);
+        }, 30);
     }
     
     _fadeOutElement(element) {
@@ -381,71 +450,157 @@ export class Level3 {
                 element.style.display = "none";
             }
             element.style.opacity = opacity;
-        }, 100);
+        }, 20);
     }
     
     _createMessage(text, id) {
         let element = document.getElementById(id);
         if (element) {
+            if (!element.title) {
+                const header = element.querySelector("div");
+                if (header) {
+                    const title = header.querySelector("div:nth-child(2)");
+                    const icon = header.querySelector("div:nth-child(1)");
+                    if (title) element.title = title;
+                    if (icon) element.icon = icon;
+                }
+            }
             return element;
         }
         
         const container = document.createElement("div");
         container.id = id;
-        container.style.position = "fixed";
-        container.style.top = "0";
-        container.style.left = "0";
-        container.style.width = "100%";
-        container.style.height = "100%";
-        container.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
-        container.style.display = "none";
-        container.style.zIndex = "1000";
-        container.style.flexDirection = "column";
-        container.style.justifyContent = "center";
-        container.style.alignItems = "center";
         
-        // Créer l'élément de texte
+        Object.assign(container.style, {
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            padding: "25px",
+            borderRadius: "15px",
+            color: "white",
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            display: "none",
+            zIndex: "1000",
+            maxWidth: "600px",
+            width: "80%",
+            backdropFilter: "blur(5px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            flexDirection: "column",
+            gap: "20px"
+        });
+        
+        // En-tête du popup
+        const header = document.createElement("div");
+        Object.assign(header.style, {
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "20px",
+            gap: "15px"
+        });
+        
+        const icon = document.createElement("div");
+        Object.assign(icon.style, {
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            backgroundColor: "#4a90e2",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "24px"
+        });
+        icon.textContent = "🌈";
+        
+        const title = document.createElement("div");
+        Object.assign(title.style, {
+            fontSize: "22px",
+            fontWeight: "bold"
+        });
+        title.textContent = "Mission";
+        
+        header.appendChild(icon);
+        header.appendChild(title);
+        container.appendChild(header);
+        
+        const messageContainer = document.createElement("div");
+        Object.assign(messageContainer.style, {
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "15px",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px"
+        });
+        
+        const avatar = document.createElement("div");
+        Object.assign(avatar.style, {
+            width: "50px",
+            height: "50px",
+            borderRadius: "50%",
+            backgroundColor: "#4a90e2",
+            backgroundImage: "url('/assets/avatar.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            flexShrink: "0"
+        });
+        
         const textElement = document.createElement("div");
+        Object.assign(textElement.style, {
+            fontSize: "18px",
+            lineHeight: "1.6",
+            color: "rgba(255, 255, 255, 0.9)",
+            fontWeight: "400"
+        });
         textElement.innerHTML = text;
-        textElement.style.color = "white";
-        textElement.style.fontFamily = "Arial, sans-serif";
-        textElement.style.fontSize = "28px";
-        textElement.style.textAlign = "center";
-        textElement.style.maxWidth = "80%";
-        textElement.style.padding = "30px";
-        textElement.style.margin = "0 auto";
-        textElement.style.marginBottom = "40px";
+        
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(textElement);
+        container.appendChild(messageContainer);
         
         const okButton = document.createElement("button");
-        okButton.textContent = "OK";
-        okButton.style.padding = "10px 30px";
-        okButton.style.fontSize = "20px";
-        okButton.style.backgroundColor = "#4CAF50";
-        okButton.style.color = "white";
-        okButton.style.border = "none";
-        okButton.style.borderRadius = "5px";
-        okButton.style.cursor = "pointer";
-        okButton.style.marginTop = "30px";
-        okButton.style.display = "none"; 
+        okButton.textContent = "Compris !";
+        Object.assign(okButton.style, {
+            padding: "12px 0",
+            fontSize: "18px",
+            backgroundColor: "#4CAF50",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            transition: "all 0.3s ease",
+            width: "100%",
+            marginTop: "10px",
+            display: "none"
+        });
         
         okButton.onmouseover = function() {
             this.style.backgroundColor = "#45a049";
+            this.style.transform = "translateY(-2px)";
+            this.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.2)";
         };
+        
         okButton.onmouseout = function() {
             this.style.backgroundColor = "#4CAF50";
+            this.style.transform = "translateY(0)";
+            this.style.boxShadow = "none";
         };
         
         okButton.onclick = () => {
             this._fadeOutElement(container);
         };
         
-        container.appendChild(textElement);
         container.appendChild(okButton);
-        
         document.body.appendChild(container);
         
         container.textElement = textElement;
         container.okButton = okButton;
+        container.title = title;
+        container.icon = icon;
         
         return container;
     }
@@ -475,8 +630,11 @@ export class Level3 {
                     if (this.collectedColors.length >= this.colorToCollect) {
                         this._createFinalRainbow();
                         this._displayCompletionMessage();
-                        // Restaurer complètement les couleurs
-                        this._restoreColors(1.0);
+                        
+                        // Forcer la restauration complète des couleurs après un court délai
+                        setTimeout(() => {
+                            this.forceRestoreColors();
+                        }, 100);
                     }
                 }
             }
@@ -510,6 +668,9 @@ export class Level3 {
     }
     
     _createFinalRainbow() {
+        // Forcer la restauration complète des couleurs
+        this.forceRestoreColors();
+        
         // Créer un grand arc-en-ciel circulaire au-dessus de la ville
         const segments = 60;
         // Augmenter le rayon pour couvrir toute la longueur de la carte
@@ -623,5 +784,145 @@ export class Level3 {
         particleSystem.maxEmitPower = 0.6;
         
         particleSystem.start();
+    }
+    
+    _createConfetti() {
+        const confettiContainer = document.createElement("div");
+        confettiContainer.style.position = "fixed";
+        confettiContainer.style.top = "0";
+        confettiContainer.style.left = "0";
+        confettiContainer.style.width = "100%";
+        confettiContainer.style.height = "100%";
+        confettiContainer.style.pointerEvents = "none";
+        confettiContainer.style.zIndex = "999";
+        document.body.appendChild(confettiContainer);
+        
+        const colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"];
+        
+        // Créer des confettis
+        for (let i = 0; i < 150; i++) {
+            setTimeout(() => {
+                const confetti = document.createElement("div");
+                const size = Math.random() * 10 + 5;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                confetti.style.position = "absolute";
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.backgroundColor = color;
+                confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
+                confetti.style.top = "-20px";
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.opacity = Math.random() + 0.5;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confetti.style.transition = "transform 1s ease";
+                
+                confettiContainer.appendChild(confetti);
+                
+                // Animation de chute
+                let speed = 1 + Math.random() * 3;
+                let posY = -20;
+                let posX = parseFloat(confetti.style.left);
+                let rotate = 0;
+                let opacity = parseFloat(confetti.style.opacity);
+                
+                const fall = setInterval(() => {
+                    posY += speed;
+                    posX += Math.sin(posY / 30) * 2;
+                    rotate += 5;
+                    confetti.style.top = `${posY}px`;
+                    confetti.style.left = `${posX}%`;
+                    confetti.style.transform = `rotate(${rotate}deg)`;
+                    
+                    if (posY > window.innerHeight) {
+                        clearInterval(fall);
+                        confetti.remove();
+                    }
+                    
+                    if (posY > window.innerHeight * 0.7) {
+                        opacity -= 0.01;
+                        confetti.style.opacity = opacity;
+                    }
+                }, 16);
+            }, i * 50);
+        }
+        
+        // Supprimer le conteneur après quelques secondes
+        setTimeout(() => {
+            confettiContainer.remove();
+        }, 10000);
+    }
+
+    // Nettoyage des ressources lors de la sortie du niveau
+    cleanup() {
+        // Supprimer le post-process noir et blanc s'il existe encore
+        if (this.blackAndWhitePostProcess) {
+            this.blackAndWhitePostProcess.dispose();
+            this.blackAndWhitePostProcess = null;
+        }
+        
+        // Restaurer tous les matériaux originaux
+        this.originalMaterials.forEach((originalMaterial, meshId) => {
+            const mesh = this.scene.getMeshByID(meshId);
+            if (mesh) {
+                mesh.material = originalMaterial;
+            }
+        });
+        
+        // Nettoyer les collectibles de couleur
+        for (const collectible of this.colorCollectibles) {
+            if (collectible.mesh && !collectible.mesh.isDisposed()) {
+                collectible.mesh.dispose();
+            }
+        }
+        
+        // Nettoyer les arcs-en-ciel
+        for (const rainbow of this.rainbows) {
+            if (rainbow && !rainbow.isDisposed()) {
+                rainbow.dispose();
+            }
+        }
+        
+        // Vider les tableaux
+        this.colorCollectibles = [];
+        this.collectedColors = [];
+        this.rainbows = [];
+        this.originalMaterials.clear();
+        
+        // Supprimer le message si présent
+        if (this.messageElement && this.messageElement.parentNode) {
+            this.messageElement.parentNode.removeChild(this.messageElement);
+        }
+    }
+
+    // Méthode pour forcer la restauration complète des couleurs
+    forceRestoreColors() {
+        console.log("Forçage de la restauration des couleurs");
+        
+        // Supprimer le post-process complètement
+        if (this.blackAndWhitePostProcess) {
+            try {
+                this.blackAndWhitePostProcess.dispose();
+            } catch (e) {
+                console.error("Erreur lors de la suppression du post-process:", e);
+            }
+            this.blackAndWhitePostProcess = null;
+        }
+        
+        // Restaurer tous les matériaux originaux
+        this.originalMaterials.forEach((originalMaterial, meshId) => {
+            try {
+                const mesh = this.scene.getMeshByID(meshId);
+                if (mesh && !mesh.isDisposed()) {
+                    mesh.material = originalMaterial;
+                }
+            } catch (e) {
+                console.error(`Erreur lors de la restauration du matériau pour le mesh ${meshId}:`, e);
+            }
+        });
+        
+        // S'assurer que la scène est correctement mise à jour
+        this.colorIntensity = 1.0;
+        this.scene.render();
     }
 } 
