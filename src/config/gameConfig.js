@@ -37,7 +37,7 @@ export const GAME_CONFIG = {
         FOLLOW: {
             POSITION_LERP: 0.2,  
             TARGET_LERP: 0.2,    
-            HEIGHT_OFFSET: 2.05,    
+            HEIGHT_OFFSET: 1.45,    
             DISTANCE: 3        
         }
     },

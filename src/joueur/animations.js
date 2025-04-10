@@ -8,6 +8,11 @@ export const transitionToAnimation = (fromAnim, toAnim, transitionTime = 0.05) =
   const loop = !isPriority;
   const initialWeight = isPriority ? 0.6 : 0.1;
   
+  // Définir le speedRatio en fonction du type d'animation
+  if (toAnim.name.includes("running")) {
+    toAnim.speedRatio = 1.4; // Vitesse d'animation de course réduite
+  }
+  
   if (fromAnim.name.includes("pistol")) {
     fromAnim.stop();
     fromAnim.setWeightForAllAnimatables(0);
@@ -64,6 +69,11 @@ export const immediateTransition = (animations, toAnim) => {
     }
   });
   
+  // Définir le speedRatio pour l'animation de course
+  if (toAnim.name.includes("running")) {
+    toAnim.speedRatio = 1.4; // Vitesse d'animation de course réduite
+  }
+  
   const loop = !toAnim.name.includes("pistol");
   toAnim.start(loop, 1.0, toAnim.from, toAnim.to, false);
   toAnim.setWeightForAllAnimatables(1);
@@ -90,6 +100,16 @@ export const initializeAnimations = (scene) => {
     .reduce((acc, [key]) => ({ ...acc, [key]: "NON TROUVÉE" }), {});
   if (Object.keys(missingAnims).length > 0) {
     console.warn("Certaines animations n'ont pas été chargées correctement", missingAnims);
+  }
+  
+  if (animations.walkAnim) {
+    animations.walkAnim.speedRatio = 1.4;
+    // Forcer la mise à jour de la vitesse pour chaque animation ciblée
+    if (animations.walkAnim.targetedAnimations?.length) {
+      animations.walkAnim.targetedAnimations.forEach(targetedAnim => {
+        targetedAnim.animation.framePerSecond = 60 * 1.4;
+      });
+    }
   }
   
   if (animations.shotgunAnim) {
