@@ -103,7 +103,6 @@ export class Level1 {
             });
         }
         
-        // Failsafe : si après 20 secondes le tutoriel est toujours affiché, montrer quand même le message
         setTimeout(() => {
             if (!this.messageShown) {
                 this._displayStoryMessage();
