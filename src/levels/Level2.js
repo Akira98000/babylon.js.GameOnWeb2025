@@ -15,8 +15,12 @@ export class Level2 {
     async init() {
         const positions = [
             new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(-40, 0, -90),
-            new BABYLON.Vector3(-90, 0, 40)
+            new BABYLON.Vector3(0, 0, 1),
+            new BABYLON.Vector3(0, 0, 2),
+
+
+            //new BABYLON.Vector3(-40, 0, -90),
+            //new BABYLON.Vector3(-90, 0, 40)
         ];
         
 

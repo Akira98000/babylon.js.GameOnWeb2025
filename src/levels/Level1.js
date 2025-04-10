@@ -16,8 +16,9 @@ export class Level1 {
         const dogResult = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'Dogtest.glb', this.scene);
         this.dog = dogResult.meshes[0];
         this.dog.name = 'levelDog';
-        this.dog.scaling.set(0.9,0.9,0.9);
-        this.dog.position.set(-60, 0, -10);
+        this.dog.scaling.set(1.3,1.3,1.3);
+        this.dog.position.set(0, 0, 6);
+        //this.dog.position.set(-60, 0, -10);
         this.dogAnimations = this._getDogAnimations();
         this._tryStartAnimation(this.dogAnimations.idle);
         this.proximityArea = this._createProximityArea(this.dog.position);
