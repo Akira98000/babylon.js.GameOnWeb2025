@@ -379,6 +379,9 @@ export class Level3 {
     }
     
     _displayCompletionMessage() {
+        // Forcer la restauration complète des couleurs immédiatement
+        this.forceRestoreColors();
+        
         const completionText = "Magnifique ! Vous avez restauré les couleurs de la ville. Les arcs-en-ciel brillent de mille feux et la vie reprend son cours normal.";
         if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
             this.messageElement.title.textContent = "Mission Accomplie !";
@@ -468,7 +471,6 @@ export class Level3 {
         const container = document.createElement("div");
         container.id = id;
         
-        // Style moderne similaire au tutoriel
         Object.assign(container.style, {
             position: "fixed",
             top: "50%",
@@ -523,7 +525,6 @@ export class Level3 {
         header.appendChild(title);
         container.appendChild(header);
         
-        // Conteneur du message
         const messageContainer = document.createElement("div");
         Object.assign(messageContainer.style, {
             display: "flex",
@@ -535,7 +536,6 @@ export class Level3 {
             marginBottom: "20px"
         });
         
-        // Avatar
         const avatar = document.createElement("div");
         Object.assign(avatar.style, {
             width: "50px",
@@ -548,7 +548,6 @@ export class Level3 {
             flexShrink: "0"
         });
         
-        // Texte du message
         const textElement = document.createElement("div");
         Object.assign(textElement.style, {
             fontSize: "18px",
@@ -562,7 +561,6 @@ export class Level3 {
         messageContainer.appendChild(textElement);
         container.appendChild(messageContainer);
         
-        // Bouton OK
         const okButton = document.createElement("button");
         okButton.textContent = "Compris !";
         Object.assign(okButton.style, {
@@ -599,7 +597,6 @@ export class Level3 {
         container.appendChild(okButton);
         document.body.appendChild(container);
         
-        // Stocker les références aux éléments internes
         container.textElement = textElement;
         container.okButton = okButton;
         container.title = title;
@@ -634,10 +631,9 @@ export class Level3 {
                         this._createFinalRainbow();
                         this._displayCompletionMessage();
                         
-                        // Forcer la restauration complète des couleurs avec une valeur légèrement supérieure à 1
-                        // pour s'assurer que la condition intensity >= 1.0 est bien respectée
+                        // Forcer la restauration complète des couleurs après un court délai
                         setTimeout(() => {
-                            this._restoreColors(1.01);
+                            this.forceRestoreColors();
                         }, 100);
                     }
                 }
@@ -672,6 +668,9 @@ export class Level3 {
     }
     
     _createFinalRainbow() {
+        // Forcer la restauration complète des couleurs
+        this.forceRestoreColors();
+        
         // Créer un grand arc-en-ciel circulaire au-dessus de la ville
         const segments = 60;
         // Augmenter le rayon pour couvrir toute la longueur de la carte
@@ -899,21 +898,31 @@ export class Level3 {
     // Méthode pour forcer la restauration complète des couleurs
     forceRestoreColors() {
         console.log("Forçage de la restauration des couleurs");
+        
         // Supprimer le post-process complètement
         if (this.blackAndWhitePostProcess) {
-            this.blackAndWhitePostProcess.dispose();
+            try {
+                this.blackAndWhitePostProcess.dispose();
+            } catch (e) {
+                console.error("Erreur lors de la suppression du post-process:", e);
+            }
             this.blackAndWhitePostProcess = null;
         }
         
         // Restaurer tous les matériaux originaux
         this.originalMaterials.forEach((originalMaterial, meshId) => {
-            const mesh = this.scene.getMeshByID(meshId);
-            if (mesh) {
-                mesh.material = originalMaterial;
+            try {
+                const mesh = this.scene.getMeshByID(meshId);
+                if (mesh && !mesh.isDisposed()) {
+                    mesh.material = originalMaterial;
+                }
+            } catch (e) {
+                console.error(`Erreur lors de la restauration du matériau pour le mesh ${meshId}:`, e);
             }
         });
         
-        // Mettre à jour l'intensité des couleurs
+        // S'assurer que la scène est correctement mise à jour
         this.colorIntensity = 1.0;
+        this.scene.render();
     }
 } 
