@@ -25,6 +25,14 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     if (hero.rotationQuaternion) hero.rotationQuaternion = null;
     hero.rotation.y = targetRotationY;
 
+    // Fonction d'aide pour maintenir les angles dans un intervalle cohérent
+    const normalizeAngle = (angle) => {
+        // Maintenir l'angle dans l'intervalle [0, 2π]
+        let normalized = angle % (2 * Math.PI);
+        if (normalized < 0) normalized += 2 * Math.PI;
+        return normalized;
+    };
+
     scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, evt => {
         const key = evt.sourceEvent.key.toLowerCase();
         if (!inputMap[key]) {
@@ -83,8 +91,15 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             if (now - lastPointerEvent >= pointerThrottle) {
                 const event = pointerInfo.event;
                 const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-                rotationDelta += movementX * rotationSensitivity;
-                targetRotationY = currentRotationY + rotationDelta;
+                
+                // Application directe du mouvement à la rotation actuelle
+                currentRotationY += movementX * rotationSensitivity;
+                currentRotationY = normalizeAngle(currentRotationY);
+                targetRotationY = currentRotationY;
+                
+                // Appliquer directement à l'objet hero
+                hero.rotation.y = currentRotationY;
+                
                 lastPointerEvent = now;
             }
         }
@@ -176,8 +191,6 @@ export function setupControls(scene, hero, animations, camera, canvas) {
 
     scene.onBeforeRenderObservable.add(() => {
         const now = Date.now();
-        hero.rotation.y = BABYLON.Scalar.Lerp(hero.rotation.y, targetRotationY, 0.1);
-        currentRotationY = hero.rotation.y;
 
         if (now - lastMoveTime >= moveThrottle) {
             const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
@@ -237,38 +250,38 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             lastMoveTime = now;
         }
 
-
         const cameraHeight = GAME_CONFIG.CAMERA.FOLLOW?.HEIGHT_OFFSET || 2;
         const cameraDistance = GAME_CONFIG.CAMERA.FOLLOW?.DISTANCE || 6;
         const positionLerp = GAME_CONFIG.CAMERA.FOLLOW?.POSITION_LERP || 0.2;
         const targetLerp = GAME_CONFIG.CAMERA.FOLLOW?.TARGET_LERP || 0.2;
         
+        // Calculer la position idéale de la caméra basée sur la rotation du héros
         const cameraOffset = new BABYLON.Vector3(0, cameraHeight, cameraDistance);
-        const rotatedOffset = BABYLON.Vector3.TransformCoordinates(cameraOffset, BABYLON.Matrix.RotationY(hero.rotation.y));
+        const rotatedOffset = BABYLON.Vector3.TransformCoordinates(
+            cameraOffset, 
+            BABYLON.Matrix.RotationY(currentRotationY)
+        );
         const idealPosition = hero.position.add(rotatedOffset);
         
+        // Vérifier la distance et repositionner la caméra si trop loin
         const currentDistance = BABYLON.Vector3.Distance(camera.position, idealPosition);
-        const maxAllowedDistance = cameraDistance * 4; 
+        const maxAllowedDistance = cameraDistance * 4;
         
         if (currentDistance > maxAllowedDistance) {
-            camera.position = idealPosition;
+            camera.position = idealPosition.clone();
+        } else {
+            // Interpolation douce vers la position idéale
+            camera.position = BABYLON.Vector3.Lerp(camera.position, idealPosition, positionLerp);
         }
         
+        // Lerp vers la cible (sur l'axe Y + 1.5)
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
-        camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), idealTarget, targetLerp));
-        
-        const cameraDirection = new BABYLON.Vector3(
-            camera.position.x - hero.position.x,
-            0,
-            camera.position.z - hero.position.z
-        );
-        
-        if (cameraDirection.length() > 0.1) {
-            const cameraAngle = Math.atan2(cameraDirection.x, cameraDirection.z);
-            const angleDiff = BABYLON.Scalar.DeltaAngle(currentRotationY, cameraAngle);
-            rotationDelta = angleDiff;
-            targetRotationY = currentRotationY + rotationDelta;
-        }
+        const currentTarget = camera.getTarget().clone();
+        const newTarget = BABYLON.Vector3.Lerp(currentTarget, idealTarget, targetLerp);
+        camera.setTarget(newTarget);
+
+        // Synchronisation entre la rotation du joueur et celle de la caméra pour éviter les déviations
+        hero.rotation.y = currentRotationY;
     });
 
     scene.metadata.executeShot = (position, direction) => {
