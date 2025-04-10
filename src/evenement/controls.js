@@ -260,24 +260,41 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         const cameraOffset = new BABYLON.Vector3(0, cameraHeight, cameraDistance);
         const rotatedOffset = BABYLON.Vector3.TransformCoordinates(cameraOffset, BABYLON.Matrix.RotationY(hero.rotation.y));
         
-        // Position idéale de la caméra
+        // Position idéale de la caméra (utilisée uniquement pour le reset avec la touche R)
         const idealPosition = hero.position.add(rotatedOffset);
         
         // Vérifier la distance entre la caméra actuelle et la position idéale
         const currentDistance = BABYLON.Vector3.Distance(camera.position, idealPosition);
-        const maxAllowedDistance = cameraDistance * 2; // Distance maximale autorisée
+        const maxAllowedDistance = cameraDistance * 4; // Distance maximale autorisée (augmentée)
         
         // Si la caméra est trop loin, la forcer à se repositionner immédiatement
         if (currentDistance > maxAllowedDistance) {
             camera.position = idealPosition;
-        } else {
-            // Sinon, utiliser l'interpolation normale
-            camera.position = BABYLON.Vector3.Lerp(camera.position, idealPosition, positionLerp);
         }
+        // Suppression de l'interpolation qui faisait revenir la caméra à sa position d'origine
+        // else {
+        //    camera.position = BABYLON.Vector3.Lerp(camera.position, idealPosition, positionLerp);
+        // }
         
-        // Position cible idéale
+        // Position cible idéale (on garde cette partie pour que la caméra continue de regarder le joueur)
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
         camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), idealTarget, targetLerp));
+        
+        // Faire en sorte que le personnage regarde dans la direction de la caméra
+        // On calcule le vecteur de direction entre le personnage et la caméra (sur le plan horizontal)
+        const cameraDirection = new BABYLON.Vector3(
+            camera.position.x - hero.position.x,
+            0,
+            camera.position.z - hero.position.z
+        );
+        
+        if (cameraDirection.length() > 0.1) {
+            // Calculer l'angle de rotation en fonction de la position de la caméra
+            const cameraAngle = Math.atan2(cameraDirection.x, cameraDirection.z);
+            // Ajuster l'angle pour que le personnage regarde dans la direction de la caméra
+            // et non vers la caméra elle-même
+            targetRotationY = cameraAngle;
+        }
     });
 
     scene.metadata.executeShot = (position, direction) => {
