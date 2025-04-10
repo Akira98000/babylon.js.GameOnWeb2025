@@ -19,7 +19,7 @@ export const setupCamera = (scene, canvas) => {
     camera.upperRadiusLimit = GAME_CONFIG.CAMERA.LIMITS.RADIUS.UPPER;
     camera.angularSensibilityX = GAME_CONFIG.CAMERA.SENSITIVITY.ANGULAR_X;
     camera.angularSensibilityY = GAME_CONFIG.CAMERA.SENSITIVITY.ANGULAR_Y;
-    camera.heightOffset = 30;
+    camera.heightOffset = 1;
     camera.rotationOffset = 0;
     camera.useNaturalPinchZoom = false;
     camera.minZ = 0.1;
