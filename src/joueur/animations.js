@@ -8,9 +8,8 @@ export const transitionToAnimation = (fromAnim, toAnim, transitionTime = 0.05) =
   const loop = !isPriority;
   const initialWeight = isPriority ? 0.6 : 0.1;
   
-  // Définir le speedRatio en fonction du type d'animation
   if (toAnim.name.includes("running")) {
-    toAnim.speedRatio = 1.4; // Vitesse d'animation de course réduite
+    toAnim.speedRatio = 0.9; 
   }
   
   if (fromAnim.name.includes("pistol")) {

@@ -13,6 +13,8 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     let animating = false;
     let sambaAnimating = false;
     let targetRotationY = Math.PI;
+    let currentRotationY = Math.PI;
+    let rotationDelta = 0;
     let currentAnimation = animations.idleAnim;
     let lastShootTime = 0;
     let lastMoveTime = 0;
@@ -29,11 +31,6 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             inputMap[key] = true;
             if (["z", "q", "s", "d"].includes(key)) {
                 handleKeyStateChange();
-            }
-            
-            // Touche R pour réinitialiser la caméra en cas de besoin
-            if (key === "r") {
-                resetCamera();
             }
         }
     }));
@@ -86,7 +83,8 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             if (now - lastPointerEvent >= pointerThrottle) {
                 const event = pointerInfo.event;
                 const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-                targetRotationY += movementX * rotationSensitivity;
+                rotationDelta += movementX * rotationSensitivity;
+                targetRotationY = currentRotationY + rotationDelta;
                 lastPointerEvent = now;
             }
         }
@@ -178,26 +176,20 @@ export function setupControls(scene, hero, animations, camera, canvas) {
 
     scene.onBeforeRenderObservable.add(() => {
         const now = Date.now();
-        
-        // Toujours mettre à jour la rotation pour plus de fluidité
-        // La rotation est uniquement contrôlée par la souris
-        hero.rotation.y = BABYLON.Scalar.LerpAngle(hero.rotation.y, targetRotationY, 0.1);
-            
+        hero.rotation.y = BABYLON.Scalar.Lerp(hero.rotation.y, targetRotationY, 0.1);
+        currentRotationY = hero.rotation.y;
+
         if (now - lastMoveTime >= moveThrottle) {
-            // Direction d'avancement (avant/arrière) basée sur la rotation actuelle du héros
             const forward = new BABYLON.Vector3(Math.sin(hero.rotation.y), 0, Math.cos(hero.rotation.y));
-            // Direction latérale (gauche/droite) perpendiculaire à la direction d'avancement
             const right = new BABYLON.Vector3(Math.sin(hero.rotation.y + Math.PI / 2), 0, Math.cos(hero.rotation.y + Math.PI / 2));
             
             let moveDirection = BABYLON.Vector3.Zero();
             let forwardMovement = BABYLON.Vector3.Zero();
             let strafeMovement = BABYLON.Vector3.Zero();
 
-            // Mouvement en avant/arrière sans changer la rotation du personnage
             if (inputMap["z"] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
             if (inputMap["s"] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
             
-            // Mouvement latéral (strafe) sans changer la rotation du personnage
             if (inputMap["d"] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
             if (inputMap["q"] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
 
@@ -205,7 +197,6 @@ export function setupControls(scene, hero, animations, camera, canvas) {
                 now - lastShootTime < shootAnimationDuration;
 
             if (forwardMovement.length() > 0 || strafeMovement.length() > 0) {
-                // Normaliser les vecteurs de mouvement s'ils ne sont pas nuls
                 if (forwardMovement.length() > 0) {
                     forwardMovement.normalize();
                 }
@@ -213,17 +204,13 @@ export function setupControls(scene, hero, animations, camera, canvas) {
                 if (strafeMovement.length() > 0) {
                     strafeMovement.normalize();
                 }
-                
-                // Calcul de la vitesse ajustée en fonction du taux de rafraîchissement
+
                 const deltaTime = scene.getEngine().getDeltaTime() / 1000;
                 const fpsRatio = targetFPS * deltaTime;
                 const adjustedForwardSpeed = heroBaseSpeed * fpsRatio;
                 const adjustedStrafeSpeed = heroStrafeSpeed * fpsRatio;
-                
-                // Appliquer les vitesses différentes selon la direction
                 const movement = forwardMovement.scale(adjustedForwardSpeed).add(strafeMovement.scale(adjustedStrafeSpeed));
                 
-                // Déplacement fluide et immédiat sans modifier la rotation
                 hero.moveWithCollisions(movement);
 
                 if (!animating && !isShooting) {
@@ -250,8 +237,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             lastMoveTime = now;
         }
 
-        // Sortir la mise à jour de la caméra hors du throttle pour qu'elle se fasse à chaque frame
-        // Utiliser les paramètres de configuration
+
         const cameraHeight = GAME_CONFIG.CAMERA.FOLLOW?.HEIGHT_OFFSET || 2;
         const cameraDistance = GAME_CONFIG.CAMERA.FOLLOW?.DISTANCE || 6;
         const positionLerp = GAME_CONFIG.CAMERA.FOLLOW?.POSITION_LERP || 0.2;
@@ -259,29 +245,18 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         
         const cameraOffset = new BABYLON.Vector3(0, cameraHeight, cameraDistance);
         const rotatedOffset = BABYLON.Vector3.TransformCoordinates(cameraOffset, BABYLON.Matrix.RotationY(hero.rotation.y));
-        
-        // Position idéale de la caméra (utilisée uniquement pour le reset avec la touche R)
         const idealPosition = hero.position.add(rotatedOffset);
         
-        // Vérifier la distance entre la caméra actuelle et la position idéale
         const currentDistance = BABYLON.Vector3.Distance(camera.position, idealPosition);
-        const maxAllowedDistance = cameraDistance * 4; // Distance maximale autorisée (augmentée)
+        const maxAllowedDistance = cameraDistance * 4; 
         
-        // Si la caméra est trop loin, la forcer à se repositionner immédiatement
         if (currentDistance > maxAllowedDistance) {
             camera.position = idealPosition;
         }
-        // Suppression de l'interpolation qui faisait revenir la caméra à sa position d'origine
-        // else {
-        //    camera.position = BABYLON.Vector3.Lerp(camera.position, idealPosition, positionLerp);
-        // }
         
-        // Position cible idéale (on garde cette partie pour que la caméra continue de regarder le joueur)
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
         camera.setTarget(BABYLON.Vector3.Lerp(camera.getTarget(), idealTarget, targetLerp));
         
-        // Faire en sorte que le personnage regarde dans la direction de la caméra
-        // On calcule le vecteur de direction entre le personnage et la caméra (sur le plan horizontal)
         const cameraDirection = new BABYLON.Vector3(
             camera.position.x - hero.position.x,
             0,
@@ -289,30 +264,16 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         );
         
         if (cameraDirection.length() > 0.1) {
-            // Calculer l'angle de rotation en fonction de la position de la caméra
             const cameraAngle = Math.atan2(cameraDirection.x, cameraDirection.z);
-            // Ajuster l'angle pour que le personnage regarde dans la direction de la caméra
-            // et non vers la caméra elle-même
-            targetRotationY = cameraAngle;
+            const angleDiff = BABYLON.Scalar.DeltaAngle(currentRotationY, cameraAngle);
+            rotationDelta = angleDiff;
+            targetRotationY = currentRotationY + rotationDelta;
         }
     });
 
     scene.metadata.executeShot = (position, direction) => {
         scene.metadata.player?.executeShot?.(position, direction);
     };
-
-    // Fonction pour réinitialiser la caméra si elle se détache
-    const resetCamera = () => {
-        const cameraHeight = GAME_CONFIG.CAMERA.FOLLOW?.HEIGHT_OFFSET || 2;
-        const cameraDistance = GAME_CONFIG.CAMERA.FOLLOW?.DISTANCE || 6;
-        
-        const cameraOffset = new BABYLON.Vector3(0, cameraHeight, cameraDistance);
-        const rotatedOffset = BABYLON.Vector3.TransformCoordinates(cameraOffset, BABYLON.Matrix.RotationY(hero.rotation.y));
-        
-        // Réinitialiser immédiatement la position et la cible de la caméra
-        camera.position = hero.position.add(rotatedOffset);
-        camera.setTarget(hero.position.add(new BABYLON.Vector3(0, 1.5, 0)));
-    };
-
+    
     return { inputMap, isPlayerMoving, changeAnimation, isMobile: false };
 }

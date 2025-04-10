@@ -227,3 +227,118 @@ canvas {
     -webkit-perspective: 1000;
     perspective: 1000;
 }
+
+#compass {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.compass-markers-container {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.compass-marker-container {
+    position: absolute;
+    top: 3px;
+    height: 30px;
+    text-align: center;
+    width: 30px;
+    transform: translateX(-50%);
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+.compass-marker {
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.7);
+    letter-spacing: 0px;
+    font-family: 'Arial', sans-serif;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.compass-value {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: 'Arial', sans-serif;
+    line-height: 1;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.compass-minor-value {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+.compass-minor-marker {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+.compass-center-indicator {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid white;
+    z-index: 1001;
+}
+
+.compass-center-indicator::after {
+    content: attr(data-degrees) "°";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+}
+
+/* Points cardinaux principaux */
+.compass-marker-container[data-angle="0"] .compass-marker,
+.compass-marker-container[data-angle="90"] .compass-marker,
+.compass-marker-container[data-angle="180"] .compass-marker,
+.compass-marker-container[data-angle="270"] .compass-marker {
+    color: #fff;
+    font-size: 18px;
+}
+
+/* Inter-cardinaux */
+.compass-marker-container[data-angle="45"] .compass-marker,
+.compass-marker-container[data-angle="135"] .compass-marker,
+.compass-marker-container[data-angle="225"] .compass-marker,
+.compass-marker-container[data-angle="315"] .compass-marker {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+}
