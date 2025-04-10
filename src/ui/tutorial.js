@@ -98,6 +98,9 @@ export class Tutorial {
 
     _createUI() {
         this.tutorialContainer = document.createElement('div');
+        this.tutorialContainer.id = 'tutorialContainer';
+        this.tutorialContainer.classList.add('tutorial-container');
+        
         Object.assign(this.tutorialContainer.style, {
             position: 'absolute',
             bottom: '30px',
@@ -219,6 +222,8 @@ export class Tutorial {
 
         const skipButton = document.createElement('button');
         skipButton.textContent = 'Passer le tutoriel';
+        skipButton.id = 'skipTutorialButton';
+        skipButton.classList.add('skip-tutorial');
         Object.assign(skipButton.style, {
             backgroundColor: 'rgba(255, 255, 255, 0.15)',
             border: 'none',
@@ -277,6 +282,12 @@ export class Tutorial {
             
             this.tutorialContainer.style.display = 'none';
             this.isVisible = false;
+            
+            // Émettre un événement personnalisé pour signaler que le tutoriel est terminé
+            const tutorialCompletedEvent = new CustomEvent('tutorialCompleted', {
+                detail: { skipped: this.currentStep < this.tutorialSteps.length }
+            });
+            document.dispatchEvent(tutorialCompletedEvent);
         }
     }
 
