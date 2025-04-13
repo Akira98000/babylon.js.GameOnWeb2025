@@ -154,7 +154,6 @@ export const createPlayer = async (scene, camera, canvas) => {
 
     scene.onBeforeRenderObservable.add(() => {
         if (!checkGrounded()) {
-            // Ajustement de la gravité en fonction du taux de rafraîchissement
             const deltaTime = scene.getEngine().getDeltaTime() / 1000;
             const fpsRatio = targetFPS * deltaTime;
             const adjustedGravity = gravityBaseForce.scale(fpsRatio);

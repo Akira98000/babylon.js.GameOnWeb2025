@@ -14,22 +14,17 @@ export class LevelManager {
             4: new Level4(scene)
         };
         
-        this.standardAudio = new Audio("/assets/salsa.mp3");
-        this.standardAudio.loop = true;
-        this.standardAudio.volume = 0;
+        //this.standardAudio = new Audio("/assets/salsa.mp3");
+        //this.standardAudio.loop = true;
+        //this.standardAudio.volume = 0;
     
-        this.catastropheAudio = new Audio("/assets/catastrophe.mp3");
-        this.catastropheAudio.loop = true;
-        this.catastropheAudio.volume = 0;
-        
-        this.combatAudio = new Audio("/assets/combat.mp3");
-        this.combatAudio.loop = true;
-        this.combatAudio.volume = 0;
+        //this.catastropheAudio = new Audio("/assets/catastrophe.mp3");
+        //this.catastropheAudio.loop = true;
+        //this.catastropheAudio.volume = 0;
         
         this.currentAudio = this.standardAudio;
         
-        // Utiliser une promesse pour s'assurer que l'audio est chargé avant de jouer
-        this.audioPromise = this.currentAudio.play()
+        /*this.audioPromise = this.currentAudio.play()
             .then(() => {
                 console.log("Audio standard démarré avec succès");
                 this.fadeInAudio(this.currentAudio);
@@ -41,7 +36,7 @@ export class LevelManager {
                         .then(() => this.fadeInAudio(this.currentAudio))
                         .catch(e => console.error("Impossible de démarrer l'audio même après interaction:", e));
                 }, { once: true });
-            });
+            });*/
         
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
         this.levels[2].onComplete = this.goToNextLevel.bind(this);

@@ -105,7 +105,7 @@ const initBabylon = async () => {
             if (!scene.metadata.player) {
               throw new Error("Le joueur doit être initialisé avant l'ennemi");
             }
-            const ennemiPosition = new BABYLON.Vector3(5, 0, 5);
+            const ennemiPosition = new BABYLON.Vector3(0, 0, 1);
             const ennemi = new EnnemiIA(scene, ennemiPosition, scene.metadata.player.hero);
             scene.metadata.ennemi = ennemi;
             return ennemi;
@@ -217,32 +217,25 @@ const initBabylon = async () => {
         }
       }
       
-      // Afficher un message de finalisation
       if (mainMenu && mainMenu.loadingScreen) {
         mainMenu.loadingScreen.updateProgress(100, "Démarrage du jeu...");
       } else if (loadingScreen) {
         loadingScreen.updateProgress(100, "Démarrage du jeu...");
       }
       
-      // Masquer l'écran de chargement indépendant si utilisé
       if (loadingScreen) {
         loadingScreen.hide();
       }
       
-      // Configurer les contrôles après avoir chargé le joueur et les animations
       const controls = setupControls(scene, player.hero, animations, camera, canvas);
       scene.metadata.controls = controls;
       
-      // Configurer l'interface utilisateur
       const fpsDisplay = setupHUD();
       const hudControls = initializeHUDUpdates(fpsDisplay);
       const instruction = instructions();
       const miniMap = createMiniMap();
       const compass = setupCompass();
       const tutorial = new Tutorial(scene);
-      
-      
-      // Variables pour le tutoriel
       let mouseMoved = false;
       let currentMouseX = 0;
       
@@ -253,21 +246,18 @@ const initBabylon = async () => {
         }
       });
 
-      // Créer et afficher la page d'accueil, puis afficher le tutoriel une fois terminé
       const welcomePage = new WelcomePage(() => {
         setTimeout(() => {
           tutorial.show();
         }, 500);
       });
       
-      // Afficher la page d'accueil après un court délai
       setTimeout(() => {
         welcomePage.show();
       }, 1000);
 
-      // Stocker la référence au tutoriel dans les métadonnées de la scène pour y accéder depuis les contrôles
-      scene.metadata.tutorial = tutorial;
-      
+      scene.metadata.tutorial = tutorial;      
+
       const mapBounds = {
         minX: -90,
         maxX: 90,
