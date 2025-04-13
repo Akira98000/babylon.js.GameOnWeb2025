@@ -136,7 +136,7 @@ const initBabylon = async () => {
               if (scene.metadata.player && scene.metadata.player.hero) {
                 console.log("Création d'un ennemi test...");
                 // Position de l'ennemi éloignée du joueur pour éviter les conflits
-                const ennemiPosition = new BABYLON.Vector3(15, 0, 15);
+                const ennemiPosition = new BABYLON.Vector3(0, 0, 15);
                 const ennemiTest = new EnnemiIA(scene, ennemiPosition, scene.metadata.player.hero);
                 
                 // Stocker l'ennemi dans les métadonnées de la scène
