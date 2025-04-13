@@ -13,41 +13,27 @@ export class Level4 {
     }
 
     async init() {
-        // Supprimer les arcs-en-ciel restants du niveau 3
         this._nettoyerArcEnCielNiveau3();
-        
-        // Vérifier si le joueur existe dans les métadonnées
         if (!this.scene.metadata || !this.scene.metadata.player || !this.scene.metadata.player.hero) {
             console.error("Player not found in scene metadata");
             return;
         }
-        
-        // Positions des ennemis - en ajouter suffisamment
         const positions = [
             new BABYLON.Vector3(0, 0, -15)
         ];
 
-        // Message d'introduction
         this._showMessage("Niveau 4: Combat contre les Pizzas Maléfiques!", 5000);
-        
-        // Créer un effet sonore dramatique
         this._playBattleSound();
-        
-        // Créer chaque ennemi avec un délai pour une apparition séquentielle
         for (let i = 0; i < this.nombreEnnemis; i++) {
             if (i < positions.length) {
                 setTimeout(() => {
                     this._spawnEnnemi(positions[i], i);
-                }, i * 1500); // Délai progressif entre chaque apparition
+                }, i * 1500);
             }
         }
-        
-        // Message d'instructions après quelques secondes
         setTimeout(() => {
             this._showMessage("Éliminez toutes les pizzas pour gagner!", 4000);
         }, 5000);
-
-        // Ajouter l'observateur pour les collisions de balles
         this.scene.onBeforeRenderObservable.add(() => {
             this._checkBulletCollisions();
         });
@@ -142,21 +128,15 @@ export class Level4 {
 
     _spawnEnnemi(position, index) {
         try {
-            // Créer un effet visuel à la position d'apparition
             this._createSpawnEffect(position);
-            
-            // Récupérer le joueur depuis les métadonnées de la scène
             const player = this.scene.metadata.player.hero;
             if (!player) {
                 console.error("Player not found for enemy targeting");
                 return;
             }
-            
-            // Créer l'ennemi
             const ennemi = new EnnemiIA(this.scene, position, player);
             this.ennemis.push(ennemi);
             
-            // Afficher un message pour chaque ennemi qui apparaît
             const messages = [
                 "Une pizza maléfique apparaît!",
                 "Une autre pizza rejoint le combat!",
@@ -171,25 +151,21 @@ export class Level4 {
     
     _createSpawnEffect(position) {
         try {
-            // Créer un système de particules pour l'apparition
             const spawnParticles = new BABYLON.ParticleSystem("spawnParticles", 200, this.scene);
             spawnParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
             spawnParticles.emitter = position;
             spawnParticles.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
             spawnParticles.maxEmitBox = new BABYLON.Vector3(1, 0, 1);
             
-            // Couleurs
             spawnParticles.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
             spawnParticles.color2 = new BABYLON.Color4(1, 0, 0, 1);
             spawnParticles.colorDead = new BABYLON.Color4(0, 0, 0, 0);
             
-            // Taille et durée de vie
             spawnParticles.minSize = 0.3;
             spawnParticles.maxSize = 1.5;
             spawnParticles.minLifeTime = 0.3;
             spawnParticles.maxLifeTime = 1.5;
             
-            // Configuration
             spawnParticles.emitRate = 100;
             spawnParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
             spawnParticles.gravity = new BABYLON.Vector3(0, 1, 0);
@@ -200,18 +176,15 @@ export class Level4 {
             spawnParticles.minEmitPower = 1;
             spawnParticles.maxEmitPower = 3;
             
-            // Durée limitée
             spawnParticles.targetStopDuration = 1.5;
             spawnParticles.start();
             
-            // Ajouter une lumière temporaire à la position d'apparition
             const light = new BABYLON.PointLight("spawnLight", new BABYLON.Vector3(position.x, position.y + 1, position.z), this.scene);
             light.diffuse = new BABYLON.Color3(1, 0.5, 0);
             light.intensity = 3;
             light.range = 20;
             this.lights.push(light);
             
-            // Animer la lumière
             const animation = new BABYLON.Animation(
                 "lightAnimation",
                 "intensity",
@@ -254,14 +227,10 @@ export class Level4 {
     }
 
     checkProximity(playerPosition) {
-        // Dans ce niveau, nous n'avons pas besoin de vérifier la proximité du joueur
-        // car le combat est géré par les collisions de balles, mais la méthode doit exister
-        // pour éviter les erreurs dans le levelManager
         return;
     }
 
     _nettoyerArcEnCielNiveau3() {
-        // Rechercher et supprimer tous les objets arc-en-ciel du niveau 3
         for (let mesh of this.scene.meshes) {
             if (mesh && mesh.name && (mesh.name.startsWith("rainbow") || mesh.name === "finalRainbow")) {
                 console.log(`Suppression de l'arc-en-ciel: ${mesh.name}`);
@@ -269,7 +238,6 @@ export class Level4 {
             }
         }
         
-        // Rechercher et supprimer les systèmes de particules des arcs-en-ciel
         for (let particleSystem of this.scene.particleSystems) {
             if (particleSystem && particleSystem.name && particleSystem.name.startsWith("rainbowParticles")) {
                 console.log(`Suppression du système de particules: ${particleSystem.name}`);
