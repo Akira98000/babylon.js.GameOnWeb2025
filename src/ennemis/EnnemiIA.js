@@ -24,14 +24,14 @@ export class EnnemiIA {
         this.isRunning = false;
         this.rotationSpeed = 0.1;
         this.targetRotation = 0;
-        this.smoothingFactor = 0.2; // Facteur de lissage pour éviter les zigzags
+        this.smoothingFactor = 0.2; 
 
         // Système de vie
         this.maxHealth = 100;
         this.currentHealth = this.maxHealth;
         this.isDead = false;
         this.isHit = false;
-        this.hitRecoveryTime = 200; // Temps de récupération après un coup en ms
+        this.hitRecoveryTime = 200; 
         this.lastHitTime = 0;
 
         BABYLON.Engine.UseUBO = false;
@@ -82,14 +82,9 @@ export class EnnemiIA {
                     this.currentAnimation = "run";
                 }
             }
-
-            // Évite les erreurs WebGL liées à des animations mal initialisées
             result.animationGroups.forEach(group => group.normalize(0));
-
-            // Créer un ActionManager pour l'ennemi
             this.mesh.actionManager = new BABYLON.ActionManager(this.scene);
 
-            // Observer pour détecter les collisions avec les balles
             const bulletCollisionObserver = () => {
                 if (this.isDead || !this.mesh) return;
 
@@ -106,7 +101,7 @@ export class EnnemiIA {
                             this.mesh.absolutePosition
                         );
                         
-                        if (distance < 2) {  // Réduire cette distance pour une détection plus précise
+                        if (distance < 2) {  
                             console.log("Hit detected on enemy:", this.mesh.name);
                             console.log("Distance:", distance);
                             console.log("Bullet position:", bullet.absolutePosition);
@@ -121,11 +116,7 @@ export class EnnemiIA {
                     }
                 }
             };
-
-            // Ajouter l'observateur à la scène
             this.scene.onBeforeRenderObservable.add(bulletCollisionObserver);
-
-            // Ajouter l'observateur de mise à jour
             this.scene.onBeforeRenderObservable.add(() => this.update());
 
         } catch (error) {
@@ -134,7 +125,6 @@ export class EnnemiIA {
     }
 
     createHealthBar() {
-        // Créer un plan pour la barre de vie
         const healthBarWidth = 0.5;
         const healthBarHeight = 0.1;
         this.healthBar = BABYLON.MeshBuilder.CreatePlane("healthBar", {
@@ -216,7 +206,6 @@ export class EnnemiIA {
 
         this.mesh.animations = [fadeOut];
         this.scene.beginAnimation(this.mesh, 0, 30, false, 1, () => {
-            // Nettoyer les ressources
             if (this.healthBar) this.healthBar.dispose();
             if (this.healthBarBackground) this.healthBarBackground.dispose();
             if (this.mesh) this.mesh.dispose();
