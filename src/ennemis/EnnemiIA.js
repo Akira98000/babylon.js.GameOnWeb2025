@@ -24,6 +24,7 @@ export class EnnemiIA {
         this.isRunning = false;
         this.rotationSpeed = 0.1;
         this.targetRotation = 0;
+        this.smoothingFactor = 0.2; // Facteur de lissage pour éviter les zigzags
 
         // Système de vie
         this.maxHealth = 100;
@@ -54,7 +55,10 @@ export class EnnemiIA {
             if (this.mesh.material) {
                 this.mesh.material.freeze(); // Optimise et évite les warnings WebGL
             }
+            
+            // Attacher le mesh directement au root sans décalage
             this.mesh.parent = this.root;
+            this.mesh.position = BABYLON.Vector3.Zero();
             this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
 
             // Ajout d'une barre de vie
@@ -64,7 +68,7 @@ export class EnnemiIA {
             this.mesh.checkCollisions = true;
             this.mesh.ellipsoid = new BABYLON.Vector3(0.6, 1, 0.6);
             this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0);
-            this.mesh.applyGravity = true;
+            this.mesh.applyGravity = false; // Désactiver la gravité
 
             // Définir un identifiant unique pour l'ennemi
             this.mesh.name = "ennemi_" + Math.random().toString(36).substr(2, 9);
@@ -243,6 +247,7 @@ export class EnnemiIA {
         const now = Date.now();
         if (now - this.lastShootTime < this.shootCooldown) return;
 
+        // Faire tourner l'ennemi pour faire face au joueur
         const directionToPlayer = this.player.position.subtract(this.root.position);
         this.targetRotation = Math.atan2(directionToPlayer.x, directionToPlayer.z);
         this.root.rotation.y = this.targetRotation;
@@ -259,8 +264,10 @@ export class EnnemiIA {
         }
 
         const shootDirection = directionToPlayer.normalize();
+        
+        // Utiliser la position du root pour le point d'origine de la balle
         const shootOrigin = this.root.position.clone();
-        shootOrigin.y += 1.5;
+        shootOrigin.y += 1.5; // Ajuster la hauteur pour que la balle parte du haut de l'ennemi
 
         createBullet(this.scene, shootOrigin, shootDirection);
         this.lastShootTime = now;
@@ -332,28 +339,41 @@ export class EnnemiIA {
         if (distanceToPlayer < this.detectionDistance) {
             if (distanceToPlayer < this.shootingDistance) {
                 this.shoot();
-                force = this.wander();
+                // Toujours se rapprocher du joueur quand on est en mode attaque
+                force = this.seek(this.player.position);
                 this.isRunning = true;
                 shouldTrackPlayer = true;
             } else {
                 force = this.seek(this.player.position);
                 this.isRunning = true;
+                shouldTrackPlayer = true;
             }
         } else {
             force = this.wander();
             this.isRunning = true;
         }
 
+        // Lisser la force pour éviter les zigzags
+        force.scaleInPlace(this.smoothingFactor);
+        
+        this.velocity.scaleInPlace(1 - this.smoothingFactor);
         this.velocity.addInPlace(force);
+        
         if (this.velocity.length() > this.maxSpeed) {
             this.velocity.normalize();
             this.velocity.scaleInPlace(this.maxSpeed);
         }
-
-        const gravity = this.scene.gravity.scale(0.015);
-        this.velocity.addInPlace(gravity);
-        this.root.position = this.mesh.position.clone(); 
-
+        
+        // Forcer la composante Y à rester à 0 pour éviter les mouvements verticaux
+        this.velocity.y = 0;
+        
+        // Appliquer la vélocité directement à la position du root
+        this.root.position.addInPlace(this.velocity);
+        
+        // Maintenir une hauteur constante
+        this.root.position.y = this.position.y;
+        
+        // Mettre à jour la rotation en fonction de la direction
         if (shouldTrackPlayer) {
             const directionToPlayer = this.player.position.subtract(this.root.position);
             this.targetRotation = Math.atan2(directionToPlayer.x, directionToPlayer.z);
