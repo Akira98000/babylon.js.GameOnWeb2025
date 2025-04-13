@@ -67,7 +67,23 @@ export const GAME_CONFIG = {
         },
         MOVEMENT: {
             TRANSITION_SPEED: 2.0,
-            RESPONSIVENESS: 8 // Valeur en ms pour le throttle des mouvements (plus petite = plus réactive)
+            RESPONSIVENESS: 8
+        }
+    },
+    ENNEMI: {
+        SCALE: 1,
+        SPEED: {
+            MAX: 0.1,
+            WANDER: 0.05
+        },
+        DETECTION: {
+            SEEK_RADIUS: 10,
+            ARRIVE_RADIUS: 2
+        },
+        WANDER: {
+            RADIUS: 2,
+            DISTANCE: 4,
+            ANGLE_CHANGE: 0.3
         }
     }
 }; 

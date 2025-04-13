@@ -18,6 +18,7 @@ import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
 import { Tutorial } from "./ui/tutorial.js";
 import { WelcomePage } from "./ui/welcomePage.js";
+import { EnnemiIA } from "./ennemis/EnnemiIA.js";
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -90,7 +91,25 @@ const initBabylon = async () => {
           name: "player", 
           weight: 20, 
           description: "Création du personnage...",
-          func: async (camera) => await createPlayer(scene, camera, canvas) 
+          func: async (camera) => {
+            const player = await createPlayer(scene, camera, canvas);
+            scene.metadata.player = player; // Stocker la référence du joueur dans les métadonnées
+            return player;
+          }
+        },
+        { 
+          name: "ennemi", 
+          weight: 10, 
+          description: "Création de l'ennemi...",
+          func: async () => {
+            if (!scene.metadata.player) {
+              throw new Error("Le joueur doit être initialisé avant l'ennemi");
+            }
+            const ennemiPosition = new BABYLON.Vector3(5, 0, 5);
+            const ennemi = new EnnemiIA(scene, ennemiPosition, scene.metadata.player.hero);
+            scene.metadata.ennemi = ennemi;
+            return ennemi;
+          }
         },
         { 
           name: "animations", 
@@ -213,9 +232,6 @@ const initBabylon = async () => {
       // Configurer les contrôles après avoir chargé le joueur et les animations
       const controls = setupControls(scene, player.hero, animations, camera, canvas);
       scene.metadata.controls = controls;
-      
-      // Stocker la référence au player pour permettre aux contrôles mobiles d'y accéder
-      scene.metadata.player = player;
       
       // Configurer l'interface utilisateur
       const fpsDisplay = setupHUD();

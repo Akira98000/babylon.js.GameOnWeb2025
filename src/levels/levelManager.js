@@ -1,6 +1,7 @@
 import { Level1 } from './Level1.js';
 import { Level2 } from './Level2.js';
 import { Level3 } from './Level3.js';
+import { Level4 } from './Level4.js';
 
 export class LevelManager {
     constructor(scene) {
@@ -9,7 +10,8 @@ export class LevelManager {
         this.levels = {
             1: new Level1(scene),
             2: new Level2(scene),
-            3: new Level3(scene)
+            3: new Level3(scene),
+            4: new Level4(scene)
         };
         
         this.standardAudio = new Audio("/assets/salsa.mp3");
@@ -19,6 +21,11 @@ export class LevelManager {
         this.catastropheAudio = new Audio("/assets/catastrophe.mp3");
         this.catastropheAudio.loop = true;
         this.catastropheAudio.volume = 0;
+        
+        this.combatAudio = new Audio("/assets/combat.mp3");
+        this.combatAudio.loop = true;
+        this.combatAudio.volume = 0;
+        
         this.currentAudio = this.standardAudio;
         
         // Utiliser une promesse pour s'assurer que l'audio est chargé avant de jouer
@@ -29,7 +36,6 @@ export class LevelManager {
             })
             .catch(err => {
                 console.error("Erreur lors du démarrage de l'audio:", err);
-                // En cas d'erreur, on essaie de démarrer l'audio lors d'une interaction utilisateur
                 document.addEventListener('click', () => {
                     this.currentAudio.play()
                         .then(() => this.fadeInAudio(this.currentAudio))
@@ -39,25 +45,18 @@ export class LevelManager {
         
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
+        this.levels[3].onComplete = this.goToNextLevel.bind(this);
     }
 
     async initCurrentLevel() {
-        if (this.currentLevel === 1) {
-            await this.levels[1].init();
-        } else if (this.currentLevel === 2) {
-            await this.levels[2].init();
-        } else if (this.currentLevel === 3) {
-            await this.levels[3].init();
+        if (this.levels[this.currentLevel]) {
+            await this.levels[this.currentLevel].init();
         }
     }
 
     checkProximity(playerPosition) {
-        if (this.currentLevel === 1) {
-            this.levels[1].checkProximity(playerPosition);
-        } else if (this.currentLevel === 2) {
-            this.levels[2].checkProximity(playerPosition);
-        } else if (this.currentLevel === 3) {
-            this.levels[3].checkProximity(playerPosition);
+        if (this.levels[this.currentLevel]) {
+            this.levels[this.currentLevel].checkProximity(playerPosition);
         }
     }
 
@@ -72,48 +71,55 @@ export class LevelManager {
         } else if (this.currentLevel === 2) {
             console.log("Level2 terminé. Passage au Level3");
             this.currentLevel = 3;
-            
-            // Changer immédiatement la musique pour le niveau 3
             this.switchToMusic("catastrophe");
-            
-            // Initialiser le niveau 3 sans attendre
             this.levels[3].init().then(() => {
                 console.log("Level3 initialisé avec succès");
             }).catch(error => {
                 console.error("Erreur lors de l'initialisation du Level3:", error);
             });
+        } else if (this.currentLevel === 3) {
+            console.log("Level3 terminé. Passage au Level4");
+            this.currentLevel = 4;
+            this.switchToMusic("combat");
+            this.levels[4].init().then(() => {
+                console.log("Level4 initialisé avec succès");
+            }).catch(error => {
+                console.error("Erreur lors de l'initialisation du Level4:", error);
+            });
         }
     }
-    
+
     _cleanupMessages() {
-        // Supprimer tous les messages d'interaction qui pourraient être affichés
-        const allMessages = document.querySelectorAll('[id^="bananaProximity"], [id^="message"], [class*="message"]');
-        allMessages.forEach(element => {
-            if (element.id !== "storyMessage") {
-                element.style.display = "none";
+        const messages = document.querySelectorAll('[id$="Message"]');
+        messages.forEach(msg => {
+            if (msg && msg.parentNode) {
+                msg.parentNode.removeChild(msg);
             }
         });
-        console.log("Messages d'interaction nettoyés");
     }
     
     switchToMusic(type) {
-        // Déterminer quel audio utiliser
-        const newAudio = type === "catastrophe" ? this.catastropheAudio : this.standardAudio;
-        const oldAudio = this.currentAudio;
+        let newAudio;
+        switch(type) {
+            case "catastrophe":
+                newAudio = this.catastropheAudio;
+                break;
+            case "combat":
+                newAudio = this.combatAudio;
+                break;
+            default:
+                newAudio = this.standardAudio;
+        }
         
-        // Si c'est déjà le bon audio, ne rien faire
+        const oldAudio = this.currentAudio;
         if (newAudio === oldAudio) return;
         
         console.log(`Changement de musique vers ${type}`);
-        
-        // Baisser le volume de l'ancien audio
         this.fadeOutAudio(oldAudio);
         
-        // Démarrer le nouvel audio
         newAudio.currentTime = 0;
         newAudio.volume = 0;
         
-        // Utiliser une promesse pour s'assurer que l'audio est chargé avant de jouer
         newAudio.play()
             .then(() => {
                 console.log(`Musique ${type} démarrée avec succès`);
@@ -122,7 +128,6 @@ export class LevelManager {
             })
             .catch(err => {
                 console.error(`Erreur lors du démarrage de la musique ${type}:`, err);
-                // En cas d'erreur, on essaie de démarrer l'audio lors d'une interaction utilisateur
                 document.addEventListener('click', () => {
                     newAudio.play()
                         .then(() => {
@@ -136,7 +141,6 @@ export class LevelManager {
     
     fadeInAudio(audio) {
         if (!audio) return;
-        
         let volume = audio.volume;
         const fadeInterval = setInterval(() => {
             volume += 0.05;
@@ -150,15 +154,12 @@ export class LevelManager {
     
     fadeOutAudio(audio) {
         if (!audio) return;
-        
         let volume = audio.volume;
         const fadeInterval = setInterval(() => {
             volume -= 0.05;
             if (volume <= 0) {
                 volume = 0;
                 audio.volume = volume;
-                
-                // Ne pas mettre en pause immédiatement pour éviter les coupures
                 setTimeout(() => {
                     try {
                         audio.pause();
@@ -166,7 +167,6 @@ export class LevelManager {
                         console.error("Erreur lors de la mise en pause de l'audio:", e);
                     }
                 }, 500);
-                
                 clearInterval(fadeInterval);
             } else {
                 audio.volume = volume;

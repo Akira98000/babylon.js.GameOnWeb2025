@@ -11,7 +11,8 @@ export class Level3 {
         this.colorToCollect = 6; 
         this.originalMaterials = new Map();
         this.blackAndWhitePostProcess = null;
-        this.colorIntensity = 0; 
+        this.colorIntensity = 0;
+        this.onComplete = null;
     }
 
     async init() {
@@ -924,5 +925,23 @@ export class Level3 {
         // S'assurer que la scène est correctement mise à jour
         this.colorIntensity = 1.0;
         this.scene.render();
+    }
+
+    _checkCompletion() {
+        if (this.collectedColors.length === this.colorToCollect && !this.isCompleted) {
+            this.isCompleted = true;
+            this._showMessage("Félicitations ! Vous avez restauré toutes les couleurs !", 5000);
+            
+            // Ajouter un message de transition vers le niveau 4
+            setTimeout(() => {
+                this._showMessage("Mais attention ! Les pizzas maléfiques arrivent...", 4000);
+            }, 5000);
+            
+            setTimeout(() => {
+                if (this.onComplete && typeof this.onComplete === 'function') {
+                    this.onComplete();
+                }
+            }, 9000);
+        }
     }
 } 
