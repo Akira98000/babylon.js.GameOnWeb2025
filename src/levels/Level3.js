@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
+import gsap from 'gsap';
 
 export class Level3 {
     constructor(scene) {
@@ -10,9 +11,9 @@ export class Level3 {
         this.messageElement = this._createMessage("", "storyMessage");
         this.colorToCollect = 6; 
         this.originalMaterials = new Map();
-        this.blackAndWhitePostProcess = null;
         this.colorIntensity = 0;
         this.onComplete = null;
+        this.canvas = null;
     }
 
     async init() {
@@ -23,155 +24,33 @@ export class Level3 {
             }
         });
         
+        // Récupérer le canvas de rendu
+        this.canvas = this.scene.getEngine().getRenderingCanvas();
         this._applyBlackAndWhiteEffect();
-        this._storeAndConvertMaterials();
         this._displayStoryMessage();
         this._createColorCollectibles();
     }
     
     _applyBlackAndWhiteEffect() {
-        const camera = this.scene.getCameraByName("camera");
-        if (camera) {
-            BABYLON.Effect.ShadersStore["blackAndWhiteFragmentShader"] = `
-                #ifdef GL_ES
-                precision highp float;
-                #endif
-                
-                varying vec2 vUV;
-                uniform sampler2D textureSampler;
-                uniform float colorIntensity;
-                
-                void main(void) {
-                    vec3 color = texture2D(textureSampler, vUV).rgb;
-                    float gray = dot(color, vec3(0.3, 0.59, 0.11));
-                    vec3 bwColor = vec3(gray, gray, gray);
-                    gl_FragColor = vec4(mix(bwColor, color, colorIntensity), 1.0);
-                }
-            `;
-            
-            this.blackAndWhitePostProcess = new BABYLON.PostProcess(
-                "BlackAndWhite", 
-                "blackAndWhite", 
-                ["colorIntensity"], 
-                null, 
-                1.0, 
-                camera
-            );
-            
-            this.blackAndWhitePostProcess.onApply = (effect) => {
-                effect.setFloat("colorIntensity", this.colorIntensity);
-            };
+        if (this.canvas) {
+            // Appliquer le filtre grayscale à 100%
+            this.canvas.style.filter = 'grayscale(1)';
+            // Assurer une transition douce lors des changements futurs
+            this.canvas.style.transition = 'filter 0.5s ease';
         }
-    }
-    
-    _storeAndConvertMaterials() {
-        this.scene.meshes.forEach(mesh => {
-            if (mesh.material) {
-                // Stocker le matériau original pour pouvoir le restaurer plus tard
-                this.originalMaterials.set(mesh.id, mesh.material.clone());
-                
-                // Ne pas convertir les orbes de couleur
-                if (!mesh.name.includes("colorCollectible")) {
-                    const bwMaterial = new BABYLON.StandardMaterial(`bw_${mesh.material.name || mesh.id}`, this.scene);
-                    
-                    // Gestion des matériaux avec texture
-                    if (mesh.material.diffuseTexture) {
-                        bwMaterial.diffuseTexture = mesh.material.diffuseTexture.clone();
-                        bwMaterial.diffuseTexture.onLoad = () => {
-                            BABYLON.Effect.ShadersStore[`grayscale_${mesh.id}FragmentShader`] = `
-                                #ifdef GL_ES
-                                precision highp float;
-                                #endif
-                                
-                                varying vec2 vUV;
-                                uniform sampler2D textureSampler;
-                                
-                                void main(void) {
-                                    vec3 color = texture2D(textureSampler, vUV).rgb;
-                                    float gray = dot(color, vec3(0.3, 0.59, 0.11));
-                                    gl_FragColor = vec4(gray, gray, gray, 1.0);
-                                }
-                            `;
-                            
-                            const effect = new BABYLON.PostProcess(
-                                `grayscale_${mesh.id}`,
-                                `grayscale_${mesh.id}`,
-                                [],
-                                ["textureSampler"],
-                                1.0
-                            );
-                            
-                            bwMaterial.diffuseTexture.postProcess = effect;
-                        };
-                    } else {
-                        // Gestion des matériaux avec couleur
-                        const color = mesh.material.diffuseColor || new BABYLON.Color3(0.5, 0.5, 0.5);
-                        const gray = (color.r * 0.3 + color.g * 0.59 + color.b * 0.11);
-                        bwMaterial.diffuseColor = new BABYLON.Color3(gray, gray, gray);
-                    }
-                    
-                    // Copier les autres propriétés importantes du matériau
-                    bwMaterial.alpha = mesh.material.alpha;
-                    bwMaterial.backFaceCulling = mesh.material.backFaceCulling;
-                    
-                    // Copier les propriétés d'émission et de spécularité si elles existent
-                    if (mesh.material.emissiveColor) {
-                        const emissiveColor = mesh.material.emissiveColor;
-                        const emissiveGray = (emissiveColor.r * 0.3 + emissiveColor.g * 0.59 + emissiveColor.b * 0.11);
-                        bwMaterial.emissiveColor = new BABYLON.Color3(emissiveGray, emissiveGray, emissiveGray);
-                    }
-                    
-                    if (mesh.material.specularColor) {
-                        const specularColor = mesh.material.specularColor;
-                        const specularGray = (specularColor.r * 0.3 + specularColor.g * 0.59 + specularColor.b * 0.11);
-                        bwMaterial.specularColor = new BABYLON.Color3(specularGray, specularGray, specularGray);
-                        bwMaterial.specularPower = mesh.material.specularPower || 64;
-                    }
-                    
-                    // Appliquer le nouveau matériau en noir et blanc
-                    mesh.material = bwMaterial;
-                }
-            }
-        });
     }
     
     _restoreColors(intensity) {
         this.colorIntensity = intensity;
         
-        // Mise à jour du post-process pour la transition progressive
-        if (this.blackAndWhitePostProcess) {
-            this.blackAndWhitePostProcess.onApply = (effect) => {
-                effect.setFloat("colorIntensity", this.colorIntensity);
-            };
+        if (this.canvas) {
+            // Utiliser GSAP pour animer la transition
+            gsap.to(this.canvas, {
+                duration: 1.0, 
+                filter: `grayscale(${1 - intensity})`,
+                ease: "power2.out"
+            });
         }
-        
-        // Si toutes les couleurs sont collectées (intensité = 1.0), supprimer le post-process
-        if (intensity >= 1.0 && this.blackAndWhitePostProcess) {
-            this.blackAndWhitePostProcess.dispose();
-            this.blackAndWhitePostProcess = null;
-        }
-        
-        this.originalMaterials.forEach((originalMaterial, meshId) => {
-            const mesh = this.scene.getMeshByID(meshId);
-            if (mesh && !mesh.name.includes("colorCollectible")) {
-                if (intensity >= 1.0) {
-                    // Restaurer complètement le matériau original
-                    mesh.material = originalMaterial;
-                } else {
-                    // Transition progressive entre noir et blanc et couleur
-                    if (mesh.material.diffuseColor && originalMaterial.diffuseColor) {
-                        const originalColor = originalMaterial.diffuseColor;
-                        const gray = (originalColor.r * 0.3 + originalColor.g * 0.59 + originalColor.b * 0.11);
-                        const grayColor = new BABYLON.Color3(gray, gray, gray);
-                        mesh.material.diffuseColor = BABYLON.Color3.Lerp(
-                            grayColor,
-                            originalColor,
-                            intensity
-                        );
-                    }
-                }
-            }
-        });
     }
     
     _createColorCollectibles() {
@@ -636,6 +515,9 @@ export class Level3 {
                         setTimeout(() => {
                             this.forceRestoreColors();
                         }, 100);
+                        
+                        // Vérifier si le niveau est terminé
+                        this._checkCompletion();
                     }
                 }
             }
@@ -856,19 +738,11 @@ export class Level3 {
 
     // Nettoyage des ressources lors de la sortie du niveau
     cleanup() {
-        // Supprimer le post-process noir et blanc s'il existe encore
-        if (this.blackAndWhitePostProcess) {
-            this.blackAndWhitePostProcess.dispose();
-            this.blackAndWhitePostProcess = null;
+        // Restaurer le canvas à son état normal (suppression du filtre)
+        if (this.canvas) {
+            this.canvas.style.filter = '';
+            this.canvas.style.transition = '';
         }
-        
-        // Restaurer tous les matériaux originaux
-        this.originalMaterials.forEach((originalMaterial, meshId) => {
-            const mesh = this.scene.getMeshByID(meshId);
-            if (mesh) {
-                mesh.material = originalMaterial;
-            }
-        });
         
         // Nettoyer les collectibles de couleur
         for (const collectible of this.colorCollectibles) {
@@ -888,7 +762,6 @@ export class Level3 {
         this.colorCollectibles = [];
         this.collectedColors = [];
         this.rainbows = [];
-        this.originalMaterials.clear();
         
         // Supprimer le message si présent
         if (this.messageElement && this.messageElement.parentNode) {
@@ -900,31 +773,16 @@ export class Level3 {
     forceRestoreColors() {
         console.log("Forçage de la restauration des couleurs");
         
-        // Supprimer le post-process complètement
-        if (this.blackAndWhitePostProcess) {
-            try {
-                this.blackAndWhitePostProcess.dispose();
-            } catch (e) {
-                console.error("Erreur lors de la suppression du post-process:", e);
-            }
-            this.blackAndWhitePostProcess = null;
+        if (this.canvas) {
+            // Animation GSAP pour restauration instantanée des couleurs
+            gsap.to(this.canvas, {
+                duration: 0.3,
+                filter: 'grayscale(0)', 
+                ease: "power4.out"
+            });
         }
         
-        // Restaurer tous les matériaux originaux
-        this.originalMaterials.forEach((originalMaterial, meshId) => {
-            try {
-                const mesh = this.scene.getMeshByID(meshId);
-                if (mesh && !mesh.isDisposed()) {
-                    mesh.material = originalMaterial;
-                }
-            } catch (e) {
-                console.error(`Erreur lors de la restauration du matériau pour le mesh ${meshId}:`, e);
-            }
-        });
-        
-        // S'assurer que la scène est correctement mise à jour
         this.colorIntensity = 1.0;
-        this.scene.render();
     }
 
     _checkCompletion() {
@@ -934,8 +792,18 @@ export class Level3 {
             
             // Ajouter un message de transition vers le niveau 4
             setTimeout(() => {
-                this._showMessage("Mais attention ! Les pizzas maléfiques arrivent...", 4000);
+                this._showMessage("Le monde retrouve ses couleurs... mais une menace approche...", 4000);
             }, 5000);
+            
+            // Ajouter un effet sonore d'alerte
+            setTimeout(() => {
+                this._playAlertSound();
+            }, 8500);
+            
+            // Nettoyer les arcs-en-ciel avant de passer au niveau suivant
+            setTimeout(() => {
+                this._cleanupRainbows();
+            }, 8900);
             
             setTimeout(() => {
                 if (this.onComplete && typeof this.onComplete === 'function') {
@@ -943,5 +811,75 @@ export class Level3 {
                 }
             }, 9000);
         }
+    }
+    
+    _cleanupRainbows() {
+        console.log("Suppression des arcs-en-ciel du niveau 3");
+        
+        // Nettoyer les arcs-en-ciel
+        for (const rainbow of this.rainbows) {
+            if (rainbow && !rainbow.isDisposed()) {
+                rainbow.dispose();
+            }
+        }
+        
+        // Supprimer également les particules associées aux arcs-en-ciel
+        for (let particleSystem of this.scene.particleSystems) {
+            if (particleSystem.name.startsWith("rainbowParticles")) {
+                particleSystem.dispose();
+            }
+        }
+        
+        // Vider le tableau des arcs-en-ciel
+        this.rainbows = [];
+    }
+    
+    _playAlertSound() {
+        try {
+            const alertSound = new BABYLON.Sound("alertSound", "/son/alert.mp3", this.scene, null, {
+                volume: 0.7,
+                autoplay: true
+            });
+        } catch (error) {
+            console.warn("Impossible de jouer le son d'alerte:", error);
+        }
+    }
+
+    _showMessage(text, duration) {
+        const messageDiv = document.createElement("div");
+        messageDiv.style.position = "fixed";
+        messageDiv.style.top = "30%";
+        messageDiv.style.left = "50%";
+        messageDiv.style.transform = "translate(-50%, -50%)";
+        messageDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        messageDiv.style.color = "white";
+        messageDiv.style.padding = "20px";
+        messageDiv.style.borderRadius = "10px";
+        messageDiv.style.fontSize = "24px";
+        messageDiv.style.fontFamily = "Arial, sans-serif";
+        messageDiv.style.textAlign = "center";
+        messageDiv.style.zIndex = "1001";
+        messageDiv.style.boxShadow = "0 0 20px rgba(255, 255, 255, 0.3)";
+        messageDiv.innerHTML = text;
+        
+        document.body.appendChild(messageDiv);
+        
+        // Animation d'entrée
+        messageDiv.style.opacity = "0";
+        messageDiv.style.transition = "opacity 0.5s ease-in-out";
+        
+        setTimeout(() => {
+            messageDiv.style.opacity = "1";
+        }, 10);
+        
+        // Suppression après la durée spécifiée
+        setTimeout(() => {
+            messageDiv.style.opacity = "0";
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 500);
+        }, duration);
     }
 } 

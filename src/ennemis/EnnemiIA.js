@@ -68,7 +68,7 @@ export class EnnemiIA {
 
             // Définir un identifiant unique pour l'ennemi
             this.mesh.name = "ennemi_" + Math.random().toString(36).substr(2, 9);
-            this.mesh.isEnnemi = true; // Marquer comme ennemi pour la détection
+            this.mesh.isEnnemi = true;
 
             // Configuration des animations
             if (result.animationGroups) {
@@ -87,22 +87,48 @@ export class EnnemiIA {
             // Évite les erreurs WebGL liées à des animations mal initialisées
             result.animationGroups.forEach(group => group.normalize(0));
 
+            // Créer un ActionManager pour l'ennemi
+            this.mesh.actionManager = new BABYLON.ActionManager(this.scene);
+
             // Observer pour détecter les collisions avec les balles
-            this.scene.onBeforeRenderObservable.add(() => {
-                const bullets = this.scene.meshes.filter(mesh => mesh.name.startsWith("bullet"));
+            const bulletCollisionObserver = () => {
+                if (this.isDead || !this.mesh) return;
+
+                const bullets = this.scene.meshes.filter(mesh => 
+                    mesh.name && 
+                    mesh.name.startsWith("bullet") && 
+                    !mesh.isDisposed
+                );
+
                 for (const bullet of bullets) {
-                    if (!bullet.isDisposed && this.mesh && !this.isDead) {
-                        const distance = BABYLON.Vector3.Distance(bullet.position, this.mesh.position);
-                        if (distance < 1) { // Rayon de collision
-                            console.log("Hit detected on enemy: ", this.mesh.name); // Ajouté pour debug
+                    if (!bullet.isDisposed && this.mesh) {
+                        const distance = BABYLON.Vector3.Distance(
+                            bullet.absolutePosition,
+                            this.mesh.absolutePosition
+                        );
+                        
+                        if (distance < 2) {  // Réduire cette distance pour une détection plus précise
+                            console.log("Hit detected on enemy:", this.mesh.name);
+                            console.log("Distance:", distance);
+                            console.log("Bullet position:", bullet.absolutePosition);
+                            console.log("Enemy position:", this.mesh.absolutePosition);
+                            
                             this.takeDamage(20);
-                            bullet.dispose();
+                            if (!bullet.isDisposed) {
+                                bullet.dispose();
+                            }
+                            break;
                         }
                     }
                 }
-            });
+            };
 
+            // Ajouter l'observateur à la scène
+            this.scene.onBeforeRenderObservable.add(bulletCollisionObserver);
+
+            // Ajouter l'observateur de mise à jour
             this.scene.onBeforeRenderObservable.add(() => this.update());
+
         } catch (error) {
             console.error("Erreur lors du chargement de l'ennemi:", error);
         }
@@ -146,10 +172,16 @@ export class EnnemiIA {
 
     takeDamage(amount) {
         console.log("takeDamage called with", amount);
+        console.log("Current health before damage:", this.currentHealth);
+        
         const now = Date.now();
-        if (now - this.lastHitTime < this.hitRecoveryTime || this.isDead) return;
+        if (now - this.lastHitTime < this.hitRecoveryTime || this.isDead) {
+            console.log("Damage prevented - recovery time or dead");
+            return;
+        }
 
         this.currentHealth -= amount;
+        console.log("Current health after damage:", this.currentHealth);
         this.lastHitTime = now;
         this.isHit = true;
 
@@ -170,6 +202,7 @@ export class EnnemiIA {
 
         // Vérifier si l'ennemi est mort
         if (this.currentHealth <= 0 && !this.isDead) {
+            console.log("Enemy killed!");
             this.die();
         }
     }

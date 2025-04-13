@@ -9,25 +9,45 @@ export class Level4 {
         this.messageElement = this._createMessage("", "storyMessage");
         this.nombreEnnemis = 3;
         this.nombreEnnemisVaincus = 0;
+        this.lights = [];
     }
 
     async init() {
+        // Supprimer les arcs-en-ciel restants du niveau 3
+        this._nettoyerArcEnCielNiveau3();
+        
+        // Vérifier si le joueur existe dans les métadonnées
+        if (!this.scene.metadata || !this.scene.metadata.player || !this.scene.metadata.player.hero) {
+            console.error("Player not found in scene metadata");
+            return;
+        }
+        
+        // Positions des ennemis - en ajouter suffisamment
         const positions = [
-            new BABYLON.Vector3(0, 0, 10),
-            new BABYLON.Vector3(0, 0, -10),
             new BABYLON.Vector3(0, 0, -15)
         ];
 
-        for (let i = 0; i < this.nombreEnnemis; i++) {
-            const ennemi = new EnnemiIA(this.scene, positions[i], this.scene.metadata.player.hero);
-            this.ennemis.push(ennemi);
-        }
-
+        // Message d'introduction
         this._showMessage("Niveau 4: Combat contre les Pizzas Maléfiques!", 5000);
+        
+        // Créer un effet sonore dramatique
+        this._playBattleSound();
+        
+        // Créer chaque ennemi avec un délai pour une apparition séquentielle
+        for (let i = 0; i < this.nombreEnnemis; i++) {
+            if (i < positions.length) {
+                setTimeout(() => {
+                    this._spawnEnnemi(positions[i], i);
+                }, i * 1500); // Délai progressif entre chaque apparition
+            }
+        }
+        
+        // Message d'instructions après quelques secondes
         setTimeout(() => {
             this._showMessage("Éliminez toutes les pizzas pour gagner!", 4000);
         }, 5000);
 
+        // Ajouter l'observateur pour les collisions de balles
         this.scene.onBeforeRenderObservable.add(() => {
             this._checkBulletCollisions();
         });
@@ -38,7 +58,7 @@ export class Level4 {
         for (let mesh of meshes) {
             if (mesh.name.startsWith("bullet")) {
                 for (let ennemi of this.ennemis) {
-                    if (ennemi.mesh && mesh.intersectsMesh(ennemi.mesh)) {
+                    if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.mesh)) {
                         this._eliminerEnnemi(ennemi);
                         mesh.dispose();
                         break;
@@ -51,8 +71,8 @@ export class Level4 {
     _eliminerEnnemi(ennemi) {
         const index = this.ennemis.indexOf(ennemi);
         if (index > -1) {
+            ennemi.takeDamage(100);
             this.ennemis.splice(index, 1);
-            ennemi.mesh.dispose();
             this.nombreEnnemisVaincus++;
 
             if (this.nombreEnnemisVaincus === this.nombreEnnemis) {
@@ -67,7 +87,7 @@ export class Level4 {
         this.isCompleted = true;
         this._showMessage("Félicitations! Vous avez vaincu toutes les pizzas maléfiques!", 5000);
         setTimeout(() => {
-            if (this.scene.metadata.levelManager) {
+            if (this.scene.metadata && this.scene.metadata.levelManager) {
                 this.scene.metadata.levelManager.goToNextLevel();
             }
         }, 5000);
@@ -107,8 +127,154 @@ export class Level4 {
                 ennemi.mesh.dispose();
             }
         }
-        if (this.messageElement) {
-            document.body.removeChild(this.messageElement);
+        
+        // Nettoyer les lumières
+        for (let light of this.lights) {
+            if (light && !light.isDisposed()) {
+                light.dispose();
+            }
+        }
+        
+        if (this.messageElement && this.messageElement.parentNode) {
+            this.messageElement.parentNode.removeChild(this.messageElement);
+        }
+    }
+
+    _spawnEnnemi(position, index) {
+        try {
+            // Créer un effet visuel à la position d'apparition
+            this._createSpawnEffect(position);
+            
+            // Récupérer le joueur depuis les métadonnées de la scène
+            const player = this.scene.metadata.player.hero;
+            if (!player) {
+                console.error("Player not found for enemy targeting");
+                return;
+            }
+            
+            // Créer l'ennemi
+            const ennemi = new EnnemiIA(this.scene, position, player);
+            this.ennemis.push(ennemi);
+            
+            // Afficher un message pour chaque ennemi qui apparaît
+            const messages = [
+                "Une pizza maléfique apparaît!",
+                "Une autre pizza rejoint le combat!",
+                "Une dernière pizza surgit!"
+            ];
+            
+            this._showMessage(messages[index % messages.length], 2000);
+        } catch (error) {
+            console.error("Erreur lors de la création de l'ennemi:", error);
+        }
+    }
+    
+    _createSpawnEffect(position) {
+        try {
+            // Créer un système de particules pour l'apparition
+            const spawnParticles = new BABYLON.ParticleSystem("spawnParticles", 200, this.scene);
+            spawnParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
+            spawnParticles.emitter = position;
+            spawnParticles.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
+            spawnParticles.maxEmitBox = new BABYLON.Vector3(1, 0, 1);
+            
+            // Couleurs
+            spawnParticles.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
+            spawnParticles.color2 = new BABYLON.Color4(1, 0, 0, 1);
+            spawnParticles.colorDead = new BABYLON.Color4(0, 0, 0, 0);
+            
+            // Taille et durée de vie
+            spawnParticles.minSize = 0.3;
+            spawnParticles.maxSize = 1.5;
+            spawnParticles.minLifeTime = 0.3;
+            spawnParticles.maxLifeTime = 1.5;
+            
+            // Configuration
+            spawnParticles.emitRate = 100;
+            spawnParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+            spawnParticles.gravity = new BABYLON.Vector3(0, 1, 0);
+            spawnParticles.direction1 = new BABYLON.Vector3(-5, 5, -5);
+            spawnParticles.direction2 = new BABYLON.Vector3(5, 5, 5);
+            spawnParticles.minAngularSpeed = 0;
+            spawnParticles.maxAngularSpeed = Math.PI;
+            spawnParticles.minEmitPower = 1;
+            spawnParticles.maxEmitPower = 3;
+            
+            // Durée limitée
+            spawnParticles.targetStopDuration = 1.5;
+            spawnParticles.start();
+            
+            // Ajouter une lumière temporaire à la position d'apparition
+            const light = new BABYLON.PointLight("spawnLight", new BABYLON.Vector3(position.x, position.y + 1, position.z), this.scene);
+            light.diffuse = new BABYLON.Color3(1, 0.5, 0);
+            light.intensity = 3;
+            light.range = 20;
+            this.lights.push(light);
+            
+            // Animer la lumière
+            const animation = new BABYLON.Animation(
+                "lightAnimation",
+                "intensity",
+                30,
+                BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+                BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+            );
+            
+            const keys = [
+                { frame: 0, value: 0 },
+                { frame: 15, value: 3 },
+                { frame: 30, value: 0 }
+            ];
+            
+            animation.setKeys(keys);
+            light.animations = [animation];
+            this.scene.beginAnimation(light, 0, 30, false, 1, () => {
+                if (light && !light.isDisposed()) {
+                    light.dispose();
+                    const index = this.lights.indexOf(light);
+                    if (index > -1) {
+                        this.lights.splice(index, 1);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Erreur lors de la création de l'effet d'apparition:", error);
+        }
+    }
+    
+    _playBattleSound() {
+        try {
+            const battleSound = new BABYLON.Sound("battleSound", "/son/battle.mp3", this.scene, null, {
+                volume: 0.5,
+                autoplay: true
+            });
+        } catch (error) {
+            console.warn("Impossible de jouer le son de bataille:", error);
+        }
+    }
+
+    checkProximity(playerPosition) {
+        // Dans ce niveau, nous n'avons pas besoin de vérifier la proximité du joueur
+        // car le combat est géré par les collisions de balles, mais la méthode doit exister
+        // pour éviter les erreurs dans le levelManager
+        return;
+    }
+
+    _nettoyerArcEnCielNiveau3() {
+        // Rechercher et supprimer tous les objets arc-en-ciel du niveau 3
+        for (let mesh of this.scene.meshes) {
+            if (mesh && mesh.name && (mesh.name.startsWith("rainbow") || mesh.name === "finalRainbow")) {
+                console.log(`Suppression de l'arc-en-ciel: ${mesh.name}`);
+                mesh.dispose();
+            }
+        }
+        
+        // Rechercher et supprimer les systèmes de particules des arcs-en-ciel
+        for (let particleSystem of this.scene.particleSystems) {
+            if (particleSystem && particleSystem.name && particleSystem.name.startsWith("rainbowParticles")) {
+                console.log(`Suppression du système de particules: ${particleSystem.name}`);
+                particleSystem.dispose();
+            }
         }
     }
 } 

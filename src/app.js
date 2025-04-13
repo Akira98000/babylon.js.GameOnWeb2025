@@ -98,20 +98,6 @@ const initBabylon = async () => {
           }
         },
         { 
-          name: "ennemi", 
-          weight: 10, 
-          description: "Création de l'ennemi...",
-          func: async () => {
-            if (!scene.metadata.player) {
-              throw new Error("Le joueur doit être initialisé avant l'ennemi");
-            }
-            const ennemiPosition = new BABYLON.Vector3(0, 0, 1);
-            const ennemi = new EnnemiIA(scene, ennemiPosition, scene.metadata.player.hero);
-            scene.metadata.ennemi = ennemi;
-            return ennemi;
-          }
-        },
-        { 
           name: "animations", 
           weight: 10, 
           description: "Chargement des animations...",
@@ -212,7 +198,6 @@ const initBabylon = async () => {
             );
           }
           
-          // Pause avant de continuer
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }

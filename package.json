@@ -15,6 +15,7 @@
     "@babylonjs/core": "^7.52.1",
     "@babylonjs/inspector": "^7.54.1",
     "@babylonjs/loaders": "^7.52.1",
-    "babylonjs": "^7.52.1"
+    "babylonjs": "^7.52.1",
+    "gsap": "^3.12.7"
   }
 }

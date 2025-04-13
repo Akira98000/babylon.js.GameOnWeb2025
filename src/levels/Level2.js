@@ -101,11 +101,40 @@ export class Level2 {
             // S'assurer une dernière fois que tous les messages sont masqués
             this._toggleMessage(this.messageElement, false);
             
+            // Nettoyer les bananes avant de passer au niveau suivant
+            this._cleanupBananas();
+            
             // Appeler le callback pour passer au niveau 3
             if (typeof this.onComplete === 'function') {
                 this.onComplete();
             }
         }, 5000);
+    }
+
+    _cleanupBananas() {
+        console.log("Nettoyage des bananes du niveau 2");
+        
+        // Supprimer tous les meshes de bananes
+        for (const bananaObj of this.bananas) {
+            if (bananaObj.mesh) {
+                // Nettoyer les animations si elles existent
+                const animations = this.scene.animationGroups.filter(
+                    anim => anim.targetedAnimations.some(
+                        targetAnim => targetAnim.target === bananaObj.mesh
+                    )
+                );
+                
+                for (const anim of animations) {
+                    anim.stop();
+                }
+                
+                // Supprimer le mesh
+                bananaObj.mesh.dispose();
+            }
+        }
+        
+        // Vider le tableau des bananes
+        this.bananas = [];
     }
 
     _playAnimation(animationGroups, name) {
