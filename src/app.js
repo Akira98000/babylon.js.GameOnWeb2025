@@ -18,7 +18,6 @@ import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
 import { Tutorial } from "./ui/tutorial.js";
 import { WelcomePage } from "./ui/welcomePage.js";
-import { EnnemiIA } from "./ennemis/EnnemiIA.js";
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -124,34 +123,6 @@ const initBabylon = async () => {
             await levelManager.levels[1].init();
             scene.metadata.levelManager = levelManager;
             return levelManager;
-          }
-        },
-        {
-          name: "testEnnemi",
-          weight: 5,
-          description: "Création d'un ennemi test...",
-          func: async () => {
-            try {
-              // Vérifier que le joueur existe
-              if (scene.metadata.player && scene.metadata.player.hero) {
-                console.log("Création d'un ennemi test...");
-                // Position de l'ennemi éloignée du joueur pour éviter les conflits
-                const ennemiPosition = new BABYLON.Vector3(0, 0, 15);
-                const ennemiTest = new EnnemiIA(scene, ennemiPosition, scene.metadata.player.hero);
-                
-                // Stocker l'ennemi dans les métadonnées de la scène
-                if (!scene.metadata.ennemis) scene.metadata.ennemis = [];
-                scene.metadata.ennemis.push(ennemiTest);
-                console.log("Ennemi test créé avec succès!");
-                return ennemiTest;
-              } else {
-                console.error("Impossible de créer l'ennemi test: joueur non initialisé");
-                return null;
-              }
-            } catch (error) {
-              console.error("Erreur lors de la création de l'ennemi test:", error);
-              return null;
-            }
           }
         }
       ];

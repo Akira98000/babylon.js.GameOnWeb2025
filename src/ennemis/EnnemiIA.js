@@ -9,7 +9,7 @@ export class EnnemiIA {
         this.position = position;
         this.maxSpeed = 0.15;
         this.maxForce = 0.05;
-        this.detectionDistance = 20;
+        this.detectionDistance = 40;
         this.shootingDistance = 15;
         this.arriveRadius = 2;
         this.wanderRadius = 2;
@@ -53,22 +53,17 @@ export class EnnemiIA {
 
             this.mesh = result.meshes[0];
             if (this.mesh.material) {
-                this.mesh.material.freeze(); // Optimise et évite les warnings WebGL
+                this.mesh.material.freeze();
             }
             
-            // Attacher le mesh directement au root sans décalage
             this.mesh.parent = this.root;
             this.mesh.position = BABYLON.Vector3.Zero();
             this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
-
-            // Ajout d'une barre de vie
             this.createHealthBar();
-
-            // Configuration des collisions
             this.mesh.checkCollisions = true;
             this.mesh.ellipsoid = new BABYLON.Vector3(0.6, 1, 0.6);
             this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0);
-            this.mesh.applyGravity = false; // Désactiver la gravité
+            this.mesh.applyGravity = false
 
             // Définir un identifiant unique pour l'ennemi
             this.mesh.name = "ennemi_" + Math.random().toString(36).substr(2, 9);
@@ -140,37 +135,30 @@ export class EnnemiIA {
 
     createHealthBar() {
         // Créer un plan pour la barre de vie
-        const healthBarWidth = 2;
-        const healthBarHeight = 0.2;
+        const healthBarWidth = 0.5;
+        const healthBarHeight = 0.1;
         this.healthBar = BABYLON.MeshBuilder.CreatePlane("healthBar", {
             width: healthBarWidth,
             height: healthBarHeight
         }, this.scene);
 
-        // Matériau pour la barre de vie
         const healthMaterial = new BABYLON.StandardMaterial("healthBarMaterial", this.scene);
         healthMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
         healthMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0);
         healthMaterial.backFaceCulling = false;
         this.healthBar.material = healthMaterial;
-
-        // Positionner la barre de vie au-dessus de l'ennemi
         this.healthBar.parent = this.root;
-        this.healthBar.position.y = 2.5;
+        this.healthBar.position.y = 2.0;
         this.healthBar.rotation.y = Math.PI;
-
-        // Créer le fond de la barre de vie
         this.healthBarBackground = this.healthBar.clone("healthBarBg");
         this.healthBarBackground.parent = this.root;
-        this.healthBarBackground.position.y = 2.5;
+        this.healthBarBackground.position.y = 2.0;
         this.healthBarBackground.scaling.x = 1;
         const bgMaterial = new BABYLON.StandardMaterial("healthBarBgMaterial", this.scene);
         bgMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         bgMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         bgMaterial.backFaceCulling = false;
         this.healthBarBackground.material = bgMaterial;
-
-        // Mettre la barre de vie derrière le fond
         this.healthBar.position.z = 0.01;
     }
 
@@ -189,12 +177,10 @@ export class EnnemiIA {
         this.lastHitTime = now;
         this.isHit = true;
 
-        // Mise à jour visuelle de la barre de vie
         if (this.healthBar) {
             this.healthBar.scaling.x = Math.max(0, this.currentHealth / this.maxHealth);
         }
 
-        // Effet visuel quand l'ennemi est touché
         if (this.mesh && this.mesh.material) {
             this.mesh.material.emissiveColor = new BABYLON.Color3(1, 0, 0);
             setTimeout(() => {
@@ -204,7 +190,6 @@ export class EnnemiIA {
             }, this.hitRecoveryTime);
         }
 
-        // Vérifier si l'ennemi est mort
         if (this.currentHealth <= 0 && !this.isDead) {
             console.log("Enemy killed!");
             this.die();
@@ -213,13 +198,9 @@ export class EnnemiIA {
 
     die() {
         this.isDead = true;
-        
-        // Animation de mort
         if (this.animations) {
             Object.values(this.animations).forEach(anim => anim?.stop());
         }
-
-        // Effet de disparition
         const fadeOut = new BABYLON.Animation(
             "fadeOut",
             "visibility",
@@ -246,8 +227,6 @@ export class EnnemiIA {
     shoot() {
         const now = Date.now();
         if (now - this.lastShootTime < this.shootCooldown) return;
-
-        // Faire tourner l'ennemi pour faire face au joueur
         const directionToPlayer = this.player.position.subtract(this.root.position);
         this.targetRotation = Math.atan2(directionToPlayer.x, directionToPlayer.z);
         this.root.rotation.y = this.targetRotation;
@@ -264,11 +243,8 @@ export class EnnemiIA {
         }
 
         const shootDirection = directionToPlayer.normalize();
-        
-        // Utiliser la position du root pour le point d'origine de la balle
         const shootOrigin = this.root.position.clone();
-        shootOrigin.y += 1.5; // Ajuster la hauteur pour que la balle parte du haut de l'ennemi
-
+        shootOrigin.y += 1.5; 
         createBullet(this.scene, shootOrigin, shootDirection);
         this.lastShootTime = now;
     }
@@ -339,7 +315,6 @@ export class EnnemiIA {
         if (distanceToPlayer < this.detectionDistance) {
             if (distanceToPlayer < this.shootingDistance) {
                 this.shoot();
-                // Toujours se rapprocher du joueur quand on est en mode attaque
                 force = this.seek(this.player.position);
                 this.isRunning = true;
                 shouldTrackPlayer = true;
@@ -352,28 +327,17 @@ export class EnnemiIA {
             force = this.wander();
             this.isRunning = true;
         }
-
-        // Lisser la force pour éviter les zigzags
         force.scaleInPlace(this.smoothingFactor);
-        
         this.velocity.scaleInPlace(1 - this.smoothingFactor);
         this.velocity.addInPlace(force);
-        
         if (this.velocity.length() > this.maxSpeed) {
             this.velocity.normalize();
             this.velocity.scaleInPlace(this.maxSpeed);
         }
-        
-        // Forcer la composante Y à rester à 0 pour éviter les mouvements verticaux
         this.velocity.y = 0;
-        
-        // Appliquer la vélocité directement à la position du root
         this.root.position.addInPlace(this.velocity);
-        
-        // Maintenir une hauteur constante
         this.root.position.y = this.position.y;
         
-        // Mettre à jour la rotation en fonction de la direction
         if (shouldTrackPlayer) {
             const directionToPlayer = this.player.position.subtract(this.root.position);
             this.targetRotation = Math.atan2(directionToPlayer.x, directionToPlayer.z);
