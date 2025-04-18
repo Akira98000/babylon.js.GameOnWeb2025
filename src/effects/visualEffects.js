@@ -25,61 +25,6 @@ export const createMuzzleFlash = (scene) => {
     return muzzleFlash;
 };
 
-export const createConfetti = (scene) => {
-    const allSystems = [];
-    const colors = [
-        { color1: new BABYLON.Color4(1, 0, 0, 1), color2: new BABYLON.Color4(1, 0.3, 0.3, 1) },
-        { color1: new BABYLON.Color4(0, 1, 0, 1), color2: new BABYLON.Color4(0.3, 1, 0.3, 1) }
-    ];
-    colors.forEach((color, index) => {
-        const confetti = new BABYLON.ParticleSystem("confetti" + index, 25, scene); // Réduit à 25 par système
-        confetti.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
-        confetti.emitter = new BABYLON.Vector3(0, 0, 0);
-        confetti.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
-        confetti.maxEmitBox = new BABYLON.Vector3(0.1, 0.1, 0.1);
-        confetti.color1 = color.color1;
-        confetti.color2 = color.color2;
-        confetti.colorDead = new BABYLON.Color4(color.color1.r, color.color1.g, color.color1.b, 0);
-        
-        confetti.minSize = 0.05;
-        confetti.maxSize = 0.15;
-        confetti.minLifeTime = 0.5;
-        confetti.maxLifeTime = 1.0;
-        confetti.emitRate = 50;
-        confetti.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
-        confetti.gravity = new BABYLON.Vector3(0, -0.5, 0);
-        confetti.direction1 = new BABYLON.Vector3(-1, 1, -1);
-        confetti.direction2 = new BABYLON.Vector3(1, 1, 1);
-        confetti.minEmitPower = 0.5;
-        confetti.maxEmitPower = 1.5;
-        confetti.minAngularSpeed = 0;
-        confetti.maxAngularSpeed = Math.PI;
-        confetti.updateSpeed = 0.02;
-        
-        allSystems.push(confetti);
-    });
-    
-    return {
-        _emitter: new BABYLON.Vector3(0, 0, 0),
-        get emitter() { return this._emitter; },
-        set emitter(value) {
-            this._emitter = value;
-            allSystems.forEach(system => {
-                system.emitter = value;
-            });
-        },
-        start: function() { 
-            allSystems.forEach(system => system.start()); 
-        },
-        stop: function() { 
-            allSystems.forEach(system => system.stop()); 
-        },
-        dispose: function() { 
-            allSystems.forEach(system => system.dispose()); 
-        }
-    };
-};
-
 export const createEnvironmentParticles = (scene) => {
     const envParticles = new BABYLON.ParticleSystem("particles", 200, scene); 
     envParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);

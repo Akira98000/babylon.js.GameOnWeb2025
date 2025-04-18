@@ -16,8 +16,6 @@ import { createMiniMap } from "./ui/miniMap.js";
 import { MainMenu } from "./ui/mainMenu.js";
 import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
-import { Tutorial } from "./ui/tutorial.js";
-import { WelcomePage } from "./ui/welcomePage.js";
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -219,7 +217,6 @@ const initBabylon = async () => {
       const instruction = instructions();
       const miniMap = createMiniMap();
       const compass = setupCompass();
-      const tutorial = new Tutorial(scene);
       let mouseMoved = false;
       let currentMouseX = 0;
       
@@ -229,18 +226,10 @@ const initBabylon = async () => {
           currentMouseX = pointerInfo.event.clientX;
         }
       });
-
-      const welcomePage = new WelcomePage(() => {
-        setTimeout(() => {
-          tutorial.show();
-        }, 500);
-      });
       
       setTimeout(() => {
         welcomePage.show();
       }, 1000);
-
-      scene.metadata.tutorial = tutorial;      
 
       const mapBounds = {
         minX: -90,
@@ -331,14 +320,6 @@ const initBabylon = async () => {
         scene.render();
         player.handleShooting(animations);
         
-        // Mettre à jour le tutoriel
-        if (tutorial.isVisible) {
-          tutorial.update(controls.inputMap, mouseMoved, player.isShooting, currentMouseX);
-          
-          // Réinitialiser le flag mouseMoved après chaque frame
-          mouseMoved = false;
-        }
-        
         if (player.hero && levelManager) {
           levelManager.checkProximity(player.hero.position);
         }
@@ -350,7 +331,6 @@ const initBabylon = async () => {
           miniMap.updateBananaMarkers(levelManager.levels[2].bananas, mapBounds);
         }
         
-        // Mettre à jour directement le FPS avec la valeur du moteur
         fpsDisplay.updateFPS(engine.getFps());
       });
       

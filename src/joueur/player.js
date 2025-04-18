@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { createMuzzleFlash, createConfetti } from '../effects/visualEffects';
+import { createMuzzleFlash } from '../effects/visualEffects';
 import { createBullet } from '../armes/balles';
 
 let isShooting = false;
@@ -37,7 +37,6 @@ export const createPlayer = async (scene, camera, canvas) => {
         return scene.pickWithRay(ray).hit;
     };
 
-    const confetti = createConfetti(scene);
     const shotgunSound = new BABYLON.Sound("shotgunSound", "/son/shotgun.mp3", scene, null, {
         volume: GAME_CONFIG.AUDIO.SHOTGUN.VOLUME,
         spatialSound: GAME_CONFIG.AUDIO.SHOTGUN.SPATIAL
@@ -84,9 +83,6 @@ export const createPlayer = async (scene, camera, canvas) => {
     const executeShot = (position, direction) => {
         const bulletStartPosition = position.clone().add(shootOffset);
         shotgunSound.play();
-        confetti.emitter = bulletStartPosition;
-        confetti.start();
-        setTimeout(() => confetti.stop(), 200);
         createBullet(scene, bulletStartPosition, direction);
     };
 

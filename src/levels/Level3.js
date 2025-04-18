@@ -287,9 +287,6 @@ export class Level3 {
             }
             this.messageElement.style.opacity = opacity;
         }, 20);
-        
-        // Animation confetti
-        this._createConfetti();
     }
     
     _animateText(text) {

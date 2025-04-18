@@ -19,7 +19,9 @@ export class Level4 {
             return;
         }
         const positions = [
-            new BABYLON.Vector3(0, 0, -15)
+            new BABYLON.Vector3(0, 0, -15),
+            new BABYLON.Vector3(5, 0, -12),
+            new BABYLON.Vector3(-5, 0, -18)
         ];
 
         this._showMessage("Niveau 4: Combat contre les Pizzas Maléfiques!", 5000);
@@ -36,6 +38,11 @@ export class Level4 {
         }, 5000);
         this.scene.onBeforeRenderObservable.add(() => {
             this._checkBulletCollisions();
+            for (const ennemi of this.ennemis) {
+                if (!ennemi.isDead) {
+                    ennemi.update();
+                }
+            }
         });
     }
 
@@ -43,11 +50,16 @@ export class Level4 {
         const meshes = this.scene.meshes;
         for (let mesh of meshes) {
             if (mesh.name.startsWith("bullet")) {
-                for (let ennemi of this.ennemis) {
-                    if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.mesh)) {
-                        this._eliminerEnnemi(ennemi);
-                        mesh.dispose();
-                        break;
+                if (mesh.metadata && mesh.metadata.fromPlayer) {
+                    for (let ennemi of this.ennemis) {
+                        if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.hitbox || ennemi.mesh)) {
+                            ennemi.takeDamage(20);
+                            if (ennemi.isDead) {
+                                this._eliminerEnnemi(ennemi);
+                            }
+                            mesh.dispose();
+                            break;
+                        }
                     }
                 }
             }
@@ -107,7 +119,6 @@ export class Level4 {
     }
 
     dispose() {
-        // Nettoyer les ressources
         for (let ennemi of this.ennemis) {
             if (ennemi.mesh) {
                 ennemi.mesh.dispose();
@@ -128,7 +139,6 @@ export class Level4 {
 
     _spawnEnnemi(position, index) {
         try {
-            this._createSpawnEffect(position);
             const player = this.scene.metadata.player.hero;
             if (!player) {
                 console.error("Player not found for enemy targeting");
@@ -149,72 +159,6 @@ export class Level4 {
         }
     }
     
-    _createSpawnEffect(position) {
-        try {
-            const spawnParticles = new BABYLON.ParticleSystem("spawnParticles", 200, this.scene);
-            spawnParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
-            spawnParticles.emitter = position;
-            spawnParticles.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
-            spawnParticles.maxEmitBox = new BABYLON.Vector3(1, 0, 1);
-            
-            spawnParticles.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
-            spawnParticles.color2 = new BABYLON.Color4(1, 0, 0, 1);
-            spawnParticles.colorDead = new BABYLON.Color4(0, 0, 0, 0);
-            
-            spawnParticles.minSize = 0.3;
-            spawnParticles.maxSize = 1.5;
-            spawnParticles.minLifeTime = 0.3;
-            spawnParticles.maxLifeTime = 1.5;
-            
-            spawnParticles.emitRate = 100;
-            spawnParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
-            spawnParticles.gravity = new BABYLON.Vector3(0, 1, 0);
-            spawnParticles.direction1 = new BABYLON.Vector3(-5, 5, -5);
-            spawnParticles.direction2 = new BABYLON.Vector3(5, 5, 5);
-            spawnParticles.minAngularSpeed = 0;
-            spawnParticles.maxAngularSpeed = Math.PI;
-            spawnParticles.minEmitPower = 1;
-            spawnParticles.maxEmitPower = 3;
-            
-            spawnParticles.targetStopDuration = 1.5;
-            spawnParticles.start();
-            
-            const light = new BABYLON.PointLight("spawnLight", new BABYLON.Vector3(position.x, position.y + 1, position.z), this.scene);
-            light.diffuse = new BABYLON.Color3(1, 0.5, 0);
-            light.intensity = 3;
-            light.range = 20;
-            this.lights.push(light);
-            
-            const animation = new BABYLON.Animation(
-                "lightAnimation",
-                "intensity",
-                30,
-                BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-                BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
-            );
-            
-            const keys = [
-                { frame: 0, value: 0 },
-                { frame: 15, value: 3 },
-                { frame: 30, value: 0 }
-            ];
-            
-            animation.setKeys(keys);
-            light.animations = [animation];
-            this.scene.beginAnimation(light, 0, 30, false, 1, () => {
-                if (light && !light.isDisposed()) {
-                    light.dispose();
-                    const index = this.lights.indexOf(light);
-                    if (index > -1) {
-                        this.lights.splice(index, 1);
-                    }
-                }
-            });
-        } catch (error) {
-            console.error("Erreur lors de la création de l'effet d'apparition:", error);
-        }
-    }
-    
     _playBattleSound() {
         try {
             const battleSound = new BABYLON.Sound("battleSound", "/son/battle.mp3", this.scene, null, {
@@ -225,11 +169,7 @@ export class Level4 {
             console.warn("Impossible de jouer le son de bataille:", error);
         }
     }
-
-    checkProximity(playerPosition) {
-        return;
-    }
-
+    
     _nettoyerArcEnCielNiveau3() {
         for (let mesh of this.scene.meshes) {
             if (mesh && mesh.name && (mesh.name.startsWith("rainbow") || mesh.name === "finalRainbow")) {
@@ -244,5 +184,11 @@ export class Level4 {
                 particleSystem.dispose();
             }
         }
+    }
+
+    checkProximity(playerPosition) {
+        // Le niveau 4 n'a pas besoin de vérifier la proximité
+        // Cette méthode est ajoutée pour maintenir la cohérence avec les autres niveaux
+        return;
     }
 } 

@@ -11,6 +11,7 @@ export class EnnemiIA {
         this.maxForce = 0.05;
         this.detectionDistance = 40;
         this.shootingDistance = 15;
+        this.keepDistance = 2; 
         this.arriveRadius = 2;
         this.wanderRadius = 2;
         this.wanderDistance = 4;
@@ -26,13 +27,14 @@ export class EnnemiIA {
         this.targetRotation = 0;
         this.smoothingFactor = 0.2; 
 
-        // Système de vie
+        // Système de vie amélioré
         this.maxHealth = 100;
         this.currentHealth = this.maxHealth;
         this.isDead = false;
         this.isHit = false;
-        this.hitRecoveryTime = 200; 
+        this.hitRecoveryTime = 200;
         this.lastHitTime = 0;
+        this.damagePerBullet = 34; 
 
         BABYLON.Engine.UseUBO = false;
 
@@ -52,22 +54,22 @@ export class EnnemiIA {
             this.root.position = this.position;
 
             this.mesh = result.meshes[0];
-            if (this.mesh.material) {
-                this.mesh.material.freeze();
-            }
-            
             this.mesh.parent = this.root;
             this.mesh.position = BABYLON.Vector3.Zero();
             this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
-            this.createHealthBar();
-            this.mesh.checkCollisions = true;
-            this.mesh.ellipsoid = new BABYLON.Vector3(0.6, 1, 0.6);
-            this.mesh.ellipsoidOffset = new BABYLON.Vector3(0, 1, 0);
-            this.mesh.applyGravity = false
+            
+            this.hitbox = BABYLON.MeshBuilder.CreateBox("hitbox", {
+                width: 1.5,
+                height: 2,
+                depth: 1.5
+            }, this.scene);
+            this.hitbox.parent = this.root;
+            this.hitbox.position.y = 1;
+            this.hitbox.visibility = 0;
+            this.hitbox.isPickable = true;
+            this.hitbox.isEnnemi = true;
 
-            // Définir un identifiant unique pour l'ennemi
-            this.mesh.name = "ennemi_" + Math.random().toString(36).substr(2, 9);
-            this.mesh.isEnnemi = true;
+            this.createHealthBar();
 
             // Configuration des animations
             if (result.animationGroups) {
@@ -82,32 +84,27 @@ export class EnnemiIA {
                     this.currentAnimation = "run";
                 }
             }
-            result.animationGroups.forEach(group => group.normalize(0));
-            this.mesh.actionManager = new BABYLON.ActionManager(this.scene);
 
-            const bulletCollisionObserver = () => {
-                if (this.isDead || !this.mesh) return;
+            // Système de détection des collisions amélioré
+            this.scene.onBeforeRenderObservable.add(() => {
+                if (this.isDead || !this.hitbox) return;
 
                 const bullets = this.scene.meshes.filter(mesh => 
                     mesh.name && 
                     mesh.name.startsWith("bullet") && 
-                    !mesh.isDisposed
+                    !mesh.isDisposed &&
+                    mesh.metadata?.fromPlayer // Ne détecter que les balles du joueur
                 );
 
                 for (const bullet of bullets) {
-                    if (!bullet.isDisposed && this.mesh) {
+                    if (!bullet.isDisposed && this.hitbox) {
                         const distance = BABYLON.Vector3.Distance(
                             bullet.absolutePosition,
-                            this.mesh.absolutePosition
+                            this.hitbox.absolutePosition
                         );
                         
-                        if (distance < 2) {  
-                            console.log("Hit detected on enemy:", this.mesh.name);
-                            console.log("Distance:", distance);
-                            console.log("Bullet position:", bullet.absolutePosition);
-                            console.log("Enemy position:", this.mesh.absolutePosition);
-                            
-                            this.takeDamage(20);
+                        if (distance < 1.5) {  
+                            this.takeDamage(this.damagePerBullet);
                             if (!bullet.isDisposed) {
                                 bullet.dispose();
                             }
@@ -115,9 +112,7 @@ export class EnnemiIA {
                         }
                     }
                 }
-            };
-            this.scene.onBeforeRenderObservable.add(bulletCollisionObserver);
-            this.scene.onBeforeRenderObservable.add(() => this.update());
+            });
 
         } catch (error) {
             console.error("Erreur lors du chargement de l'ennemi:", error);
@@ -127,48 +122,52 @@ export class EnnemiIA {
     createHealthBar() {
         const healthBarWidth = 0.5;
         const healthBarHeight = 0.1;
+    
+        // Avant (barre verte)
         this.healthBar = BABYLON.MeshBuilder.CreatePlane("healthBar", {
             width: healthBarWidth,
             height: healthBarHeight
         }, this.scene);
-
+    
         const healthMaterial = new BABYLON.StandardMaterial("healthBarMaterial", this.scene);
-        healthMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
-        healthMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0);
-        healthMaterial.backFaceCulling = false;
+        healthMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0); // vert
+        healthMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0); // vert lumineux
+        healthMaterial.backFaceCulling = false; // visible des deux côtés
         this.healthBar.material = healthMaterial;
+    
         this.healthBar.parent = this.root;
         this.healthBar.position.y = 2.0;
+        this.healthBar.position.z = 0.01; // légèrement en avant
         this.healthBar.rotation.y = Math.PI;
+    
+        // Fond (gris foncé)
         this.healthBarBackground = this.healthBar.clone("healthBarBg");
         this.healthBarBackground.parent = this.root;
         this.healthBarBackground.position.y = 2.0;
+        this.healthBarBackground.position.z = -0.01; // légèrement derrière
         this.healthBarBackground.scaling.x = 1;
+    
         const bgMaterial = new BABYLON.StandardMaterial("healthBarBgMaterial", this.scene);
         bgMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         bgMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.2, 0.2);
         bgMaterial.backFaceCulling = false;
         this.healthBarBackground.material = bgMaterial;
-        this.healthBar.position.z = 0.01;
     }
 
     takeDamage(amount) {
-        console.log("takeDamage called with", amount);
-        console.log("Current health before damage:", this.currentHealth);
-        
         const now = Date.now();
         if (now - this.lastHitTime < this.hitRecoveryTime || this.isDead) {
-            console.log("Damage prevented - recovery time or dead");
             return;
         }
 
         this.currentHealth -= amount;
-        console.log("Current health after damage:", this.currentHealth);
         this.lastHitTime = now;
         this.isHit = true;
 
         if (this.healthBar) {
-            this.healthBar.scaling.x = Math.max(0, this.currentHealth / this.maxHealth);
+            const ratio = Math.max(0, this.currentHealth / this.maxHealth);
+            this.healthBar.scaling.x = ratio;
+            this.healthBar.position.x = 0.5 * (1 - ratio) * this.healthBarBackground.scaling.x;
         }
 
         if (this.mesh && this.mesh.material) {
@@ -180,17 +179,21 @@ export class EnnemiIA {
             }, this.hitRecoveryTime);
         }
 
+        // Vérifier si l'ennemi est mort
         if (this.currentHealth <= 0 && !this.isDead) {
-            console.log("Enemy killed!");
             this.die();
         }
     }
 
     die() {
         this.isDead = true;
+        
+        // Arrêter toutes les animations
         if (this.animations) {
             Object.values(this.animations).forEach(anim => anim?.stop());
         }
+
+        // Animation de disparition
         const fadeOut = new BABYLON.Animation(
             "fadeOut",
             "visibility",
@@ -206,11 +209,17 @@ export class EnnemiIA {
 
         this.mesh.animations = [fadeOut];
         this.scene.beginAnimation(this.mesh, 0, 30, false, 1, () => {
+            // Nettoyer les ressources
             if (this.healthBar) this.healthBar.dispose();
             if (this.healthBarBackground) this.healthBarBackground.dispose();
+            if (this.hitbox) this.hitbox.dispose();
             if (this.mesh) this.mesh.dispose();
             if (this.root) this.root.dispose();
         });
+
+        // Émettre un événement de mort
+        const event = new CustomEvent("enemyKilled", { detail: { enemy: this } });
+        document.dispatchEvent(event);
     }
 
     shoot() {
@@ -234,7 +243,7 @@ export class EnnemiIA {
         const shootDirection = directionToPlayer.normalize();
         const shootOrigin = this.root.position.clone();
         shootOrigin.y += 1.5; 
-        createBullet(this.scene, shootOrigin, shootDirection);
+        createBullet(this.scene, shootOrigin, shootDirection, false);
         this.lastShootTime = now;
     }
 
@@ -243,7 +252,9 @@ export class EnnemiIA {
         const distance = desired.length();
         desired.normalize();
 
-        if (distance < this.arriveRadius) {
+        if (distance < this.keepDistance) {
+            desired.scaleInPlace(-this.maxSpeed); 
+        } else if (distance < this.arriveRadius) {
             const speed = this.maxSpeed * (distance / this.arriveRadius);
             desired.scaleInPlace(speed);
         } else {

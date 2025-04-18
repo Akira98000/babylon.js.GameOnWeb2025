@@ -444,9 +444,6 @@ export class Level2 {
             }
             this.messageElement.style.opacity = opacity;
         }, 20);
-        
-        // Animation confetti
-        this._createConfetti();
     }
 
     _animateText(text) {
@@ -489,72 +486,5 @@ export class Level2 {
             }
             element.style.opacity = opacity;
         }, 20);
-    }
-    
-    _createConfetti() {
-        const confettiContainer = document.createElement("div");
-        confettiContainer.style.position = "fixed";
-        confettiContainer.style.top = "0";
-        confettiContainer.style.left = "0";
-        confettiContainer.style.width = "100%";
-        confettiContainer.style.height = "100%";
-        confettiContainer.style.pointerEvents = "none";
-        confettiContainer.style.zIndex = "999";
-        document.body.appendChild(confettiContainer);
-        
-        const colors = ["#ffcc00", "#ffea00", "#ffff00", "#aaff00", "#55ff00"];
-        
-        // Créer des confettis
-        for (let i = 0; i < 150; i++) {
-            setTimeout(() => {
-                const confetti = document.createElement("div");
-                const size = Math.random() * 10 + 5;
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                
-                confetti.style.position = "absolute";
-                confetti.style.width = `${size}px`;
-                confetti.style.height = `${size}px`;
-                confetti.style.backgroundColor = color;
-                confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
-                confetti.style.top = "-20px";
-                confetti.style.left = `${Math.random() * 100}%`;
-                confetti.style.opacity = Math.random() + 0.5;
-                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-                confetti.style.transition = "transform 1s ease";
-                
-                confettiContainer.appendChild(confetti);
-                
-                // Animation de chute
-                let speed = 1 + Math.random() * 3;
-                let posY = -20;
-                let posX = parseFloat(confetti.style.left);
-                let rotate = 0;
-                let opacity = parseFloat(confetti.style.opacity);
-                
-                const fall = setInterval(() => {
-                    posY += speed;
-                    posX += Math.sin(posY / 30) * 2;
-                    rotate += 5;
-                    confetti.style.top = `${posY}px`;
-                    confetti.style.left = `${posX}%`;
-                    confetti.style.transform = `rotate(${rotate}deg)`;
-                    
-                    if (posY > window.innerHeight) {
-                        clearInterval(fall);
-                        confetti.remove();
-                    }
-                    
-                    if (posY > window.innerHeight * 0.7) {
-                        opacity -= 0.01;
-                        confetti.style.opacity = opacity;
-                    }
-                }, 16);
-            }, i * 50);
-        }
-        
-        // Supprimer le conteneur après quelques secondes
-        setTimeout(() => {
-            confettiContainer.remove();
-        }, 10000);
     }
 }

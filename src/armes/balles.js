@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-export const createBullet = (scene, startPosition, direction) => {
+export const createBullet = (scene, startPosition, direction, fromPlayer = true) => {
 
   const bullet = BABYLON.MeshBuilder.CreateCylinder("bullet", {
         height: 0.03,
@@ -19,6 +19,11 @@ export const createBullet = (scene, startPosition, direction) => {
     
     bullet.material = bulletMaterial;
     bullet.position = startPosition.clone();
+
+    // Ajouter les métadonnées pour identifier la source de la balle
+    bullet.metadata = {
+        fromPlayer: fromPlayer
+    };
 
     const speed = 30;
     const bulletDirection = direction.clone().normalize();
