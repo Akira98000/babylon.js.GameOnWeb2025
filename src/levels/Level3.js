@@ -131,43 +131,40 @@ export class Level3 {
     }
     
     _createCollectibleParticles(mesh, color) {
-        const particleSystem = new BABYLON.ParticleSystem(`particles${mesh.name}`, 100, this.scene);
+        const particleSystem = new BABYLON.ParticleSystem(`particles${mesh.name}`, 50, this.scene);
         particleSystem.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
         particleSystem.emitter = mesh;
-        particleSystem.minEmitBox = new BABYLON.Vector3(-0.2, -0.2, -0.2);
-        particleSystem.maxEmitBox = new BABYLON.Vector3(0.2, 0.2, 0.2);
+        particleSystem.minEmitBox = new BABYLON.Vector3(-0.1, -0.1, -0.1);
+        particleSystem.maxEmitBox = new BABYLON.Vector3(0.1, 0.1, 0.1);
         
         particleSystem.color1 = new BABYLON.Color4(color.r, color.g, color.b, 1.0);
         particleSystem.color2 = new BABYLON.Color4(color.r, color.g, color.b, 1.0);
         particleSystem.colorDead = new BABYLON.Color4(color.r, color.g, color.b, 0);
         
         particleSystem.minSize = 0.1;
-        particleSystem.maxSize = 0.3;
+        particleSystem.maxSize = 0.2;
         particleSystem.minLifeTime = 0.5;
-        particleSystem.maxLifeTime = 1.5;
-        particleSystem.emitRate = 20;
+        particleSystem.maxLifeTime = 1.0;
+        particleSystem.emitRate = 10;
         particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
         particleSystem.gravity = new BABYLON.Vector3(0, 0, 0);
-        particleSystem.direction1 = new BABYLON.Vector3(-1, 1, -1);
-        particleSystem.direction2 = new BABYLON.Vector3(1, 1, 1);
-        particleSystem.minAngularSpeed = 0;
-        particleSystem.maxAngularSpeed = Math.PI;
-        particleSystem.minEmitPower = 0.5;
-        particleSystem.maxEmitPower = 1;
-        particleSystem.updateSpeed = 0.01;
+        particleSystem.direction1 = new BABYLON.Vector3(-0.5, 0.5, -0.5);
+        particleSystem.direction2 = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        particleSystem.minEmitPower = 0.3;
+        particleSystem.maxEmitPower = 0.7;
+        particleSystem.updateSpeed = 0.02;
         
         particleSystem.start();
     }
     
     _createRainbow(startPosition, endPosition, color, index) {
         const points = [];
-        const segments = 20;
-        const height = 50; // Hauteur maximale de l'arc augmentée
+        const segments = 10;
+        const height = 40;
         
-        // Ajuster les positions pour couvrir une plus grande distance
         const distance = BABYLON.Vector3.Distance(startPosition, endPosition);
         const direction = BABYLON.Vector3.Normalize(endPosition.subtract(startPosition));
-        const scaledDirection = direction.scale(distance * 2); // Doubler la distance
+        const scaledDirection = direction.scale(distance * 1.5);
         const newEndPosition = startPosition.add(scaledDirection);
         
         for (let i = 0; i <= segments; i++) {
@@ -180,18 +177,16 @@ export class Level3 {
         
         const rainbow = BABYLON.MeshBuilder.CreateTube(`rainbow${index}`, {
             path: points,
-            radius: 1.5, 
-            tessellation: 16, 
-            updatable: true
+            radius: 1.5,
+            tessellation: 8,
+            updatable: false
         }, this.scene);
         
         const material = new BABYLON.StandardMaterial(`rainbowMaterial${index}`, this.scene);
         material.diffuseColor = color;
-        material.emissiveColor = color.scale(0.7); 
+        material.emissiveColor = color.scale(0.5);
         material.alpha = 0.8;
         rainbow.material = material;
-        
-        this._createRainbowParticles(points, color);
         
         return rainbow;
     }
@@ -548,13 +543,10 @@ export class Level3 {
     }
     
     _createFinalRainbow() {
-        // Forcer la restauration complète des couleurs
         this.forceRestoreColors();
         
-        // Créer un grand arc-en-ciel circulaire au-dessus de la ville
-        const segments = 60;
-        // Augmenter le rayon pour couvrir toute la longueur de la carte
-        const radius = 100; // Valeur augmentée pour couvrir la carte entière
+        const segments = 30;
+        const radius = 100;
         const centerPoint = new BABYLON.Vector3(0, 0, 0);
         const points = [];
         
@@ -562,20 +554,19 @@ export class Level3 {
             const angle = (i / segments) * Math.PI * 2;
             const x = radius * Math.cos(angle);
             const z = radius * Math.sin(angle);
-            // Augmenter la hauteur pour rendre l'arc-en-ciel plus visible
             const y = 30 + 10 * Math.sin((i / segments) * Math.PI * 4);
             points.push(new BABYLON.Vector3(x, y, z));
         }
         
         const finalRainbow = BABYLON.MeshBuilder.CreateTube("finalRainbow", {
             path: points,
-            radius: 2, // Augmenter l'épaisseur du tube
-            tessellation: 12,
-            updatable: true
+            radius: 2,
+            tessellation: 8,
+            updatable: false
         }, this.scene);
         
         const rainbowMaterial = new BABYLON.StandardMaterial("rainbowMaterial", this.scene);
-        const rainbowTexture = new BABYLON.ProceduralTexture("rainbowTexture", 256, "rainbowShader", this.scene);
+        const rainbowTexture = new BABYLON.ProceduralTexture("rainbowTexture", 128, "rainbowShader", this.scene);
         
         BABYLON.Effect.ShadersStore["rainbowShaderFragmentShader"] = `
             precision highp float;
@@ -613,8 +604,7 @@ export class Level3 {
         
         finalRainbow.material = rainbowMaterial;
         
-        // Créer des particules d'arc-en-ciel autour du grand arc
-        for (let i = 0; i < points.length; i += 3) {
+        for (let i = 0; i < points.length; i += 6) {
             this._createColorfulParticles(points[i]);
         }
         
@@ -622,7 +612,7 @@ export class Level3 {
     }
     
     _createColorfulParticles(position) {
-        const particleSystem = new BABYLON.ParticleSystem("rainbowParticles", 200, this.scene);
+        const particleSystem = new BABYLON.ParticleSystem("rainbowParticles", 100, this.scene);
         particleSystem.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
         particleSystem.emitter = position;
         particleSystem.updateFunction = (particles) => {
@@ -652,16 +642,16 @@ export class Level3 {
         };
         
         particleSystem.minSize = 0.1;
-        particleSystem.maxSize = 0.3;
-        particleSystem.minLifeTime = 1;
-        particleSystem.maxLifeTime = 3;
-        particleSystem.emitRate = 50;
+        particleSystem.maxSize = 0.2;
+        particleSystem.minLifeTime = 0.8;
+        particleSystem.maxLifeTime = 2;
+        particleSystem.emitRate = 25;
         particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
-        particleSystem.gravity = new BABYLON.Vector3(0, -0.05, 0);
-        particleSystem.direction1 = new BABYLON.Vector3(-1, 1, -1);
-        particleSystem.direction2 = new BABYLON.Vector3(1, 1, 1);
-        particleSystem.minEmitPower = 0.2;
-        particleSystem.maxEmitPower = 0.6;
+        particleSystem.gravity = new BABYLON.Vector3(0, -0.03, 0);
+        particleSystem.direction1 = new BABYLON.Vector3(-0.5, 0.5, -0.5);
+        particleSystem.direction2 = new BABYLON.Vector3(0.5, 0.5, 0.5);
+        particleSystem.minEmitPower = 0.1;
+        particleSystem.maxEmitPower = 0.3;
         
         particleSystem.start();
     }
@@ -679,58 +669,44 @@ export class Level3 {
         
         const colors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff"];
         
-        // Créer des confettis
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 50; i++) {
             setTimeout(() => {
                 const confetti = document.createElement("div");
-                const size = Math.random() * 10 + 5;
+                const size = Math.random() * 8 + 4;
                 const color = colors[Math.floor(Math.random() * colors.length)];
                 
                 confetti.style.position = "absolute";
                 confetti.style.width = `${size}px`;
                 confetti.style.height = `${size}px`;
                 confetti.style.backgroundColor = color;
-                confetti.style.borderRadius = Math.random() > 0.5 ? "50%" : "0";
+                confetti.style.borderRadius = "50%";
                 confetti.style.top = "-20px";
                 confetti.style.left = `${Math.random() * 100}%`;
-                confetti.style.opacity = Math.random() + 0.5;
-                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-                confetti.style.transition = "transform 1s ease";
+                confetti.style.opacity = "0.8";
                 
                 confettiContainer.appendChild(confetti);
                 
-                // Animation de chute
-                let speed = 1 + Math.random() * 3;
+                let speed = 1 + Math.random() * 2;
                 let posY = -20;
                 let posX = parseFloat(confetti.style.left);
-                let rotate = 0;
-                let opacity = parseFloat(confetti.style.opacity);
                 
                 const fall = setInterval(() => {
                     posY += speed;
-                    posX += Math.sin(posY / 30) * 2;
-                    rotate += 5;
+                    posX += Math.sin(posY / 30);
                     confetti.style.top = `${posY}px`;
                     confetti.style.left = `${posX}%`;
-                    confetti.style.transform = `rotate(${rotate}deg)`;
                     
                     if (posY > window.innerHeight) {
                         clearInterval(fall);
                         confetti.remove();
                     }
-                    
-                    if (posY > window.innerHeight * 0.7) {
-                        opacity -= 0.01;
-                        confetti.style.opacity = opacity;
-                    }
-                }, 16);
-            }, i * 50);
+                }, 20);
+            }, i * 80);
         }
         
-        // Supprimer le conteneur après quelques secondes
         setTimeout(() => {
             confettiContainer.remove();
-        }, 10000);
+        }, 8000);
     }
 
     // Nettoyage des ressources lors de la sortie du niveau

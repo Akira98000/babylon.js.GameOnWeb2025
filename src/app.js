@@ -16,10 +16,12 @@ import { createMiniMap } from "./ui/miniMap.js";
 import { MainMenu } from "./ui/mainMenu.js";
 import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
+import { WelcomePage } from "./ui/welcomePage.js";
 
 let mainMenu = null;
 let loadingScreen = null;
 let isGameLoading = false;
+let welcomePage = null;
 
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
@@ -228,6 +230,10 @@ const initBabylon = async () => {
       });
       
       setTimeout(() => {
+        welcomePage = new WelcomePage(() => {
+          // Callback when welcome page is completed
+          console.log("Welcome page completed");
+        });
         welcomePage.show();
       }, 1000);
 
