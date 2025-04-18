@@ -364,7 +364,6 @@ export class Level3 {
             gap: "20px"
         });
         
-        // En-tête du popup
         const header = document.createElement("div");
         Object.assign(header.style, {
             display: "flex",

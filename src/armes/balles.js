@@ -2,25 +2,20 @@ import * as BABYLON from '@babylonjs/core'
 
 export const createBullet = (scene, startPosition, direction, fromPlayer = true) => {
 
-  const bullet = BABYLON.MeshBuilder.CreateCylinder("bullet", {
-        height: 0.03,
+  const bullet = BABYLON.MeshBuilder.CreateCylinder("bullet", { height: 0.03,
         diameter: 0.05,
         tessellation: 3
   }, scene);
     
     bullet.rotation.x = Math.PI / 2;
-    
     const bulletMaterial = new BABYLON.StandardMaterial("bulletMaterial", scene);
     bulletMaterial.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7);
     bulletMaterial.specularColor = new BABYLON.Color3(1, 1, 1);
     bulletMaterial.specularPower = 32; 
     bulletMaterial.emissiveColor = new BABYLON.Color3(1, 0.3, 0);
     bulletMaterial.freeze();
-    
     bullet.material = bulletMaterial;
     bullet.position = startPosition.clone();
-
-    // Ajouter les métadonnées pour identifier la source de la balle
     bullet.metadata = {
         fromPlayer: fromPlayer
     };
