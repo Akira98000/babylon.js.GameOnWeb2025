@@ -13,10 +13,11 @@ export class AmiAI {
 
         this.maxSpeed = 0.15;
         this.maxForce = 0.05;
-        this.detectionDistance = 40;
-        this.shootingDistance = 15;
+        this.detectionDistance = 50;
+        this.shootingDistance = 20;
         this.keepDistance = 5;
         this.arriveRadius = 3;
+        this.maxEnemyDistance = 8; // Distance maximale avec les ennemis
 
         // Wander
         this.wanderRadius = 2;
@@ -31,7 +32,7 @@ export class AmiAI {
 
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.lastShootTime = 0;
-        this.shootCooldown = 2000;
+        this.shootCooldown = 1000;
 
         // Assignation d'une position préférée
         this.preferredOffset = (AmiAI.allAllies.length * (2 * Math.PI / 3)) % (2 * Math.PI);
@@ -237,8 +238,29 @@ export class AmiAI {
             return;
         }
 
+        // Amélioration du calcul de direction pour meilleure précision
         const dir = target.root.position.subtract(this.root.position);
-        this.targetRotation = Math.atan2(dir.x, dir.z) + Math.PI; // Ajout de Math.PI pour faire face à l'ennemi
+        dir.y = 0; // Assurer que la visée est horizontale pour plus de précision
+        
+        // Prédiction de la position de l'ennemi en fonction de sa vitesse
+        if (target.velocity && target.velocity.length() > 0.1) {
+            // Calculer le temps que prendra la balle pour atteindre la cible
+            const distance = dir.length();
+            const bulletSpeed = 40; // Doit correspondre à la vitesse dans createBullet
+            const timeToTarget = distance / bulletSpeed;
+            
+            // Prédire où sera la cible
+            const predictedPosition = target.root.position.add(
+                target.velocity.scale(timeToTarget * 0.7) // Facteur de correction (0.7) pour éviter la surcompensation
+            );
+            
+            // Recalculer la direction avec la position prédite
+            dir.copyFrom(predictedPosition.subtract(this.root.position));
+            dir.y = 0; // Maintenir la visée horizontale
+        }
+        
+        // Mise à jour de la rotation
+        this.targetRotation = Math.atan2(dir.x, dir.z) + Math.PI;
         this.root.rotation.y = this.targetRotation;
 
         if (this.animations && this.animations.shoot) {
@@ -249,24 +271,16 @@ export class AmiAI {
             });
         }
 
-        // Créer la direction de tir
+        // Créer la direction de tir avec une légère élévation pour éviter les obstacles
         const shootDir = dir.normalize();
         
-        // Position de départ de la balle
+        // Position de départ de la balle (légèrement plus élevée pour éviter les obstacles)
         const origin = this.root.position.clone();
-        origin.y += 1.5;
+        origin.y += 1.6; // Augmenté de 1.5 à 1.6
 
-        // Créer la balle en indiquant clairement que ce n'est pas une balle du joueur
+        // Créer la balle avec les paramètres appropriés
         console.log("Création d'une balle d'allié vers la position:", target.root.position);
-        const bullet = createBullet(this.scene, origin, shootDir, false);
-        
-        // Marquer la balle comme venant d'un allié
-        if (bullet) {
-            bullet.metadata = { fromAlly: true, fromPlayer: false };
-            console.log("Balle créée par l'allié avec metadata:", bullet.metadata);
-        } else {
-            console.warn("Échec de la création de la balle");
-        }
+        createBullet(this.scene, origin, shootDir, false, false, true);
 
         this.lastShootTime = now;
     }
@@ -307,7 +321,42 @@ export class AmiAI {
             if (enemy.isDead || !enemy.root || !enemy.root.position) continue;
 
             const distance = BABYLON.Vector3.Distance(this.root.position, enemy.root.position);
-            if (distance < minDistance) {
+            
+            // Vérifier s'il y a un obstacle entre l'allié et l'ennemi
+            const direction = enemy.root.position.subtract(this.root.position).normalize();
+            const ray = new BABYLON.Ray(
+                new BABYLON.Vector3(
+                    this.root.position.x,
+                    this.root.position.y + 1.0, // Ajuster la hauteur pour éviter les collisions avec le sol
+                    this.root.position.z
+                ),
+                direction,
+                distance
+            );
+            
+            let obstacleDetected = false;
+            
+            if (mapPartsData && mapPartsData.length > 0) {
+                for (const mapPart of mapPartsData) {
+                    if (!mapPart.mainMesh) continue;
+                    
+                    const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
+                        mesh.checkCollisions
+                    );
+                    
+                    for (const mesh of collisionMeshes) {
+                        const hit = ray.intersectsMesh(mesh);
+                        if (hit.hit) {
+                            obstacleDetected = true;
+                            break;
+                        }
+                    }
+                    if (obstacleDetected) break;
+                }
+            }
+            
+            // Seulement considérer cet ennemi s'il n'y a pas d'obstacle entre l'allié et l'ennemi
+            if (!obstacleDetected && distance < minDistance) {
                 minDistance = distance;
                 nearestEnemy = enemy;
             }
@@ -376,8 +425,14 @@ export class AmiAI {
             const distToEnemy = BABYLON.Vector3.Distance(this.root.position, nearestEnemy.root.position);
 
             if (distToEnemy < this.detectionDistance) {
-                const pursuitForce = this.seek(nearestEnemy.root.position);
-                force.addInPlace(pursuitForce.scale(this.pursuitWeight));
+                // Si l'allié est trop proche de l'ennemi, on s'éloigne
+                if (distToEnemy < this.maxEnemyDistance) {
+                    const awayFromEnemy = this.root.position.subtract(nearestEnemy.root.position).normalize();
+                    force.addInPlace(awayFromEnemy.scale(this.maxForce * 2));
+                } else {
+                    const pursuitForce = this.seek(nearestEnemy.root.position);
+                    force.addInPlace(pursuitForce.scale(this.pursuitWeight));
+                }
 
                 const separationForce = this.separate();
                 force.addInPlace(separationForce.scale(this.separationWeight));
@@ -388,6 +443,12 @@ export class AmiAI {
 
                 // Tirer si l'ennemi est à portée
                 if (distToEnemy < this.shootingDistance) {
+                    // Mettre à jour la rotation immédiatement pour améliorer le ciblage
+                    const d = nearestEnemy.root.position.subtract(this.root.position);
+                    d.y = 0; // Assurer une visée horizontale
+                    this.targetRotation = Math.atan2(d.x, d.z) + Math.PI;
+                    this.root.rotation.y = this.targetRotation;
+                    
                     this.shoot(nearestEnemy);
                 }
             }
@@ -526,16 +587,18 @@ export class AmiAI {
         // Mise à jour de la rotation
         if (shouldTrack && nearestEnemy) {
             const d = nearestEnemy.root.position.subtract(this.root.position);
-            this.targetRotation = Math.atan2(d.x, d.z) + Math.PI; // Ajout de Math.PI pour faire face à l'ennemi
+            d.y = 0; // Assurer une visée horizontale
+            this.targetRotation = Math.atan2(d.x, d.z) + Math.PI; 
+            
+            // Appliquer une rotation plus directe pour un meilleur ciblage
+            const rotDiff = this.targetRotation - this.root.rotation.y;
+            let normalizedRotDiff = rotDiff;
+            while (normalizedRotDiff > Math.PI) normalizedRotDiff -= 2 * Math.PI;
+            while (normalizedRotDiff < -Math.PI) normalizedRotDiff += 2 * Math.PI;
+            this.root.rotation.y += normalizedRotDiff * (this.rotationSpeed * 1.5); // Rotation plus rapide
         } else if (this.velocity.length() > 0.01) {
-            this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z) + Math.PI; // Ajout de Math.PI pour faire face à la direction du mouvement
+            this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z) + Math.PI;
         }
-
-        // Appliquer la rotation de manière fluide
-        let rotDiff = this.targetRotation - this.root.rotation.y;
-        while (rotDiff > Math.PI) rotDiff -= 2 * Math.PI;
-        while (rotDiff < -Math.PI) rotDiff += 2 * Math.PI;
-        this.root.rotation.y += rotDiff * this.rotationSpeed;
 
         if (this.animations) {
             if (this.isRunning && this.currentAnimation !== "pistolrun") {

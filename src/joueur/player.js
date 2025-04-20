@@ -18,6 +18,14 @@ export const createPlayer = async (scene, camera, canvas) => {
     hero.isPickable = false;
     hero.renderingGroupId = 1; 
     
+    hero.maxHealth = 100;
+    hero.currentHealth = 100;
+    hero.isDead = false;
+    hero.isHit = false;
+    hero.hitRecoveryTime = 200;
+    hero.lastHitTime = 0;
+    hero.damagePerBullet = 10;
+    
     for (let child of heroResult.meshes) {
         if (child.material) {
             child.material.freeze(); 
@@ -42,6 +50,10 @@ export const createPlayer = async (scene, camera, canvas) => {
         spatialSound: GAME_CONFIG.AUDIO.SHOTGUN.SPATIAL
     });
 
+    const hitSound = new BABYLON.Sound("playerHitSound", "/son/hit.mp3", scene, null, {
+        volume: 0.5
+    });
+
     let lastShotTime = 0;
     const shootCooldown = GAME_CONFIG.ANIMATIONS?.SHOOT?.COOLDOWN || 500;
     let isMoving = false;
@@ -49,6 +61,104 @@ export const createPlayer = async (scene, camera, canvas) => {
     let controlsRef = null;
     let animationsRef = null;
     let shootEndObserver = null;
+
+    const createHealthBar = () => {
+        const healthBarContainer = document.createElement("div");
+        healthBarContainer.id = "playerHealthBar";
+        healthBarContainer.style.position = "fixed";
+        healthBarContainer.style.bottom = "20px";
+        healthBarContainer.style.left = "20px";
+        healthBarContainer.style.width = "200px";
+        healthBarContainer.style.height = "20px";
+        healthBarContainer.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        healthBarContainer.style.border = "2px solid white";
+        healthBarContainer.style.borderRadius = "10px";
+        healthBarContainer.style.overflow = "hidden";
+        
+        const healthBarFill = document.createElement("div");
+        healthBarFill.id = "playerHealthBarFill";
+        healthBarFill.style.width = "100%";
+        healthBarFill.style.height = "100%";
+        healthBarFill.style.backgroundColor = "#4CAF50";
+        healthBarFill.style.transition = "width 0.3s";
+        
+        healthBarContainer.appendChild(healthBarFill);
+        document.body.appendChild(healthBarContainer);
+        
+        return healthBarFill;
+    };
+    
+    const healthBarFill = createHealthBar();
+    
+    const updateHealthBar = () => {
+        const ratio = Math.max(0, hero.currentHealth / hero.maxHealth);
+        healthBarFill.style.width = `${ratio * 100}%`;
+        
+        if (ratio < 0.3) {
+            healthBarFill.style.backgroundColor = "#FF0000";
+        } else if (ratio < 0.6) {
+            healthBarFill.style.backgroundColor = "#FFA500";
+        } else {
+            healthBarFill.style.backgroundColor = "#4CAF50";
+        }
+    };
+    
+    const takeDamage = (amount) => {
+        const now = Date.now();
+        if (now - hero.lastHitTime < hero.hitRecoveryTime || hero.isDead) return;
+        
+        hero.currentHealth -= amount;
+        hero.lastHitTime = now;
+        hero.isHit = true;
+        
+        updateHealthBar();
+        hitSound.play();
+        
+        const redFilter = document.createElement("div");
+        redFilter.style.position = "fixed";
+        redFilter.style.top = "0";
+        redFilter.style.left = "0";
+        redFilter.style.width = "100%";
+        redFilter.style.height = "100%";
+        redFilter.style.backgroundColor = "rgba(255, 0, 0, 0.3)";
+        redFilter.style.pointerEvents = "none";
+        redFilter.style.transition = "opacity 0.5s";
+        redFilter.style.zIndex = "1000";
+        document.body.appendChild(redFilter);
+        
+        setTimeout(() => {
+            redFilter.style.opacity = "0";
+            setTimeout(() => {
+                document.body.removeChild(redFilter);
+            }, 500);
+        }, 100);
+        
+        if (hero.currentHealth <= 0 && !hero.isDead) {
+            hero.isDead = true;
+            console.log("Le joueur est mort!");
+        }
+    };
+    
+    scene.onBeforeRenderObservable.add(() => {
+        if (hero.isDead) return;
+        
+        const bullets = scene.meshes.filter(mesh => 
+            mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && 
+            !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly
+        );
+        
+        for (const bullet of bullets) {
+            const dist = BABYLON.Vector3.Distance(
+                bullet.absolutePosition,
+                hero.position
+            );
+            if (dist < 1.5) {
+                takeDamage(hero.damagePerBullet);
+                if (!bullet.isDisposed) bullet.dispose();
+                break;
+            }
+        }
+    });
 
     const playShootAnimation = (animations, isMoving, shootPosition, shootDirection) => {
         if (!animations || !animations.transitionToAnimation) return false;
@@ -83,7 +193,7 @@ export const createPlayer = async (scene, camera, canvas) => {
     const executeShot = (position, direction) => {
         const bulletStartPosition = position.clone().add(shootOffset);
         shotgunSound.play();
-        createBullet(scene, bulletStartPosition, direction);
+        createBullet(scene, bulletStartPosition, direction, true, false, false);
     };
 
     if (!document.getElementById("crosshair")) {
@@ -167,6 +277,7 @@ export const createPlayer = async (scene, camera, canvas) => {
         hero,
         handleShooting,
         executeShot,
+        takeDamage,
         get isShooting() {
             return isShooting;
         }

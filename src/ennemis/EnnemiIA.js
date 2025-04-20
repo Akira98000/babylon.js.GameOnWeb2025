@@ -18,6 +18,7 @@ export class EnnemiIA {
         this.shootingDistance = 15;
         this.keepDistance = 5;
         this.arriveRadius = 3;
+        this.maxAllyDistance = 8; // Distance maximale avec les alliés
 
         // Wander
         this.wanderRadius = 2;
@@ -261,7 +262,7 @@ export class EnnemiIA {
         const shootDir = dir.normalize();
         const origin = this.root.position.clone();
         origin.y += 1.5;
-        createBullet(this.scene, origin, shootDir, false);
+        createBullet(this.scene, origin, shootDir, false, true, false);
         this.lastShootTime = now;
     }
 
@@ -369,6 +370,12 @@ export class EnnemiIA {
             nearestAllyInfo.distance < this.detectionDistance) {
             shouldPursueAlly = true;
             targetToTrack = nearestAllyInfo.ally;
+
+            // Si l'ennemi est trop proche de l'allié, on s'éloigne
+            if (nearestAllyInfo.distance < this.maxAllyDistance) {
+                const awayFromAlly = this.root.position.subtract(nearestAllyInfo.ally.root.position).normalize();
+                force.addInPlace(awayFromAlly.scale(this.maxForce * 2));
+            }
         }
 
         if (distToPlayer < this.detectionDistance || (shouldPursueAlly && nearestAllyInfo.distance < this.detectionDistance)) {

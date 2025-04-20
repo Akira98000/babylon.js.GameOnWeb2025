@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core'
 
-export const createBullet = (scene, startPosition, direction, fromPlayer = true) => {
+export const createBullet = (scene, startPosition, direction, fromPlayer = false, fromEnemy = false, fromAlly = false) => {
 
   const bullet = BABYLON.MeshBuilder.CreateCylinder("bullet", { height: 0.03,
         diameter: 0.05,
@@ -17,23 +17,48 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
     bullet.material = bulletMaterial;
     bullet.position = startPosition.clone();
     
-    // Définir le metadata de la balle
+    // Définir le metadata de la balle avec les trois paramètres
     bullet.metadata = {
         fromPlayer: fromPlayer,
-        fromAlly: !fromPlayer // Si la balle ne vient pas du joueur, elle vient d'un allié
+        fromEnemy: fromEnemy,
+        fromAlly: fromAlly
     };
     
     console.log("Balle créée avec metadata:", bullet.metadata);
 
-    const speed = 30;
-    const bulletDirection = direction.clone().normalize();
+    // Augmentation de la vitesse des balles des alliés pour plus de précision
+    const speed = fromAlly ? 40 : 30; // Balles d'allié plus rapides
+    
+    // S'assurer que la direction est correctement normalisée
+    let bulletDirection = direction.clone();
+    
+    // S'assurer que la direction est toujours normalisée
+    if (bulletDirection.lengthSquared() === 0) {
+        console.warn("Direction de balle invalide (longueur nulle)");
+        bulletDirection = new BABYLON.Vector3(0, 0, 1);
+    }
+    
+    bulletDirection.normalize();
+    
+    // Couleur différente selon l'origine de la balle
+    let bulletColor;
+    if (fromPlayer) {
+        bulletColor = new BABYLON.Color3(1, 0.5, 0); // Orange pour le joueur
+        bulletMaterial.emissiveColor = new BABYLON.Color3(1, 0.5, 0);
+    } else if (fromAlly) {
+        bulletColor = new BABYLON.Color3(0, 0.7, 1); // Bleu pour les alliés
+        bulletMaterial.emissiveColor = new BABYLON.Color3(0, 0.7, 1);
+    } else if (fromEnemy) {
+        bulletColor = new BABYLON.Color3(1, 0, 0); // Rouge pour les ennemis
+        bulletMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0);
+    }
     
     const distortionBlur = new BABYLON.HighlightLayer("distortion", scene, {
         mainTextureRatio: 0.1, 
         blurHorizontalSize: 0.5,
         blurVerticalSize: 0.5
     });
-    distortionBlur.addMesh(bullet, new BABYLON.Color3(1, 0.5, 0));
+    distortionBlur.addMesh(bullet, bulletColor);
 
     const fireTrail = new BABYLON.ParticleSystem("fireTrail", 10, scene);
     fireTrail.particleTexture = new BABYLON.Texture("/assets/fire.png", scene);
@@ -41,8 +66,15 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
     fireTrail.minEmitBox = new BABYLON.Vector3(0, 0, 0);
     fireTrail.maxEmitBox = new BABYLON.Vector3(0, 0, 0);
     
-    fireTrail.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
-    fireTrail.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+    // Ajuster les couleurs des particules selon la source
+    if (!fromPlayer && !fromAlly) {
+        fireTrail.color1 = new BABYLON.Color4(1, 0, 0, 1);
+        fireTrail.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+    } else {
+        fireTrail.color1 = new BABYLON.Color4(1, 0.5, 0, 1);
+        fireTrail.color2 = new BABYLON.Color4(1, 0.2, 0, 1);
+    }
+    
     fireTrail.colorDead = new BABYLON.Color4(0.7, 0, 0, 0);
     
     fireTrail.minSize = 0.2;
@@ -82,11 +114,11 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
     fireTrail.start();
     smokeTrail.start();
     
-    const bulletLifetime = 1000;
+    const bulletLifetime = fromAlly ? 1500 : 1000; // Durée de vie prolongée pour les balles d'allié
     let elapsedTime = 0;
     
     const light = new BABYLON.PointLight("bulletLight", bullet.position, scene);
-    light.diffuse = new BABYLON.Color3(1, 0.5, 0);
+    light.diffuse = bulletColor;
     light.intensity = 0.5; 
     light.range = 0.5;
     
@@ -98,7 +130,9 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
         bullet.rotate(bulletDirection, 0.5, BABYLON.Space.WORLD);
         
         elapsedTime += scene.getEngine().getDeltaTime();
-        const ray = new BABYLON.Ray(bullet.position, bulletDirection, 0.1);
+        
+        // Rayon de détection de collision légèrement plus long pour plus de précision
+        const ray = new BABYLON.Ray(bullet.position, bulletDirection, 0.15);
         const hit = scene.pickWithRay(ray);
         
         if ((hit.hit && hit.pickedMesh && hit.pickedMesh.name !== "bullet") || elapsedTime > bulletLifetime) {
