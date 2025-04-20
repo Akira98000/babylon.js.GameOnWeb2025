@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { createBullet } from "../armes/balles";
+import { mapPartsData } from "../scene/mapGestion";
 
 export class EnnemiIA {
     static allEnemies = [];
@@ -363,7 +364,131 @@ export class EnnemiIA {
         }
 
         this.velocity.y = 0;
-        this.root.position.addInPlace(this.velocity);
+        
+        // Stocker la position actuelle avant déplacement pour vérifier les collisions
+        const previousPosition = this.root.position.clone();
+        
+        // Calculer la nouvelle position
+        const newPosition = previousPosition.add(this.velocity);
+        
+        // Vérifier les collisions avec les éléments de la map
+        let collisionDetected = false;
+        const collisionMargin = 0.75; // Marge de collision pour l'ennemi
+        const enemyHeight = 2.0; // Hauteur approximative de l'ennemi
+        
+        // Créer un rayon pour la détection de collision
+        const raycastDirection = this.velocity.clone().normalize();
+        const rayLength = this.velocity.length() + collisionMargin;
+        
+        // Raycast pour détecter les collisions
+        const ray = new BABYLON.Ray(
+            new BABYLON.Vector3(
+                this.root.position.x,
+                this.root.position.y + enemyHeight / 2, 
+                this.root.position.z
+            ),
+            raycastDirection,
+            rayLength
+        );
+        
+        // Vérifier les collisions avec les meshes de la map
+        if (mapPartsData && mapPartsData.length > 0) {
+            for (const mapPart of mapPartsData) {
+                if (!mapPart.mainMesh) continue;
+                
+                // Récupérer tous les meshes enfants qui peuvent avoir des collisions
+                const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
+                    mesh.checkCollisions
+                );
+                
+                for (const mesh of collisionMeshes) {
+                    const hit = ray.intersectsMesh(mesh);
+                    if (hit.hit) {
+                        collisionDetected = true;
+                        break;
+                    }
+                }
+                
+                if (collisionDetected) break;
+            }
+        }
+        
+        // Appliquer le mouvement seulement s'il n'y a pas de collision
+        if (!collisionDetected) {
+            this.root.position = newPosition;
+        } else {
+            // En cas de collision, essayer de glisser le long des murs
+            // Projections latérales du vecteur de mouvement
+            const slideX = new BABYLON.Vector3(this.velocity.x, 0, 0);
+            const slideZ = new BABYLON.Vector3(0, 0, this.velocity.z);
+            
+            // Vérifier si on peut glisser sur l'axe X
+            const rayX = new BABYLON.Ray(
+                new BABYLON.Vector3(
+                    this.root.position.x,
+                    this.root.position.y + enemyHeight / 2, 
+                    this.root.position.z
+                ),
+                slideX.normalize(),
+                slideX.length() + collisionMargin
+            );
+            
+            let collisionX = false;
+            for (const mapPart of mapPartsData) {
+                if (!mapPart.mainMesh) continue;
+                const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
+                    mesh.checkCollisions
+                );
+                
+                for (const mesh of collisionMeshes) {
+                    const hit = rayX.intersectsMesh(mesh);
+                    if (hit.hit) {
+                        collisionX = true;
+                        break;
+                    }
+                }
+                if (collisionX) break;
+            }
+            
+            // Vérifier si on peut glisser sur l'axe Z
+            const rayZ = new BABYLON.Ray(
+                new BABYLON.Vector3(
+                    this.root.position.x,
+                    this.root.position.y + enemyHeight / 2, 
+                    this.root.position.z
+                ),
+                slideZ.normalize(),
+                slideZ.length() + collisionMargin
+            );
+            
+            let collisionZ = false;
+            for (const mapPart of mapPartsData) {
+                if (!mapPart.mainMesh) continue;
+                const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
+                    mesh.checkCollisions
+                );
+                
+                for (const mesh of collisionMeshes) {
+                    const hit = rayZ.intersectsMesh(mesh);
+                    if (hit.hit) {
+                        collisionZ = true;
+                        break;
+                    }
+                }
+                if (collisionZ) break;
+            }
+            
+            // Appliquer le glissement si possible
+            if (!collisionX) {
+                this.root.position.x += slideX.x;
+            }
+            
+            if (!collisionZ) {
+                this.root.position.z += slideZ.z;
+            }
+        }
+        
+        // Maintenir la hauteur y constante
         this.root.position.y = this.position.y;
 
         if (shouldTrack) {
