@@ -374,7 +374,6 @@ export class AmiAI {
 
         if (nearestEnemy && !nearestEnemy.isDead) {
             const distToEnemy = BABYLON.Vector3.Distance(this.root.position, nearestEnemy.root.position);
-            console.log("Distance à l'ennemi:", distToEnemy);
 
             if (distToEnemy < this.detectionDistance) {
                 const pursuitForce = this.seek(nearestEnemy.root.position);
@@ -389,7 +388,6 @@ export class AmiAI {
 
                 // Tirer si l'ennemi est à portée
                 if (distToEnemy < this.shootingDistance) {
-                    console.log("Tentative de tir sur l'ennemi avec position:", nearestEnemy.root.position);
                     this.shoot(nearestEnemy);
                 }
             }

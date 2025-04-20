@@ -2,6 +2,7 @@ import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { createBullet } from "../armes/balles";
 import { mapPartsData } from "../scene/mapGestion";
+import { AmiAI } from "../amis/AmiAI";
 
 export class EnnemiIA {
     static allEnemies = [];
@@ -216,10 +217,36 @@ export class EnnemiIA {
         document.dispatchEvent(new CustomEvent("enemyKilled", { detail: { enemy: this } }));
     }
 
-    shoot() {
+    findNearestAlly() {
+        let nearestAlly = null;
+        let minDistance = Infinity;
+
+        if (AmiAI.allAllies.length === 0) return null;
+
+        for (const ally of AmiAI.allAllies) {
+            if (ally.isDead || !ally.root || !ally.root.position) continue;
+
+            const distance = BABYLON.Vector3.Distance(this.root.position, ally.root.position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestAlly = ally;
+            }
+        }
+
+        return { ally: nearestAlly, distance: minDistance };
+    }
+
+    shoot(target) {
         const now = Date.now();
         if (now - this.lastShootTime < this.shootCooldown) return;
-        const dir = this.player.position.subtract(this.root.position);
+
+        let dir;
+        if (target === this.player) {
+            dir = this.player.position.subtract(this.root.position);
+        } else {
+            dir = target.root.position.subtract(this.root.position);
+        }
+        
         this.targetRotation = Math.atan2(dir.x, dir.z);
         this.root.rotation.y = this.targetRotation;
 
@@ -330,12 +357,33 @@ export class EnnemiIA {
         if (!this.root || !this.player || this.isDead) return;
 
         const distToPlayer = BABYLON.Vector3.Distance(this.root.position, this.player.position);
+        const nearestAllyInfo = this.findNearestAlly();
+        
         let force = new BABYLON.Vector3(0, 0, 0);
         let shouldTrack = false;
+        let targetToTrack = null;
 
-        if (distToPlayer < this.detectionDistance) {
-            const preferredPos = this.getPreferredPosition();
-            const pursuitForce = this.seek(preferredPos);
+        // Vérifier si un allié est plus proche que le joueur et à portée de détection
+        let shouldPursueAlly = false;
+        if (nearestAllyInfo && nearestAllyInfo.ally && nearestAllyInfo.distance < distToPlayer && 
+            nearestAllyInfo.distance < this.detectionDistance) {
+            shouldPursueAlly = true;
+            targetToTrack = nearestAllyInfo.ally;
+        }
+
+        if (distToPlayer < this.detectionDistance || (shouldPursueAlly && nearestAllyInfo.distance < this.detectionDistance)) {
+            let positionToSeek;
+            
+            if (shouldPursueAlly) {
+                // Si on poursuit un allié, on se dirige vers lui
+                positionToSeek = targetToTrack.root.position;
+            } else {
+                // Sinon on poursuit le joueur avec l'offset préféré
+                positionToSeek = this.getPreferredPosition();
+                targetToTrack = this.player;
+            }
+            
+            const pursuitForce = this.seek(positionToSeek);
             force.addInPlace(pursuitForce.scale(this.pursuitWeight));
 
             const separationForce = this.separate();
@@ -345,8 +393,14 @@ export class EnnemiIA {
             shouldTrack = true;
             this.currentAnimation = "run";
 
-            if (distToPlayer < this.shootingDistance) {
-                this.shoot();
+            // Tirer si la cible est à portée de tir
+            if ((shouldPursueAlly && nearestAllyInfo.distance < this.shootingDistance) || 
+                (!shouldPursueAlly && distToPlayer < this.shootingDistance)) {
+                if (shouldPursueAlly) {
+                    this.shoot(targetToTrack);
+                } else {
+                    this.shoot(this.player);
+                }
             }
         } else {
             const wanderForce = this.wander();
@@ -491,8 +545,13 @@ export class EnnemiIA {
         // Maintenir la hauteur y constante
         this.root.position.y = this.position.y;
 
-        if (shouldTrack) {
-            const d = this.player.position.subtract(this.root.position);
+        if (shouldTrack && targetToTrack) {
+            let d;
+            if (targetToTrack === this.player) {
+                d = this.player.position.subtract(this.root.position);
+            } else {
+                d = targetToTrack.root.position.subtract(this.root.position);
+            }
             this.targetRotation = Math.atan2(d.x, d.z);
         } else if (this.velocity.length() > 0.01) {
             this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z);
