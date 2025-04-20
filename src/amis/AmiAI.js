@@ -2,13 +2,13 @@ import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { createBullet } from "../armes/balles";
 import { mapPartsData } from "../scene/mapGestion";
+import { EnnemiIA } from "../ennemis/EnnemiIA";
 
-export class EnnemiIA {
-    static allEnemies = [];
+export class AmiAI {
+    static allAllies = [];
 
-    constructor(scene, position, player) {
+    constructor(scene, position) {
         this.scene = scene;
-        this.player = player;
         this.position = position;
 
         this.maxSpeed = 0.15;
@@ -33,8 +33,8 @@ export class EnnemiIA {
         this.lastShootTime = 0;
         this.shootCooldown = 2000;
 
-        // Assignation d'une position préférée autour du joueur
-        this.preferredOffset = (EnnemiIA.allEnemies.length * (2 * Math.PI / 3)) % (2 * Math.PI);
+        // Assignation d'une position préférée
+        this.preferredOffset = (AmiAI.allAllies.length * (2 * Math.PI / 3)) % (2 * Math.PI);
         
         // Vie
         this.maxHealth = 100;
@@ -53,32 +53,39 @@ export class EnnemiIA {
         this.targetRotation = 0;
         this.smoothingFactor = 0.2;
 
-        // Offset unique pour chaque ennemi autour du joueur
+        // Offset unique pour chaque ami
         this.offsetAngle = Math.random() * Math.PI * 2;
 
         // Ajouter à la liste statique
-        EnnemiIA.allEnemies.push(this);
+        AmiAI.allAllies.push(this);
 
         BABYLON.Engine.UseUBO = false;
-        this.loadEnnemi();
+        this.loadAmi();
     }
 
-    async loadEnnemi() {
+    async loadAmi() {
         try {
             const result = await BABYLON.SceneLoader.ImportMeshAsync(
                 "",
                 "/personnage/",
-                "pizza.glb",
+                "banana.glb",
                 this.scene
             );
 
-            this.root = new BABYLON.TransformNode("ennemiRoot", this.scene);
+            this.root = new BABYLON.TransformNode("amiRoot", this.scene);
             this.root.position = this.position;
 
             this.mesh = result.meshes[0];
             this.mesh.parent = this.root;
             this.mesh.position = BABYLON.Vector3.Zero();
             this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+
+            // Changer la couleur pour différencier des ennemis
+            const material = new BABYLON.StandardMaterial("amiMaterial", this.scene);
+            material.diffuseColor = new BABYLON.Color3(0, 0.7, 1); // Bleu clair
+            material.specularColor = new BABYLON.Color3(0.5, 0.6, 1);
+            material.emissiveColor = new BABYLON.Color3(0, 0.3, 0.5);
+            this.mesh.material = material;
 
             this.hitbox = BABYLON.MeshBuilder.CreateBox("hitbox", {
                 width: 1.5,
@@ -89,20 +96,20 @@ export class EnnemiIA {
             this.hitbox.position.y = 1;
             this.hitbox.visibility = 0;
             this.hitbox.isPickable = true;
-            this.hitbox.isEnnemi = true;
+            this.hitbox.isAmi = true;
 
             this.createHealthBar();
 
             if (result.animationGroups) {
                 this.animations = {
-                    run: result.animationGroups.find(a => a.name.toLowerCase().includes("run")),
+                    run: result.animationGroups.find(a => a.name.toLowerCase().includes("pistolrun")),
                     idle: result.animationGroups.find(a => a.name.toLowerCase().includes("idle")),
                     shoot: result.animationGroups.find(a => a.name.toLowerCase().includes("shoot"))
                 };
 
                 if (this.animations.run) {
                     this.animations.run.start(true);
-                    this.currentAnimation = "run";
+                    this.currentAnimation = "pistolrun";
                 }
             }
 
@@ -110,7 +117,7 @@ export class EnnemiIA {
                 if (this.isDead || !this.hitbox) return;
 
                 const bullets = this.scene.meshes.filter(mesh =>
-                    mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && (mesh.metadata?.fromPlayer || mesh.metadata?.fromAlly)
+                    mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly
                 );
 
                 for (const bullet of bullets) {
@@ -127,7 +134,7 @@ export class EnnemiIA {
             });
 
         } catch (error) {
-            console.error("Erreur lors du chargement de l'ennemi:", error);
+            console.error("Erreur lors du chargement de l'ami:", error);
         }
     }
 
@@ -177,7 +184,7 @@ export class EnnemiIA {
             this.mesh.material.emissiveColor = new BABYLON.Color3(1, 0, 0);
             setTimeout(() => {
                 if (this.mesh && this.mesh.material) {
-                    this.mesh.material.emissiveColor = new BABYLON.Color3(0, 0, 0);
+                    this.mesh.material.emissiveColor = new BABYLON.Color3(0, 0.3, 0.5);
                 }
             }, this.hitRecoveryTime);
         }
@@ -187,10 +194,9 @@ export class EnnemiIA {
 
     die() {
         this.isDead = true;
-        // Retirer l'ennemi de la liste statique
-        const index = EnnemiIA.allEnemies.indexOf(this);
+        const index = AmiAI.allAllies.indexOf(this);
         if (index > -1) {
-            EnnemiIA.allEnemies.splice(index, 1);
+            AmiAI.allAllies.splice(index, 1);
         }
         
         if (this.animations) Object.values(this.animations).forEach(a => a?.stop());
@@ -213,17 +219,29 @@ export class EnnemiIA {
               .forEach(obj => obj && obj.dispose());
         });
 
-        document.dispatchEvent(new CustomEvent("enemyKilled", { detail: { enemy: this } }));
+        document.dispatchEvent(new CustomEvent("allyKilled", { detail: { ally: this } }));
     }
 
-    shoot() {
+    shoot(target) {
         const now = Date.now();
         if (now - this.lastShootTime < this.shootCooldown) return;
-        const dir = this.player.position.subtract(this.root.position);
-        this.targetRotation = Math.atan2(dir.x, dir.z);
+
+        // S'assurer que la cible est valide
+        if (!target) {
+            console.warn("Cible invalide pour le tir : target est null");
+            return;
+        }
+
+        if (!target.root || !target.root.position) {
+            console.warn("Cible invalide pour le tir : target.root ou target.root.position est null");
+            return;
+        }
+
+        const dir = target.root.position.subtract(this.root.position);
+        this.targetRotation = Math.atan2(dir.x, dir.z) + Math.PI; // Ajout de Math.PI pour faire face à l'ennemi
         this.root.rotation.y = this.targetRotation;
 
-        if (this.animations.shoot) {
+        if (this.animations && this.animations.shoot) {
             this.animations.shoot.start(false);
             this.animations.shoot.onAnimationEndObservable.addOnce(() => {
                 if (this.animations.run && this.isRunning) this.animations.run.start(true);
@@ -231,10 +249,25 @@ export class EnnemiIA {
             });
         }
 
+        // Créer la direction de tir
         const shootDir = dir.normalize();
+        
+        // Position de départ de la balle
         const origin = this.root.position.clone();
         origin.y += 1.5;
-        createBullet(this.scene, origin, shootDir, false);
+
+        // Créer la balle en indiquant clairement que ce n'est pas une balle du joueur
+        console.log("Création d'une balle d'allié vers la position:", target.root.position);
+        const bullet = createBullet(this.scene, origin, shootDir, false);
+        
+        // Marquer la balle comme venant d'un allié
+        if (bullet) {
+            bullet.metadata = { fromAlly: true, fromPlayer: false };
+            console.log("Balle créée par l'allié avec metadata:", bullet.metadata);
+        } else {
+            console.warn("Échec de la création de la balle");
+        }
+
         this.lastShootTime = now;
     }
 
@@ -243,7 +276,7 @@ export class EnnemiIA {
         let steer = new BABYLON.Vector3(0, 0, 0);
         let count = 0;
 
-        for (const other of EnnemiIA.allEnemies) {
+        for (const other of AmiAI.allAllies) {
             if (other === this || other.isDead || !other.root || !other.root.position) continue;
 
             const d = BABYLON.Vector3.Distance(this.root.position, other.root.position);
@@ -266,15 +299,21 @@ export class EnnemiIA {
         return steer;
     }
 
-    getPreferredPosition() {
-        const angle = this.preferredOffset;
-        const radius = this.keepDistance;
-        const offset = new BABYLON.Vector3(
-            Math.cos(angle) * radius,
-            0,
-            Math.sin(angle) * radius
-        );
-        return this.player.position.add(offset);
+    findNearestEnemy() {
+        let nearestEnemy = null;
+        let minDistance = Infinity;
+
+        for (const enemy of EnnemiIA.allEnemies) {
+            if (enemy.isDead || !enemy.root || !enemy.root.position) continue;
+
+            const distance = BABYLON.Vector3.Distance(this.root.position, enemy.root.position);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+
+        return nearestEnemy;
     }
 
     seek(target) {
@@ -327,26 +366,32 @@ export class EnnemiIA {
     }
 
     update() {
-        if (!this.root || !this.player || this.isDead) return;
+        if (!this.root || this.isDead) return;
 
-        const distToPlayer = BABYLON.Vector3.Distance(this.root.position, this.player.position);
+        const nearestEnemy = this.findNearestEnemy();
         let force = new BABYLON.Vector3(0, 0, 0);
         let shouldTrack = false;
 
-        if (distToPlayer < this.detectionDistance) {
-            const preferredPos = this.getPreferredPosition();
-            const pursuitForce = this.seek(preferredPos);
-            force.addInPlace(pursuitForce.scale(this.pursuitWeight));
+        if (nearestEnemy && !nearestEnemy.isDead) {
+            const distToEnemy = BABYLON.Vector3.Distance(this.root.position, nearestEnemy.root.position);
+            console.log("Distance à l'ennemi:", distToEnemy);
 
-            const separationForce = this.separate();
-            force.addInPlace(separationForce.scale(this.separationWeight));
+            if (distToEnemy < this.detectionDistance) {
+                const pursuitForce = this.seek(nearestEnemy.root.position);
+                force.addInPlace(pursuitForce.scale(this.pursuitWeight));
 
-            this.isRunning = true;
-            shouldTrack = true;
-            this.currentAnimation = "run";
+                const separationForce = this.separate();
+                force.addInPlace(separationForce.scale(this.separationWeight));
 
-            if (distToPlayer < this.shootingDistance) {
-                this.shoot();
+                this.isRunning = true;
+                shouldTrack = true;
+                this.currentAnimation = "run";
+
+                // Tirer si l'ennemi est à portée
+                if (distToEnemy < this.shootingDistance) {
+                    console.log("Tentative de tir sur l'ennemi avec position:", nearestEnemy.root.position);
+                    this.shoot(nearestEnemy);
+                }
             }
         } else {
             const wanderForce = this.wander();
@@ -373,30 +418,26 @@ export class EnnemiIA {
         
         // Vérifier les collisions avec les éléments de la map
         let collisionDetected = false;
-        const collisionMargin = 0.75; // Marge de collision pour l'ennemi
-        const enemyHeight = 2.0; // Hauteur approximative de l'ennemi
+        const collisionMargin = 0.75;
+        const allyHeight = 2.0;
         
-        // Créer un rayon pour la détection de collision
         const raycastDirection = this.velocity.clone().normalize();
         const rayLength = this.velocity.length() + collisionMargin;
         
-        // Raycast pour détecter les collisions
         const ray = new BABYLON.Ray(
             new BABYLON.Vector3(
                 this.root.position.x,
-                this.root.position.y + enemyHeight / 2, 
+                this.root.position.y + allyHeight / 2, 
                 this.root.position.z
             ),
             raycastDirection,
             rayLength
         );
         
-        // Vérifier les collisions avec les meshes de la map
         if (mapPartsData && mapPartsData.length > 0) {
             for (const mapPart of mapPartsData) {
                 if (!mapPart.mainMesh) continue;
                 
-                // Récupérer tous les meshes enfants qui peuvent avoir des collisions
                 const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
                     mesh.checkCollisions
                 );
@@ -413,20 +454,16 @@ export class EnnemiIA {
             }
         }
         
-        // Appliquer le mouvement seulement s'il n'y a pas de collision
         if (!collisionDetected) {
             this.root.position = newPosition;
         } else {
-            // En cas de collision, essayer de glisser le long des murs
-            // Projections latérales du vecteur de mouvement
             const slideX = new BABYLON.Vector3(this.velocity.x, 0, 0);
             const slideZ = new BABYLON.Vector3(0, 0, this.velocity.z);
             
-            // Vérifier si on peut glisser sur l'axe X
             const rayX = new BABYLON.Ray(
                 new BABYLON.Vector3(
                     this.root.position.x,
-                    this.root.position.y + enemyHeight / 2, 
+                    this.root.position.y + allyHeight / 2, 
                     this.root.position.z
                 ),
                 slideX.normalize(),
@@ -450,11 +487,10 @@ export class EnnemiIA {
                 if (collisionX) break;
             }
             
-            // Vérifier si on peut glisser sur l'axe Z
             const rayZ = new BABYLON.Ray(
                 new BABYLON.Vector3(
                     this.root.position.x,
-                    this.root.position.y + enemyHeight / 2, 
+                    this.root.position.y + allyHeight / 2, 
                     this.root.position.z
                 ),
                 slideZ.normalize(),
@@ -478,7 +514,6 @@ export class EnnemiIA {
                 if (collisionZ) break;
             }
             
-            // Appliquer le glissement si possible
             if (!collisionX) {
                 this.root.position.x += slideX.x;
             }
@@ -488,26 +523,27 @@ export class EnnemiIA {
             }
         }
         
-        // Maintenir la hauteur y constante
         this.root.position.y = this.position.y;
 
-        if (shouldTrack) {
-            const d = this.player.position.subtract(this.root.position);
-            this.targetRotation = Math.atan2(d.x, d.z);
+        // Mise à jour de la rotation
+        if (shouldTrack && nearestEnemy) {
+            const d = nearestEnemy.root.position.subtract(this.root.position);
+            this.targetRotation = Math.atan2(d.x, d.z) + Math.PI; // Ajout de Math.PI pour faire face à l'ennemi
         } else if (this.velocity.length() > 0.01) {
-            this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z);
+            this.targetRotation = Math.atan2(this.velocity.x, this.velocity.z) + Math.PI; // Ajout de Math.PI pour faire face à la direction du mouvement
         }
 
+        // Appliquer la rotation de manière fluide
         let rotDiff = this.targetRotation - this.root.rotation.y;
         while (rotDiff > Math.PI) rotDiff -= 2 * Math.PI;
         while (rotDiff < -Math.PI) rotDiff += 2 * Math.PI;
         this.root.rotation.y += rotDiff * this.rotationSpeed;
 
         if (this.animations) {
-            if (this.isRunning && this.currentAnimation !== "run") {
+            if (this.isRunning && this.currentAnimation !== "pistolrun") {
                 this.animations.run?.start(true);
-                this.currentAnimation = "run";
+                this.currentAnimation = "pistolrun";
             }
         }
     }
-}
+} 

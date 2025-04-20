@@ -16,9 +16,14 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
     bulletMaterial.freeze();
     bullet.material = bulletMaterial;
     bullet.position = startPosition.clone();
+    
+    // Définir le metadata de la balle
     bullet.metadata = {
-        fromPlayer: fromPlayer
+        fromPlayer: fromPlayer,
+        fromAlly: !fromPlayer // Si la balle ne vient pas du joueur, elle vient d'un allié
     };
+    
+    console.log("Balle créée avec metadata:", bullet.metadata);
 
     const speed = 30;
     const bulletDirection = direction.clone().normalize();
@@ -107,4 +112,6 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = true)
             bullet.dispose();
         }
     });
+
+    return bullet; // Retourner la balle créée
 };

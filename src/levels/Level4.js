@@ -1,13 +1,16 @@
 import * as BABYLON from '@babylonjs/core';
 import { EnnemiIA } from '../ennemis/EnnemiIA.js';
+import { AmiAI } from '../amis/AmiAI.js';
 
 export class Level4 {
     constructor(scene) {
         this.scene = scene;
         this.isCompleted = false;
         this.ennemis = [];
+        this.amis = [];
         this.messageElement = this._createMessage("", "storyMessage");
         this.nombreEnnemis = 3;
+        this.nombreAmis = 2;
         this.nombreEnnemisVaincus = 0;
         this.lights = [];
     }
@@ -18,29 +21,52 @@ export class Level4 {
             console.error("Player not found in scene metadata");
             return;
         }
-        const positions = [
+        const positionsEnnemis = [
             new BABYLON.Vector3(0, 0, -15),
             new BABYLON.Vector3(5, 0, -12),
             new BABYLON.Vector3(-5, 0, -18)
         ];
 
+        const positionsAmis = [
+            new BABYLON.Vector3(3, 0, 5),
+            new BABYLON.Vector3(-3, 0, 5)
+        ];
+
         this._showMessage("Niveau 4: Combat contre les Pizzas Maléfiques!", 5000);
         this._playBattleSound();
-        for (let i = 0; i < this.nombreEnnemis; i++) {
-            if (i < positions.length) {
+
+        // Spawn des amis
+        for (let i = 0; i < this.nombreAmis; i++) {
+            if (i < positionsAmis.length) {
                 setTimeout(() => {
-                    this._spawnEnnemi(positions[i], i);
-                }, i * 1500);
+                    this._spawnAmi(positionsAmis[i], i);
+                }, i * 1000);
             }
         }
+
+        // Spawn des ennemis
+        for (let i = 0; i < this.nombreEnnemis; i++) {
+            if (i < positionsEnnemis.length) {
+                setTimeout(() => {
+                    this._spawnEnnemi(positionsEnnemis[i], i);
+                }, (i + this.nombreAmis) * 1500);
+            }
+        }
+
         setTimeout(() => {
-            this._showMessage("Éliminez toutes les pizzas pour gagner!", 4000);
+            this._showMessage("Éliminez toutes les pizzas maléfiques avec l'aide de vos alliés!", 4000);
         }, 5000);
+
         this.scene.onBeforeRenderObservable.add(() => {
             this._checkBulletCollisions();
             for (const ennemi of this.ennemis) {
                 if (!ennemi.isDead) {
                     ennemi.update();
+                }
+            }
+            for (const ami of this.amis) {
+                if (!ami.isDead) {
+                    ami.update();
                 }
             }
         });
@@ -50,7 +76,7 @@ export class Level4 {
         const meshes = this.scene.meshes;
         for (let mesh of meshes) {
             if (mesh.name.startsWith("bullet")) {
-                if (mesh.metadata && mesh.metadata.fromPlayer) {
+                if (mesh.metadata && (mesh.metadata.fromPlayer || mesh.metadata.fromAlly)) {
                     for (let ennemi of this.ennemis) {
                         if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.hitbox || ennemi.mesh)) {
                             ennemi.takeDamage(20);
@@ -76,7 +102,7 @@ export class Level4 {
             if (this.nombreEnnemisVaincus === this.nombreEnnemis) {
                 this._victoire();
             } else {
-                this._showMessage(`Pizza éliminée! Reste ${this.nombreEnnemis - this.nombreEnnemisVaincus} pizzas!`, 2000);
+                this._showMessage(`Pizza maléfique éliminée! Reste ${this.nombreEnnemis - this.nombreEnnemisVaincus} pizzas!`, 2000);
             }
         }
     }
@@ -125,6 +151,12 @@ export class Level4 {
             }
         }
         
+        for (let ami of this.amis) {
+            if (ami.mesh) {
+                ami.mesh.dispose();
+            }
+        }
+        
         // Nettoyer les lumières
         for (let light of this.lights) {
             if (light && !light.isDisposed()) {
@@ -156,6 +188,22 @@ export class Level4 {
             this._showMessage(messages[index % messages.length], 2000);
         } catch (error) {
             console.error("Erreur lors de la création de l'ennemi:", error);
+        }
+    }
+
+    _spawnAmi(position, index) {
+        try {
+            const ami = new AmiAI(this.scene, position);
+            this.amis.push(ami);
+            
+            const messages = [
+                "Une pizza alliée arrive en renfort!",
+                "Un autre allié rejoint le combat!"
+            ];
+            
+            this._showMessage(messages[index % messages.length], 2000);
+        } catch (error) {
+            console.error("Erreur lors de la création de l'ami:", error);
         }
     }
     
