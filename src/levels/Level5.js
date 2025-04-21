@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { EnnemiIA } from '../ennemis/EnnemiIA.js';
 import { AmiAI } from '../amis/AmiAI.js';
+import { PurpleStorm } from '../storm/PurpleStorm.js';
 
 export class Level5 {
     constructor(scene) {
@@ -13,7 +14,6 @@ export class Level5 {
         this.quartierActuel = 0;
         this.nombreEnnemisParQuartier = 5;
         this.nombreEnnemisVaincus = 0;
-        this.bossSpawned = false;
         this.lights = [];
         
         // Trackers pour les ennemis par quartier
@@ -29,6 +29,10 @@ export class Level5 {
         
         // Élément pour afficher les coordonnées du joueur
         this.playerCoordinatesElement = this._createCoordinatesDisplay();
+        
+        // Tempête violette
+        this.purpleStorm = null;
+        this.stormStarted = false;
     }
 
     async init() {
@@ -55,6 +59,9 @@ export class Level5 {
             this._checkBulletCollisions();
             this._updatePlayerCoordinates();
             this._updateAllies();
+            
+            // Vérifier si tous les ennemis ont été éliminés
+            this._checkForLevelCompletion();
             
             for (const ennemi of this.ennemis) {
                 if (!ennemi.isDead) {
@@ -138,9 +145,8 @@ export class Level5 {
 
     _passerAuQuartierSuivant() {
         if (this.quartierActuel >= this.nombreQuartiers) {
-            if (!this.bossSpawned) {
-                this._spawnBoss();
-            }
+            // Tous les quartiers sont terminés, victoire
+            this._victoire();
             return;
         }
 
@@ -166,29 +172,11 @@ export class Level5 {
         // Spawn des ennemis
         for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
             setTimeout(() => {
-                this._spawnEnnemi(positions[i], i, false);
+                this._spawnEnnemi(positions[i], i);
             }, i * 800); // Réduction du délai pour accélérer l'apparition
         }
 
         this.quartierActuel++;
-    }
-
-    _spawnBoss() {
-        this.bossSpawned = true;
-        this._showMessage("ATTENTION! La Pizza Suprême est apparue!", 5000);
-        
-        // Position centrale entre les quatre quartiers
-        const bossPosition = new BABYLON.Vector3(
-            (this.quartiers[0].position.x + this.quartiers[1].position.x + 
-             this.quartiers[2].position.x + this.quartiers[3].position.x) / 4,
-            0.10,
-            (this.quartiers[0].position.z + this.quartiers[1].position.z + 
-             this.quartiers[2].position.z + this.quartiers[3].position.z) / 4
-        );
-        
-        setTimeout(() => {
-            this._spawnEnnemi(bossPosition, 0, true);
-        }, 2000);
     }
 
     _checkBulletCollisions() {
@@ -198,7 +186,8 @@ export class Level5 {
                 if (mesh.metadata && (mesh.metadata.fromPlayer || mesh.metadata.fromAlly)) {
                     for (let ennemi of this.ennemis) {
                         if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.hitbox || ennemi.mesh)) {
-                            const damage = ennemi.isBoss ? 10 : 20; // Le boss prend moins de dégâts
+                            // Tous les ennemis prennent les mêmes dégâts
+                            const damage = 20;
                             ennemi.takeDamage(damage);
                             if (ennemi.isDead) {
                                 this._eliminerEnnemi(ennemi);
@@ -220,47 +209,67 @@ export class Level5 {
             this.nombreEnnemisVaincus++;
             
             // Incrémenter le compteur d'ennemis vaincus pour le quartier spécifique
-            if (!ennemi.isBoss && ennemi.quartier >= 0 && ennemi.quartier < this.ennemisVaincusParQuartier.length) {
+            if (ennemi.quartier >= 0 && ennemi.quartier < this.ennemisVaincusParQuartier.length) {
                 this.ennemisVaincusParQuartier[ennemi.quartier]++;
                 console.log(`Quartier ${ennemi.quartier}: ${this.ennemisVaincusParQuartier[ennemi.quartier]}/${this.ennemisParQuartier[ennemi.quartier]} ennemis vaincus`);
             }
 
-            if (ennemi.isBoss) {
-                this._victoire();
-            } else {
-                // Vérifier si tous les ennemis du quartier actuel sont éliminés
-                const quartierActif = this.quartierActuel - 1;
+            // Vérifier si tous les ennemis du quartier actuel sont éliminés
+            const quartierActif = this.quartierActuel - 1;
+            
+            // Vérifier si nous avons éliminé tous les ennemis du quartier actif
+            if (quartierActif >= 0 && 
+                this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
                 
-                // Vérifier si nous avons éliminé tous les ennemis du quartier actif
-                if (quartierActif >= 0 && 
-                    this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
-                    
-                    if (this.quartierActuel < this.nombreQuartiers) {
-                        this._showMessage(`Quartier ${this.quartiers[quartierActif].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
-                        setTimeout(() => {
-                            this._passerAuQuartierSuivant();
-                        }, 3000);
-                    } else if (!this.bossSpawned) {
-                        this._showMessage("Tous les quartiers sont libérés! Mais...", 3000);
-                        setTimeout(() => {
-                            this._spawnBoss();
-                        }, 3000);
-                    }
+                // Vérifier si nous devons démarrer la tempête
+                if (quartierActif === 1 && !this.stormStarted) {
+                    this._startPurpleStorm();
+                } else if (this.quartierActuel < this.nombreQuartiers) {
+                    this._showMessage(`Quartier ${this.quartiers[quartierActif].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
+                    setTimeout(() => {
+                        this._passerAuQuartierSuivant();
+                    }, 3000);
                 } else {
-                    // Afficher les ennemis restants dans le quartier actuel
-                    const quartierIndex = ennemi.quartier;
-                    if (quartierIndex >= 0 && quartierIndex < this.quartiers.length) {
-                        const restants = this.ennemisParQuartier[quartierIndex] - this.ennemisVaincusParQuartier[quartierIndex];
-                        this._showMessage(`Pizza maléfique éliminée! Reste ${restants} pizzas dans le quartier ${this.quartiers[quartierIndex].name}!`, 2000);
-                    }
+                    // Si c'était le dernier quartier, victoire
+                    this._victoire();
+                }
+            } else {
+                // Afficher les ennemis restants dans le quartier actuel
+                const quartierIndex = ennemi.quartier;
+                if (quartierIndex >= 0 && quartierIndex < this.quartiers.length) {
+                    const restants = this.ennemisParQuartier[quartierIndex] - this.ennemisVaincusParQuartier[quartierIndex];
+                    this._showMessage(`Pizza maléfique éliminée! Reste ${restants} pizzas dans le quartier ${this.quartiers[quartierIndex].name}!`, 2000);
                 }
             }
+            
+            // Vérifier après chaque élimination si tous les ennemis ont été tués
+            this._checkForLevelCompletion();
+        }
+    }
+
+    _startPurpleStorm() {
+        this.stormStarted = true;
+        this._showMessage("Une violente tempête violette s'abat sur la ville! Restez dans l'œil de la tempête pour survivre!", 5000);
+        
+        // Créer et démarrer la tempête
+        this.purpleStorm = new PurpleStorm(this.scene);
+        this.purpleStorm.start();
+        
+        // Jouer un son d'orage si disponible
+        try {
+            const stormSound = new BABYLON.Sound("stormSound", "/son/storm.mp3", this.scene, null, {
+                volume: 0.3,
+                loop: true,
+                autoplay: true
+            });
+        } catch (error) {
+            console.warn("Impossible de jouer le son de la tempête:", error);
         }
     }
 
     _victoire() {
         this.isCompleted = true;
-        this._showMessage("Félicitations! Vous avez vaincu la Pizza Suprême et libéré tous les quartiers!", 5000);
+        this._showMessage("Félicitations! Vous avez libéré tous les quartiers de la ville!", 5000);
         setTimeout(() => {
             if (this.scene.metadata && this.scene.metadata.levelManager) {
                 this.scene.metadata.levelManager.goToNextLevel();
@@ -329,65 +338,34 @@ export class Level5 {
             this.playerCoordinatesElement.parentNode.removeChild(this.playerCoordinatesElement);
         }
         
+        // Nettoyer la tempête
+        if (this.purpleStorm) {
+            this.purpleStorm.dispose();
+        }
+        
         this.amis = [];
     }
 
-    _spawnEnnemi(position, index, isBoss = false) {
+    _spawnEnnemi(position, index) {
         try {
             const player = this.scene.metadata.player.hero;
             if (!player) {
                 console.error("Player not found for enemy targeting");
                 return;
             }
-    
+
             const ennemi = new EnnemiIA(this.scene, position, player);
             ennemi.quartier = this.quartierActuel - 1;
-            ennemi.isBoss = isBoss;
-            
-            if (isBoss) {
-                const checkMeshLoaded = () => {
-                    if (ennemi.mesh && ennemi.mesh.scaling) {
-                        ennemi.mesh.scaling.multiplyInPlace(new BABYLON.Vector3(2.5, 2.5, 2.5));
-                        ennemi.health = 300;
-                        ennemi.maxHealth = 300;
-                        
-                        // Ajouter un effet de lumière au boss
-                        const bossLight = new BABYLON.PointLight("bossLight", position.clone(), this.scene);
-                        bossLight.diffuse = new BABYLON.Color3(1, 0, 0);
-                        bossLight.intensity = 0.7;
-                        bossLight.range = 10;
-                        this.lights.push(bossLight);
-                        
-                        // Associer la lumière au boss pour qu'elle se déplace avec lui
-                        this.scene.onBeforeRenderObservable.add(() => {
-                            if (ennemi.mesh && !ennemi.isDead) {
-                                bossLight.position = ennemi.mesh.position.clone();
-                            } else if (!ennemi.isDead) {
-                                bossLight.dispose();
-                            }
-                        });
-                    } else if (!ennemi.isDead) {
-                        // Si le mesh n'est pas encore chargé et que l'ennemi n'est pas mort,
-                        // réessayer un peu plus tard
-                        setTimeout(checkMeshLoaded, 100);
-                    }
-                };
-                
-                // Démarrer la vérification
-                checkMeshLoaded();
-            }
             
             this.ennemis.push(ennemi);
             
-            const messages = isBoss 
-                ? ["La Pizza Suprême se prépare à l'attaque!"] 
-                : [
-                    "Une pizza maléfique apparaît dans le quartier!",
-                    "Une pizza du quartier vous attaque!",
-                    "Voici une pizza ennemie!",
-                    "Une pizza hostile a été repérée!",
-                    "Attention, pizza maléfique en approche!"
-                ];
+            const messages = [
+                "Une pizza maléfique apparaît dans le quartier!",
+                "Une pizza du quartier vous attaque!",
+                "Voici une pizza ennemie!",
+                "Une pizza hostile a été repérée!",
+                "Attention, pizza maléfique en approche!"
+            ];
             
             this._showMessage(messages[index % messages.length], 2000);
         } catch (error) {
@@ -457,6 +435,37 @@ export class Level5 {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Vérifier si le niveau est terminé
+    _checkForLevelCompletion() {
+        // Si le niveau est déjà complété, on ne fait rien
+        if (this.isCompleted) return;
+        
+        // Vérifier si tous les ennemis ont été éliminés
+        if (this.ennemis.length === 0) {
+            // Vérifier si tous les quartiers ont été visités
+            if (this.quartierActuel >= this.nombreQuartiers) {
+                // Le joueur a éliminé tous les ennemis et visité tous les quartiers
+                this._victoire();
+            }
+        }
+        
+        // Vérifier si tous les quartiers ont été nettoyés
+        let tousQuartiersLiberes = true;
+        for (let i = 0; i < this.quartierActuel; i++) {
+            if (this.ennemisVaincusParQuartier[i] < this.ennemisParQuartier[i]) {
+                tousQuartiersLiberes = false;
+                break;
+            }
+        }
+        
+        // Si tous les quartiers actuels sont libérés et qu'on est au dernier quartier
+        if (tousQuartiersLiberes && this.quartierActuel >= this.nombreQuartiers) {
+            if (this.ennemis.length === 0) {
+                this._victoire();
             }
         }
     }

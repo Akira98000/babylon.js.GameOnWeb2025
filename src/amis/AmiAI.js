@@ -109,7 +109,10 @@ export class AmiAI {
             }, this.scene);
             this.hitbox.parent = this.root;
             this.hitbox.position.y = 1;
-            this.hitbox.visibility = 0;
+            const hitboxMaterial = new BABYLON.StandardMaterial("hitboxMaterial", this.scene);
+            hitboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1);
+            hitboxMaterial.alpha = 0.3;
+            this.hitbox.material = hitboxMaterial;
             this.hitbox.isPickable = true;
             this.hitbox.isAmi = true;
 
@@ -132,7 +135,7 @@ export class AmiAI {
                 if (this.isDead || !this.hitbox) return;
 
                 const bullets = this.scene.meshes.filter(mesh =>
-                    mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly
+                    mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly && mesh.metadata?.fromEnemy
                 );
 
                 for (const bullet of bullets) {
@@ -293,7 +296,6 @@ export class AmiAI {
         origin.y += 1.6; // Augmenté de 1.5 à 1.6
 
         // Créer la balle avec les paramètres appropriés
-        console.log("Création d'une balle d'allié vers la position:", target.root.position);
         createBullet(this.scene, origin, shootDir, false, false, true);
 
         this.lastShootTime = now;
@@ -431,9 +433,6 @@ export class AmiAI {
     update() {
         if (!this.root || this.isDead) return;
         
-        // Vérifier si l'allié est bloqué
-        this._checkIfStuck();
-
         const nearestEnemy = this.findNearestEnemy();
         let force = new BABYLON.Vector3(0, 0, 0);
         let shouldTrack = false;
@@ -683,207 +682,5 @@ export class AmiAI {
                 this.currentAnimation = "pistolrun";
             }
         }
-    }
-    
-    _checkIfStuck() {
-        if (!this.root || this.isDead) return;
-        
-        // Incrémenter le compteur de frames
-        this.frameCounter++;
-        
-        // Vérifier le blocage tous les X frames
-        if (this.frameCounter % this.stuckCheckInterval === 0) {
-            // Enregistrer la position actuelle
-            const currentPosition = this.root.position.clone();
-            
-            // Si nous avons déjà des positions enregistrées
-            if (this.lastPositions.length > 0) {
-                const lastPosition = this.lastPositions[this.lastPositions.length - 1];
-                const distance = BABYLON.Vector3.Distance(currentPosition, lastPosition);
-                
-                // Si l'allié ne s'est presque pas déplacé
-                if (distance < this.stuckThreshold) {
-                    this.stuckCounter++;
-                    console.log(`Allié potentiellement bloqué (${this.stuckCounter}/${this.teleportAfterStuckCount})`);
-                    
-                    // Si l'allié est bloqué depuis plusieurs vérifications
-                    if (this.stuckCounter >= this.teleportAfterStuckCount) {
-                        this._teleportToSafeLocation();
-                        this.stuckCounter = 0;
-                    }
-                } else {
-                    // Si l'allié s'est déplacé normalement, réinitialiser le compteur de blocage
-                    this.stuckCounter = 0;
-                }
-            }
-            
-            // Enregistrer la position pour la prochaine vérification
-            this.lastPositions.push(currentPosition);
-            
-            // Limiter la taille du tableau (garder seulement la dernière position)
-            if (this.lastPositions.length > 1) {
-                this.lastPositions.shift();
-            }
-        }
-    }
-    
-    _teleportToSafeLocation() {
-        if (!this.root || this.isDead) return;
-        
-        console.log("Téléportation d'un allié bloqué");
-        
-        // Si nous suivons le joueur, téléporter près du joueur
-        if (this.followPlayer && this.player) {
-            // Direction aléatoire autour du joueur
-            const randomAngle = Math.random() * Math.PI * 2;
-            const randomDir = new BABYLON.Vector3(
-                Math.cos(randomAngle),
-                0,
-                Math.sin(randomAngle)
-            );
-            
-            // Distance entre 3 et 7 unités du joueur
-            const distance = 3 + Math.random() * 4;
-            
-            // Nouvelle position potentielle
-            const playerPos = this.player.position.clone();
-            let safePosFound = false;
-            let attempts = 0;
-            let newPosition;
-            
-            // Essayer plusieurs positions aléatoires
-            while (!safePosFound && attempts < 10) {
-                attempts++;
-                
-                // Générer une nouvelle direction aléatoire
-                const angle = Math.random() * Math.PI * 2;
-                const dir = new BABYLON.Vector3(
-                    Math.cos(angle),
-                    0,
-                    Math.sin(angle)
-                );
-                
-                // Nouvelle position potentielle
-                newPosition = playerPos.add(dir.scale(distance));
-                
-                // Vérifier que la nouvelle position n'est pas en collision
-                safePosFound = this._isPositionSafe(newPosition);
-            }
-            
-            if (safePosFound) {
-                // Téléporter l'allié à la position sûre
-                this.root.position = newPosition;
-                
-                // Réinitialiser la vélocité pour éviter les comportements étranges
-                this.velocity = new BABYLON.Vector3(0, 0, 0);
-                
-                console.log(`Allié téléporté avec succès à la position: (${newPosition.x.toFixed(2)}, ${newPosition.y.toFixed(2)}, ${newPosition.z.toFixed(2)})`);
-            } else {
-                // Dernier recours : téléporter directement à la position du joueur
-                console.log("Téléportation d'urgence à la position du joueur");
-                this.root.position = this.player.position.clone();
-                this.velocity = new BABYLON.Vector3(0, 0, 0);
-            }
-        } else {
-            // Si nous ne suivons pas le joueur, trouver une position sûre dans le voisinage
-            let safePosFound = false;
-            let attempts = 0;
-            let newPosition;
-            
-            // Essayer plusieurs positions aléatoires
-            while (!safePosFound && attempts < 10) {
-                attempts++;
-                
-                // Générer une direction aléatoire
-                const randomAngle = Math.random() * Math.PI * 2;
-                const randomDir = new BABYLON.Vector3(
-                    Math.cos(randomAngle),
-                    0,
-                    Math.sin(randomAngle)
-                );
-                
-                // Distance aléatoire entre 5 et 10 unités
-                const distance = 5 + Math.random() * 5;
-                
-                // Nouvelle position potentielle
-                newPosition = this.root.position.add(randomDir.scale(distance));
-                
-                // Vérifier que la nouvelle position n'est pas en collision
-                safePosFound = this._isPositionSafe(newPosition);
-            }
-            
-            if (safePosFound) {
-                // Téléporter l'allié à la position sûre
-                this.root.position = newPosition;
-                
-                // Réinitialiser la vélocité pour éviter les comportements étranges
-                this.velocity = new BABYLON.Vector3(0, 0, 0);
-                
-                console.log(`Allié téléporté avec succès à la position: (${newPosition.x.toFixed(2)}, ${newPosition.y.toFixed(2)}, ${newPosition.z.toFixed(2)})`);
-            } else {
-                console.log("Impossible de trouver une position sûre pour téléporter l'allié");
-            }
-        }
-    }
-    
-    _isPositionSafe(position) {
-        if (!mapPartsData || mapPartsData.length === 0) return true;
-        
-        // Hauteur de l'allié
-        const allyHeight = 2.0;
-        
-        // Créer une série de rayons pour vérifier les collisions autour de la position
-        const rayDirections = [
-            new BABYLON.Vector3(1, 0, 0),
-            new BABYLON.Vector3(-1, 0, 0),
-            new BABYLON.Vector3(0, 0, 1),
-            new BABYLON.Vector3(0, 0, -1),
-            new BABYLON.Vector3(0.7, 0, 0.7),
-            new BABYLON.Vector3(0.7, 0, -0.7),
-            new BABYLON.Vector3(-0.7, 0, 0.7),
-            new BABYLON.Vector3(-0.7, 0, -0.7)
-        ];
-        
-        // Distance de détection
-        const rayLength = 1.5;
-        
-        // Vérifier les collisions dans toutes les directions
-        for (const dir of rayDirections) {
-            const ray = new BABYLON.Ray(
-                new BABYLON.Vector3(
-                    position.x,
-                    position.y + allyHeight / 2,
-                    position.z
-                ),
-                dir,
-                rayLength
-            );
-            
-            let collisionDetected = false;
-            
-            for (const mapPart of mapPartsData) {
-                if (!mapPart.mainMesh) continue;
-                
-                const collisionMeshes = mapPart.mainMesh.getChildMeshes(false).filter(mesh => 
-                    mesh.checkCollisions
-                );
-                
-                for (const mesh of collisionMeshes) {
-                    const hit = ray.intersectsMesh(mesh);
-                    if (hit.hit) {
-                        collisionDetected = true;
-                        break;
-                    }
-                }
-                
-                if (collisionDetected) break;
-            }
-            
-            if (collisionDetected) {
-                return false;
-            }
-        }
-        
-        return true;
     }
 } 

@@ -18,6 +18,20 @@ export const createPlayer = async (scene, camera, canvas) => {
     hero.isPickable = false;
     hero.renderingGroupId = 1; 
     
+    const hitbox = BABYLON.MeshBuilder.CreateBox("playerHitbox", {
+        width: 3.0,
+        height: 10.0,
+        depth: 3.0
+    }, scene);
+    hitbox.parent = hero;
+    hitbox.position = new BABYLON.Vector3(0, 1.0, 0);
+    const hitboxMaterial = new BABYLON.StandardMaterial("playerHitboxMaterial", scene);
+    hitboxMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0);
+    hitboxMaterial.alpha = 0.3;
+    hitbox.material = hitboxMaterial;
+    hitbox.isPickable = true;
+    hitbox.isPlayer = true;
+    
     hero.maxHealth = 100;
     hero.currentHealth = 100;
     hero.isDead = false;
@@ -144,15 +158,15 @@ export const createPlayer = async (scene, camera, canvas) => {
         
         const bullets = scene.meshes.filter(mesh => 
             mesh.name && mesh.name.startsWith("bullet") && !mesh.isDisposed && 
-            !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly
+            !mesh.metadata?.fromPlayer && !mesh.metadata?.fromAlly && mesh.metadata?.fromEnemy
         );
         
         for (const bullet of bullets) {
             const dist = BABYLON.Vector3.Distance(
                 bullet.absolutePosition,
-                hero.position
+                hitbox.absolutePosition
             );
-            if (dist < 1.5) {
+            if (dist < 2.0) {
                 takeDamage(hero.damagePerBullet);
                 if (!bullet.isDisposed) bullet.dispose();
                 break;
