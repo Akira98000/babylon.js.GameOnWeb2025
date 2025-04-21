@@ -3,6 +3,7 @@ import { Level2 } from './Level2.js';
 import { Level3 } from './Level3.js';
 import { Level4 } from './Level4.js';
 import { Level5 } from './Level5.js';
+import { AmiAI } from '../amis/AmiAI.js';
 
 export class LevelManager {
     constructor(scene) {
@@ -62,6 +63,8 @@ export class LevelManager {
                 });
             }, 1500);
         } else if (this.currentLevel === 4) {
+            this._cleanupAllies();
+            
             this._createQuartiersTransitionEffect();
             this.currentLevel = 5;
             
@@ -72,6 +75,34 @@ export class LevelManager {
                 });
             }, 2000);
         }
+    }
+
+    _cleanupAllies() {
+        console.log("Nettoyage des alliés avant le passage au niveau suivant...");
+        
+        const alliesArray = [...AmiAI.allAllies];
+        
+        for (const ally of alliesArray) {
+            if (ally && !ally.isDead) {
+                console.log("Nettoyage d'un allié");
+                
+                ally.isDead = true;
+                
+                if (ally.mesh) ally.mesh.dispose();
+                if (ally.root) ally.root.dispose();
+                if (ally.hitbox) ally.hitbox.dispose();
+                if (ally.healthBar) ally.healthBar.dispose();
+                if (ally.healthBarBackground) ally.healthBarBackground.dispose();
+                
+                const index = AmiAI.allAllies.indexOf(ally);
+                if (index > -1) {
+                    AmiAI.allAllies.splice(index, 1);
+                }
+            }
+        }
+        
+        AmiAI.allAllies = [];
+        console.log("Nettoyage des alliés terminé.");
     }
 
     _cleanupMessages() {

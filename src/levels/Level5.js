@@ -15,6 +15,11 @@ export class Level5 {
         this.nombreEnnemisVaincus = 0;
         this.bossSpawned = false;
         this.lights = [];
+        
+        // Trackers pour les ennemis par quartier
+        this.ennemisParQuartier = [0, 0, 0, 0]; // Compteur d'ennemis par quartier
+        this.ennemisVaincusParQuartier = [0, 0, 0, 0]; // Compteur d'ennemis vaincus par quartier
+        
         this.quartiers = [
             { name: "Centre-Sud", position: new BABYLON.Vector3(-1.84, 0.10, -84.43) },
             { name: "Est", position: new BABYLON.Vector3(-111.76, 0.10, -83.29) },
@@ -154,6 +159,10 @@ export class Level5 {
             ));
         }
 
+        // Réinitialiser le compteur d'ennemis pour ce quartier
+        this.ennemisParQuartier[this.quartierActuel] = this.nombreEnnemisParQuartier;
+        this.ennemisVaincusParQuartier[this.quartierActuel] = 0;
+
         // Spawn des ennemis
         for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
             setTimeout(() => {
@@ -209,16 +218,25 @@ export class Level5 {
             ennemi.takeDamage(100);
             this.ennemis.splice(index, 1);
             this.nombreEnnemisVaincus++;
+            
+            // Incrémenter le compteur d'ennemis vaincus pour le quartier spécifique
+            if (!ennemi.isBoss && ennemi.quartier >= 0 && ennemi.quartier < this.ennemisVaincusParQuartier.length) {
+                this.ennemisVaincusParQuartier[ennemi.quartier]++;
+                console.log(`Quartier ${ennemi.quartier}: ${this.ennemisVaincusParQuartier[ennemi.quartier]}/${this.ennemisParQuartier[ennemi.quartier]} ennemis vaincus`);
+            }
 
             if (ennemi.isBoss) {
                 this._victoire();
             } else {
                 // Vérifier si tous les ennemis du quartier actuel sont éliminés
-                const ennemisRestantsDansQuartier = this.ennemis.filter(e => e.quartier === this.quartierActuel - 1).length;
+                const quartierActif = this.quartierActuel - 1;
                 
-                if (ennemisRestantsDansQuartier === 0) {
+                // Vérifier si nous avons éliminé tous les ennemis du quartier actif
+                if (quartierActif >= 0 && 
+                    this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
+                    
                     if (this.quartierActuel < this.nombreQuartiers) {
-                        this._showMessage(`Quartier ${this.quartiers[this.quartierActuel-1].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
+                        this._showMessage(`Quartier ${this.quartiers[quartierActif].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
                         setTimeout(() => {
                             this._passerAuQuartierSuivant();
                         }, 3000);
@@ -230,7 +248,11 @@ export class Level5 {
                     }
                 } else {
                     // Afficher les ennemis restants dans le quartier actuel
-                    this._showMessage(`Pizza maléfique éliminée! Reste ${ennemisRestantsDansQuartier} pizzas dans le quartier ${this.quartiers[this.quartierActuel-1].name}!`, 2000);
+                    const quartierIndex = ennemi.quartier;
+                    if (quartierIndex >= 0 && quartierIndex < this.quartiers.length) {
+                        const restants = this.ennemisParQuartier[quartierIndex] - this.ennemisVaincusParQuartier[quartierIndex];
+                        this._showMessage(`Pizza maléfique éliminée! Reste ${restants} pizzas dans le quartier ${this.quartiers[quartierIndex].name}!`, 2000);
+                    }
                 }
             }
         }
@@ -317,37 +339,42 @@ export class Level5 {
                 console.error("Player not found for enemy targeting");
                 return;
             }
-            
+    
             const ennemi = new EnnemiIA(this.scene, position, player);
-            
-            // Ajouter des propriétés pour le niveau 5
             ennemi.quartier = this.quartierActuel - 1;
             ennemi.isBoss = isBoss;
             
-            // Personnaliser le boss
             if (isBoss) {
-                // Doubler la taille du boss
-                ennemi.mesh.scaling.multiplyInPlace(new BABYLON.Vector3(1.5, 1.5, 1.5));
-                
-                // Augmenter les points de vie
-                ennemi.health = 300;
-                ennemi.maxHealth = 300;
-                
-                // Ajouter un effet de lumière au boss
-                const bossLight = new BABYLON.PointLight("bossLight", position.clone(), this.scene);
-                bossLight.diffuse = new BABYLON.Color3(1, 0, 0);
-                bossLight.intensity = 0.7;
-                bossLight.range = 10;
-                this.lights.push(bossLight);
-                
-                // Associer la lumière au boss pour qu'elle se déplace avec lui
-                this.scene.onBeforeRenderObservable.add(() => {
-                    if (ennemi.mesh && !ennemi.isDead) {
-                        bossLight.position = ennemi.mesh.position.clone();
+                const checkMeshLoaded = () => {
+                    if (ennemi.mesh && ennemi.mesh.scaling) {
+                        ennemi.mesh.scaling.multiplyInPlace(new BABYLON.Vector3(2.5, 2.5, 2.5));
+                        ennemi.health = 300;
+                        ennemi.maxHealth = 300;
+                        
+                        // Ajouter un effet de lumière au boss
+                        const bossLight = new BABYLON.PointLight("bossLight", position.clone(), this.scene);
+                        bossLight.diffuse = new BABYLON.Color3(1, 0, 0);
+                        bossLight.intensity = 0.7;
+                        bossLight.range = 10;
+                        this.lights.push(bossLight);
+                        
+                        // Associer la lumière au boss pour qu'elle se déplace avec lui
+                        this.scene.onBeforeRenderObservable.add(() => {
+                            if (ennemi.mesh && !ennemi.isDead) {
+                                bossLight.position = ennemi.mesh.position.clone();
+                            } else if (!ennemi.isDead) {
+                                bossLight.dispose();
+                            }
+                        });
                     } else if (!ennemi.isDead) {
-                        bossLight.dispose();
+                        // Si le mesh n'est pas encore chargé et que l'ennemi n'est pas mort,
+                        // réessayer un peu plus tard
+                        setTimeout(checkMeshLoaded, 100);
                     }
-                });
+                };
+                
+                // Démarrer la vérification
+                checkMeshLoaded();
             }
             
             this.ennemis.push(ennemi);
@@ -416,8 +443,12 @@ export class Level5 {
         for (let i = this.quartierActuel - 1; i < this.nombreQuartiers; i++) {
             if (i === this.quartierActuel - 1) {
                 // Quartier actuel - vérifier si tous les ennemis sont vaincus
-                const ennemisRestants = this.ennemis.filter(e => e.quartier === i && !e.isBoss).length;
-                if (ennemisRestants === 0 && this.quartierActuel < this.nombreQuartiers) {
+                // On n'utilise plus cette méthode pour passer au quartier suivant
+                // car on veut s'assurer que tous les ennemis sont éliminés d'abord
+                
+                // Si tous les ennemis du quartier sont vaincus, permettre au joueur de passer au suivant
+                if (this.ennemisVaincusParQuartier[i] >= this.ennemisParQuartier[i] &&
+                    this.quartierActuel < this.nombreQuartiers) {
                     const quartierSuivant = this.quartiers[this.quartierActuel];
                     if (quartierSuivant) {
                         const distance = BABYLON.Vector3.Distance(playerPosition, quartierSuivant.position);

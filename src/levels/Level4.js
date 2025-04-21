@@ -151,9 +151,24 @@ export class Level4 {
             }
         }
         
+        // Nettoyage amélioré des alliés
         for (let ami of this.amis) {
-            if (ami.mesh) {
-                ami.mesh.dispose();
+            if (ami.isDead) continue; // Si l'allié est déjà mort, ne pas le traiter à nouveau
+            
+            // Marquer comme mort pour éviter des opérations supplémentaires dans d'autres parties du code
+            ami.isDead = true;
+            
+            // Nettoyer les ressources
+            if (ami.mesh) ami.mesh.dispose();
+            if (ami.root) ami.root.dispose();
+            if (ami.hitbox) ami.hitbox.dispose();
+            if (ami.healthBar) ami.healthBar.dispose();
+            if (ami.healthBarBackground) ami.healthBarBackground.dispose();
+            
+            // Retirer de la liste statique des alliés si présent
+            const index = AmiAI.allAllies.indexOf(ami);
+            if (index > -1) {
+                AmiAI.allAllies.splice(index, 1);
             }
         }
         
