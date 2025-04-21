@@ -13,11 +13,9 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = false
     bulletMaterial.specularColor = new BABYLON.Color3(1, 1, 1);
     bulletMaterial.specularPower = 32; 
     
-    // Définir la couleur émissive en fonction du tireur
     if (fromEnemy) {
         bulletMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0);
     } else {
-        // Pour le joueur et les alliés
         bulletMaterial.emissiveColor = new BABYLON.Color3(0, 0.7, 1);
     }
     
@@ -45,9 +43,9 @@ export const createBullet = (scene, startPosition, direction, fromPlayer = false
     
     const light = new BABYLON.PointLight("bulletLight", bullet.position, scene);
     if (fromEnemy) {
-        light.diffuse = new BABYLON.Color3(1, 0, 0); // Rouge pour les ennemis
+        light.diffuse = new BABYLON.Color3(1, 0, 0); 
     } else {
-        light.diffuse = new BABYLON.Color3(0, 0.7, 1); // Bleu pour le joueur et les alliés
+        light.diffuse = new BABYLON.Color3(0, 0.7, 1);
     }
     light.intensity = 0.5;
     light.range = 0.5;

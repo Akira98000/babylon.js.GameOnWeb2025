@@ -4,17 +4,13 @@ export class PurpleStorm {
     constructor(scene) {
         this.scene = scene;
         this.isActive = false;
-        this.damagePerSecond = 5;
-        this.maxDamagePerSecond = 10;
-        this.damageIncreaseRate = 1; 
+        this.damagePerSecond = 10;
         this.initialRadius = 100;
         this.currentRadius = this.initialRadius;
-        this.finalRadius = 20;
-        this.shrinkRate = 0.8; 
-        this.phaseInterval = 15000; 
-        this.nextPhaseCountdown = this.phaseInterval;
+        this.finalRadius = 10;
         this.stormWall = null;
         this.stormParticles = null;
+        this.stormCenter = new BABYLON.Vector3(0, 0, 0);
         this.countdownElement = this._createCountdownElement();
     }
     
@@ -22,10 +18,10 @@ export class PurpleStorm {
         this.isActive = true;
         this._createStormWall();
         this._createStormParticles();
-        this._startPhaseTimer();
+        this._shrinkStorm();
+        
         this.scene.onBeforeRenderObservable.add(() => {
             if (!this.isActive) return;
-            this._updateStormEffects();
             this._checkPlayerDamage();
         });
     }
@@ -39,9 +35,18 @@ export class PurpleStorm {
         const stormMaterial = new BABYLON.StandardMaterial("stormMaterial", this.scene);
         stormMaterial.diffuseColor = new BABYLON.Color3(0.5, 0, 0.5);
         stormMaterial.emissiveColor = new BABYLON.Color3(0.3, 0, 0.3);
-        stormMaterial.alpha = 0.3;
+        stormMaterial.alpha = 0.4;
+        stormMaterial.backFaceCulling = false;
+        stormMaterial.disableLighting = true;
+        stormMaterial.specularColor = new BABYLON.Color3(0.6, 0, 0.6);
+        stormMaterial.emissiveFresnelParameters = new BABYLON.FresnelParameters();
+        stormMaterial.emissiveFresnelParameters.bias = 0.2;
+        stormMaterial.emissiveFresnelParameters.power = 2;
+        stormMaterial.emissiveFresnelParameters.leftColor = BABYLON.Color3.White();
+        stormMaterial.emissiveFresnelParameters.rightColor = BABYLON.Color3.Purple();
+        
         this.stormWall.material = stormMaterial;
-        this.stormWall.position.y = 10;
+        this.stormWall.position = new BABYLON.Vector3(0, 10, 0);
     }
     
     _createStormParticles() {
@@ -57,86 +62,30 @@ export class PurpleStorm {
         this.stormParticles.emitRate = 500;
         this.stormParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
         this.stormParticles.gravity = new BABYLON.Vector3(0, 0, 0);
-        this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);        
+        this.stormParticles.emitter = new BABYLON.Vector3(0, 10, 0);
+        this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);
         this.stormParticles.start();
-    }
-    
-    _updateStormEffects() {
-        if (!this.stormWall) return;
-        
-        // Mettre à jour la taille du mur
-        this.stormWall.scaling.x = this.currentRadius / this.initialRadius;
-        this.stormWall.scaling.z = this.currentRadius / this.initialRadius;
-        
-        // Mettre à jour les particules
-        if (this.stormParticles) {
-            this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);
-        }
     }
     
     _checkPlayerDamage() {
         const player = this.scene.metadata?.player?.hero;
         if (!player) return;
-        
-        // Calculer la distance du joueur par rapport au centre
-        const distanceFromCenter = new BABYLON.Vector2(
-            player.position.x,
-            player.position.z
-        ).length();
+        const distanceFromCenter = BABYLON.Vector3.Distance(
+            new BABYLON.Vector3(player.position.x, 0, player.position.z),
+            this.stormCenter
+        );
         
         // Si le joueur est en dehors de la zone sûre
         if (distanceFromCenter > this.currentRadius) {
-            // Appliquer les dégâts - Correction: utiliser scene.metadata.player.takeDamage
             if (this.scene.metadata?.player?.takeDamage) {
-                this.scene.metadata.player.takeDamage(this.damagePerSecond / 60); // Diviser par 60 car appelé à chaque frame
+                this.scene.metadata.player.takeDamage(this.damagePerSecond / 60);
             }
-        }
-    }
-    
-    _startPhaseTimer() {
-        let lastTime = Date.now();
-        
-        this.scene.onBeforeRenderObservable.add(() => {
-            if (!this.isActive) return;
-            
-            const currentTime = Date.now();
-            const deltaTime = currentTime - lastTime;
-            lastTime = currentTime;
-            
-            this.nextPhaseCountdown -= deltaTime;
-            
-            // Mettre à jour le compte à rebours
-            const seconds = Math.ceil(this.nextPhaseCountdown / 1000);
-            this._updateCountdown(seconds);
-            
-            if (this.nextPhaseCountdown <= 0) {
-                this._startNewPhase();
-            }
-        });
-    }
-    
-    _startNewPhase() {
-        // Réduire la taille de la zone sûre
-        this.currentRadius *= this.shrinkRate;
-        
-        // Augmenter les dégâts
-        this.damagePerSecond = Math.min(
-            this.damagePerSecond + this.damageIncreaseRate,
-            this.maxDamagePerSecond
-        );
-        
-        // Réinitialiser le compte à rebours
-        this.nextPhaseCountdown = this.phaseInterval;
-        
-        // Vérifier si c'est la phase finale
-        if (this.currentRadius <= this.finalRadius) {
-            this.stop();
         }
     }
     
     _createCountdownElement() {
         const element = document.createElement("div");
-        element.id = "stormCountdown";
+        element.id = "stormWarning";
         element.style.position = "absolute";
         element.style.top = "10%";
         element.style.left = "50%";
@@ -146,16 +95,10 @@ export class PurpleStorm {
         element.style.fontFamily = "Arial, sans-serif";
         element.style.textAlign = "center";
         element.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
-        element.style.display = "none";
+        element.style.display = "block";
+        element.textContent = "⚠️ Tempête violette active ! Restez dans la zone sûre ! ⚠️";
         document.body.appendChild(element);
         return element;
-    }
-    
-    _updateCountdown(seconds) {
-        if (this.countdownElement) {
-            this.countdownElement.style.display = "block";
-            this.countdownElement.textContent = `Rétrécissement de la zone dans: ${seconds} secondes`;
-        }
     }
     
     stop() {
@@ -179,5 +122,27 @@ export class PurpleStorm {
     
     dispose() {
         this.stop();
+    }
+
+    _shrinkStorm() {
+        const shrinkDuration = 60; // durée en secondes
+        const shrinkRate = (this.initialRadius - this.finalRadius) / (shrinkDuration * 60); // par frame
+
+        this.scene.onBeforeRenderObservable.add(() => {
+            if (!this.isActive || this.currentRadius <= this.finalRadius) return;
+
+            this.currentRadius -= shrinkRate;
+            
+            // Mise à jour du mur de la tempête
+            if (this.stormWall) {
+                this.stormWall.scaling.x = this.currentRadius / this.initialRadius;
+                this.stormWall.scaling.z = this.currentRadius / this.initialRadius;
+            }
+
+            // Mise à jour des particules
+            if (this.stormParticles) {
+                this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);
+            }
+        });
     }
 } 

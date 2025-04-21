@@ -10,21 +10,20 @@ export class Level5 {
         this.ennemis = [];
         this.amis = [];
         this.messageElement = this._createMessage("", "storyMessage");
-        this.nombreQuartiers = 4;
+        this.nombreQuartiers = 3;
         this.quartierActuel = 0;
         this.nombreEnnemisParQuartier = 5;
         this.nombreEnnemisVaincus = 0;
         this.lights = [];
         
         // Trackers pour les ennemis par quartier
-        this.ennemisParQuartier = [0, 0, 0, 0]; // Compteur d'ennemis par quartier
-        this.ennemisVaincusParQuartier = [0, 0, 0, 0]; // Compteur d'ennemis vaincus par quartier
+        this.ennemisParQuartier = [0, 0, 0];
+        this.ennemisVaincusParQuartier = [0, 0, 0];
         
         this.quartiers = [
             { name: "Centre-Sud", position: new BABYLON.Vector3(-1.84, 0.10, -84.43) },
             { name: "Est", position: new BABYLON.Vector3(-111.76, 0.10, -83.29) },
-            { name: "Nord", position: new BABYLON.Vector3(-61.82, 0.10, -30.11) },
-            { name: "Ouest", position: new BABYLON.Vector3(-106.72, 0.10, 41.41)}
+            { name: "Nord", position: new BABYLON.Vector3(-61.82, 0.10, -30.11) }
         ];
         
         // Élément pour afficher les coordonnées du joueur
@@ -222,7 +221,7 @@ export class Level5 {
                 this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
                 
                 // Vérifier si nous devons démarrer la tempête
-                if (quartierActif === 1 && !this.stormStarted) {
+                if (quartierActif === 2 && !this.stormStarted) {
                     this._startPurpleStorm();
                 } else if (this.quartierActuel < this.nombreQuartiers) {
                     this._showMessage(`Quartier ${this.quartiers[quartierActif].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
@@ -382,15 +381,11 @@ export class Level5 {
             }
             
             const ami = new AmiAI(this.scene, position);
-            
-            // Configurer l'allié pour suivre le joueur
             ami.followPlayer = true;
             ami.player = player;
-            
-            // Personnaliser l'allié
-            ami.followPlayerDistance = 4; // Distance réduite pour rester plus près du joueur
-            ami.followWeight = 2.0; // Force accrue pour mieux suivre le joueur
-            ami.detectionDistance = 60; // Augmenter la distance de détection des ennemis
+            ami.followPlayerDistance = 4; 
+            ami.followWeight = 2.0; 
+            ami.detectionDistance = 60; 
             
             this.amis.push(ami);
             
