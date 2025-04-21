@@ -17,8 +17,8 @@ export class AmiAI {
         this.shootingDistance = 20;
         this.keepDistance = 5;
         this.arriveRadius = 3;
-        this.maxEnemyDistance = 8; // Distance maximale avec les ennemis
-        this.followPlayerDistance = 5; // Distance idéale pour suivre le joueur
+        this.maxEnemyDistance = 8; 
+        this.followPlayerDistance = 5; r
 
         // Mode de suivi du joueur
         this.followPlayer = false;

@@ -34,16 +34,11 @@ export class Level5 {
 
         this._showMessage("Niveau 5: La Reconquête des Quartiers!", 5000);
         this._playBattleSound();
-        
-        // Spawn de deux alliés qui suivront le joueur
         const player = this.scene.metadata.player.hero;
-        
-        // Premier allié légèrement derrière à gauche du joueur
         const offset1 = new BABYLON.Vector3(-2, 0, -2);
         const worldOffset1 = player.position.add(offset1);
         this._spawnAmi(worldOffset1, 0);
         
-        // Second allié légèrement derrière à droite du joueur
         const offset2 = new BABYLON.Vector3(2, 0, -2);
         const worldOffset2 = player.position.add(offset2);
         this._spawnAmi(worldOffset2, 1);
