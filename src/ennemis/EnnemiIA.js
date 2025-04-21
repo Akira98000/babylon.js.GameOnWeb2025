@@ -12,6 +12,10 @@ export class EnnemiIA {
         this.player = player;
         this.position = position;
 
+        // Propriétés spécifiques au niveau 5
+        this.quartier = -1; // Quartier auquel l'ennemi appartient (-1 = non assigné)
+        this.isBoss = false; // Indique si l'ennemi est un boss
+
         this.maxSpeed = 0.15;
         this.maxForce = 0.05;
         this.detectionDistance = 40;
@@ -40,7 +44,8 @@ export class EnnemiIA {
         
         // Vie
         this.maxHealth = 100;
-        this.currentHealth = this.maxHealth;
+        this.health = this.maxHealth;
+        this.currentHealth = this.health;
         this.isDead = false;
         this.isHit = false;
         this.hitRecoveryTime = 200;
@@ -81,6 +86,23 @@ export class EnnemiIA {
             this.mesh.parent = this.root;
             this.mesh.position = BABYLON.Vector3.Zero();
             this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+
+            // Si c'est un boss, modifier son apparence
+            if (this.isBoss) {
+                // Augmenter la taille
+                this.mesh.scaling.multiplyInPlace(new BABYLON.Vector3(1.5, 1.5, 1.5));
+                
+                // Ajouter un matériau brillant pour le boss
+                const bossMaterial = new BABYLON.StandardMaterial("bossMaterial", this.scene);
+                bossMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.1, 0.1); // Rouge foncé
+                bossMaterial.specularColor = new BABYLON.Color3(1, 0.5, 0.5);
+                bossMaterial.emissiveColor = new BABYLON.Color3(0.4, 0, 0);
+                this.mesh.material = bossMaterial;
+                
+                // Augmenter la vitesse et les cooldowns pour le boss
+                this.maxSpeed *= 1.2;
+                this.shootCooldown = 1500; // Plus rapide que les ennemis standards
+            }
 
             this.hitbox = BABYLON.MeshBuilder.CreateBox("hitbox", {
                 width: 1.5,
@@ -364,56 +386,72 @@ export class EnnemiIA {
         let shouldTrack = false;
         let targetToTrack = null;
 
-        // Vérifier si un allié est plus proche que le joueur et à portée de détection
-        let shouldPursueAlly = false;
-        if (nearestAllyInfo && nearestAllyInfo.ally && nearestAllyInfo.distance < distToPlayer && 
-            nearestAllyInfo.distance < this.detectionDistance) {
-            shouldPursueAlly = true;
-            targetToTrack = nearestAllyInfo.ally;
-
-            // Si l'ennemi est trop proche de l'allié, on s'éloigne
-            if (nearestAllyInfo.distance < this.maxAllyDistance) {
-                const awayFromAlly = this.root.position.subtract(nearestAllyInfo.ally.root.position).normalize();
-                force.addInPlace(awayFromAlly.scale(this.maxForce * 2));
+        // Comportement spécial pour le boss
+        if (this.isBoss) {
+            // Le boss est plus agressif envers le joueur
+            const pursuitForce = this.seek(this.player.position);
+            force.addInPlace(pursuitForce.scale(this.pursuitWeight * 1.5));
+            shouldTrack = true;
+            targetToTrack = this.player;
+            
+            // Le boss tire plus souvent
+            if (distToPlayer < this.shootingDistance * 1.2) {
+                this.shoot(this.player);
             }
         }
+        // Comportement normal pour les ennemis standards
+        else {
+            // Vérifier si un allié est plus proche que le joueur et à portée de détection
+            let shouldPursueAlly = false;
+            if (nearestAllyInfo && nearestAllyInfo.ally && nearestAllyInfo.distance < distToPlayer && 
+                nearestAllyInfo.distance < this.detectionDistance) {
+                shouldPursueAlly = true;
+                targetToTrack = nearestAllyInfo.ally;
 
-        if (distToPlayer < this.detectionDistance || (shouldPursueAlly && nearestAllyInfo.distance < this.detectionDistance)) {
-            let positionToSeek;
-            
-            if (shouldPursueAlly) {
-                // Si on poursuit un allié, on se dirige vers lui
-                positionToSeek = targetToTrack.root.position;
-            } else {
-                // Sinon on poursuit le joueur avec l'offset préféré
-                positionToSeek = this.getPreferredPosition();
-                targetToTrack = this.player;
-            }
-            
-            const pursuitForce = this.seek(positionToSeek);
-            force.addInPlace(pursuitForce.scale(this.pursuitWeight));
-
-            const separationForce = this.separate();
-            force.addInPlace(separationForce.scale(this.separationWeight));
-
-            this.isRunning = true;
-            shouldTrack = true;
-            this.currentAnimation = "run";
-
-            // Tirer si la cible est à portée de tir
-            if ((shouldPursueAlly && nearestAllyInfo.distance < this.shootingDistance) || 
-                (!shouldPursueAlly && distToPlayer < this.shootingDistance)) {
-                if (shouldPursueAlly) {
-                    this.shoot(targetToTrack);
-                } else {
-                    this.shoot(this.player);
+                // Si l'ennemi est trop proche de l'allié, on s'éloigne
+                if (nearestAllyInfo.distance < this.maxAllyDistance) {
+                    const awayFromAlly = this.root.position.subtract(nearestAllyInfo.ally.root.position).normalize();
+                    force.addInPlace(awayFromAlly.scale(this.maxForce * 2));
                 }
             }
-        } else {
-            const wanderForce = this.wander();
-            force.addInPlace(wanderForce.scale(this.wanderWeight));
-            this.isRunning = true;
-            this.currentAnimation = "run";
+
+            if (distToPlayer < this.detectionDistance || (shouldPursueAlly && nearestAllyInfo.distance < this.detectionDistance)) {
+                let positionToSeek;
+                
+                if (shouldPursueAlly) {
+                    // Si on poursuit un allié, on se dirige vers lui
+                    positionToSeek = targetToTrack.root.position;
+                } else {
+                    // Sinon on poursuit le joueur avec l'offset préféré
+                    positionToSeek = this.getPreferredPosition();
+                    targetToTrack = this.player;
+                }
+                
+                const pursuitForce = this.seek(positionToSeek);
+                force.addInPlace(pursuitForce.scale(this.pursuitWeight));
+
+                const separationForce = this.separate();
+                force.addInPlace(separationForce.scale(this.separationWeight));
+
+                this.isRunning = true;
+                shouldTrack = true;
+                this.currentAnimation = "run";
+
+                // Tirer si la cible est à portée de tir
+                if ((shouldPursueAlly && nearestAllyInfo.distance < this.shootingDistance) || 
+                    (!shouldPursueAlly && distToPlayer < this.shootingDistance)) {
+                    if (shouldPursueAlly) {
+                        this.shoot(targetToTrack);
+                    } else {
+                        this.shoot(this.player);
+                    }
+                }
+            } else {
+                const wanderForce = this.wander();
+                force.addInPlace(wanderForce.scale(this.wanderWeight));
+                this.isRunning = true;
+                this.currentAnimation = "run";
+            }
         }
 
         force.scaleInPlace(this.smoothingFactor);

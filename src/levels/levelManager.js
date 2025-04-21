@@ -2,6 +2,7 @@ import { Level1 } from './Level1.js';
 import { Level2 } from './Level2.js';
 import { Level3 } from './Level3.js';
 import { Level4 } from './Level4.js';
+import { Level5 } from './Level5.js';
 
 export class LevelManager {
     constructor(scene) {
@@ -11,12 +12,14 @@ export class LevelManager {
             1: new Level1(scene),
             2: new Level2(scene),
             3: new Level3(scene),
-            4: new Level4(scene)
+            4: new Level4(scene),
+            5: new Level5(scene)
         };
         this.currentAudio = this.standardAudio;
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
+        this.levels[4].onComplete = this.goToNextLevel.bind(this);
     }
 
     async initCurrentLevel() {
@@ -58,6 +61,16 @@ export class LevelManager {
                     console.error("Erreur lors de l'initialisation du Level4:", error);
                 });
             }, 1500);
+        } else if (this.currentLevel === 4) {
+            this._createQuartiersTransitionEffect();
+            this.currentLevel = 5;
+            
+            setTimeout(() => {
+                this.levels[5].init().then(() => {
+                }).catch(error => {
+                    console.error("Erreur lors de l'initialisation du Level5:", error);
+                });
+            }, 2000);
         }
     }
 
@@ -178,6 +191,69 @@ export class LevelManager {
         warningText.style.opacity = "0";
         overlay.appendChild(warningText);
 
+        setTimeout(() => {
+            overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+            setTimeout(() => {
+                warningText.style.opacity = "1";
+                warningText.style.transform = "translate(-50%, -50%) scale(1)";
+                
+                let scale = 1;
+                let growing = false;
+                const pulseInterval = setInterval(() => {
+                    if (growing) {
+                        scale += 0.05;
+                        if (scale >= 1.2) growing = false;
+                    } else {
+                        scale -= 0.05;
+                        if (scale <= 1) growing = true;
+                    }
+                    warningText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                }, 100);
+                
+                setTimeout(() => {
+                    clearInterval(pulseInterval);
+                    warningText.style.transform = "translate(-50%, -50%) scale(0)";
+                    warningText.style.opacity = "0";
+                    overlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+                    
+                    setTimeout(() => {
+                        if (overlay.parentNode) {
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                    }, 1000);
+                }, 3000);
+            }, 500);
+        }, 100);
+    }
+
+    _createQuartiersTransitionEffect() {
+        const overlay = document.createElement("div");
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100%";
+        overlay.style.height = "100%";
+        overlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+        overlay.style.transition = "background-color 1s ease";
+        overlay.style.zIndex = "1000";
+        
+        const warningText = document.createElement("div");
+        warningText.textContent = "ALERTE: INVASION DE QUARTIERS";
+        warningText.style.position = "absolute";
+        warningText.style.top = "50%";
+        warningText.style.left = "50%";
+        warningText.style.transform = "translate(-50%, -50%) scale(0.5)";
+        warningText.style.color = "red";
+        warningText.style.fontSize = "48px";
+        warningText.style.fontWeight = "bold";
+        warningText.style.textAlign = "center";
+        warningText.style.opacity = "0";
+        warningText.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+        warningText.style.textShadow = "0 0 10px rgba(255, 0, 0, 0.7)";
+        
+        overlay.appendChild(warningText);
+        document.body.appendChild(overlay);
+        
         setTimeout(() => {
             overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
             setTimeout(() => {

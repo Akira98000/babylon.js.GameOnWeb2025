@@ -11,13 +11,18 @@ export class AmiAI {
         this.scene = scene;
         this.position = position;
 
-        this.maxSpeed = 0.15;
+        this.maxSpeed = 0.25;
         this.maxForce = 0.05;
         this.detectionDistance = 50;
         this.shootingDistance = 20;
         this.keepDistance = 5;
         this.arriveRadius = 3;
         this.maxEnemyDistance = 8; // Distance maximale avec les ennemis
+        this.followPlayerDistance = 5; // Distance idéale pour suivre le joueur
+
+        // Mode de suivi du joueur
+        this.followPlayer = false;
+        this.player = null;
 
         // Wander
         this.wanderRadius = 2;
@@ -29,6 +34,7 @@ export class AmiAI {
         this.separationWeight = 2.0;
         this.pursuitWeight = 1.0;
         this.wanderWeight = 0.5;
+        this.followWeight = 1.5; // Poids pour suivre le joueur
 
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.lastShootTime = 0;
@@ -420,8 +426,44 @@ export class AmiAI {
         const nearestEnemy = this.findNearestEnemy();
         let force = new BABYLON.Vector3(0, 0, 0);
         let shouldTrack = false;
+        let isFollowingPlayer = false;
 
-        if (nearestEnemy && !nearestEnemy.isDead) {
+        // Mode de suivi du joueur (priorité plus basse que l'attaque des ennemis)
+        if (this.followPlayer && this.player) {
+            const distToPlayer = BABYLON.Vector3.Distance(this.root.position, this.player.position);
+            
+            // Si aucun ennemi à proximité ou l'ennemi est loin
+            if (!nearestEnemy || (nearestEnemy && BABYLON.Vector3.Distance(this.root.position, nearestEnemy.root.position) > this.detectionDistance)) {
+                isFollowingPlayer = true;
+                
+                // Si trop loin du joueur, le suivre
+                if (distToPlayer > this.followPlayerDistance) {
+                    const followForce = this.seek(this.player.position);
+                    force.addInPlace(followForce.scale(this.followWeight));
+                    this.isRunning = true;
+                    shouldTrack = true;
+                    this.currentAnimation = "run";
+                } 
+                // Si suffisamment proche, rester à cette distance
+                else if (distToPlayer < this.followPlayerDistance * 0.5) {
+                    const awayFromPlayer = this.root.position.subtract(this.player.position).normalize();
+                    force.addInPlace(awayFromPlayer.scale(this.maxForce));
+                    this.isRunning = true;
+                }
+                else {
+                    // Comportement de vagabondage autour du joueur
+                    const wanderForce = this.wander();
+                    force.addInPlace(wanderForce.scale(this.wanderWeight * 0.3));
+                }
+                
+                // Dans tous les cas, ajouter une force de séparation des autres alliés
+                const separationForce = this.separate();
+                force.addInPlace(separationForce.scale(this.separationWeight));
+            }
+        }
+
+        // Si on ne suit pas déjà le joueur, vérifier les ennemis
+        if (!isFollowingPlayer && nearestEnemy && !nearestEnemy.isDead) {
             const distToEnemy = BABYLON.Vector3.Distance(this.root.position, nearestEnemy.root.position);
 
             if (distToEnemy < this.detectionDistance) {
@@ -451,12 +493,36 @@ export class AmiAI {
                     
                     this.shoot(nearestEnemy);
                 }
+            } else {
+                // Si en mode suivi et pas d'ennemi à proximité, revenir vers le joueur
+                if (this.followPlayer && this.player) {
+                    const distToPlayer = BABYLON.Vector3.Distance(this.root.position, this.player.position);
+                    if (distToPlayer > this.followPlayerDistance * 1.5) {
+                        const followForce = this.seek(this.player.position);
+                        force.addInPlace(followForce.scale(this.followWeight));
+                        this.isRunning = true;
+                        shouldTrack = true;
+                    } else {
+                        // Vagabonder autour du joueur
+                        const wanderForce = this.wander();
+                        force.addInPlace(wanderForce.scale(this.wanderWeight));
+                        this.isRunning = false;
+                        if (this.animations.idle && this.currentAnimation !== "idle") {
+                            this.animations.idle.start(true);
+                            this.currentAnimation = "idle";
+                        }
+                    }
+                } else {
+                    // Comportement normal quand pas d'ennemi et pas en mode suivi
+                    const wanderForce = this.wander();
+                    force.addInPlace(wanderForce.scale(this.wanderWeight));
+                    this.isRunning = false;
+                    if (this.animations.idle && this.currentAnimation !== "idle") {
+                        this.animations.idle.start(true);
+                        this.currentAnimation = "idle";
+                    }
+                }
             }
-        } else {
-            const wanderForce = this.wander();
-            force.addInPlace(wanderForce.scale(this.wanderWeight));
-            this.isRunning = true;
-            this.currentAnimation = "run";
         }
 
         force.scaleInPlace(this.smoothingFactor);
