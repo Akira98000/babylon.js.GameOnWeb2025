@@ -3,6 +3,7 @@ import { Level2 } from './Level2.js';
 import { Level3 } from './Level3.js';
 import { Level4 } from './Level4.js';
 import { Level5 } from './Level5.js';
+import { Level6 } from './level6.js';
 import { AmiAI } from '../amis/AmiAI.js';
 
 export class LevelManager {
@@ -14,7 +15,8 @@ export class LevelManager {
             2: new Level2(scene),
             3: new Level3(scene),
             4: new Level4(scene),
-            5: new Level5(scene)
+            5: new Level5(scene),
+            6: new Level6(scene)
         };
         this.currentAudio = this.standardAudio;
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
@@ -72,6 +74,19 @@ export class LevelManager {
                 this.levels[5].init().then(() => {
                 }).catch(error => {
                     console.error("Erreur lors de l'initialisation du Level5:", error);
+                });
+            }, 2000);
+        } else if (this.currentLevel === 5) {
+            this._cleanupAllies();
+            this._createRocketTransitionEffect();
+            this.currentLevel = 6;
+            
+            this.levels[6] = new Level6(this.scene, this.scene.getEngine(), this.scene.activeCamera, this.scene.metadata?.player?.hero);
+            
+            setTimeout(() => {
+                this.levels[6].initialize().then(() => {
+                }).catch(error => {
+                    console.error("Erreur lors de l'initialisation du Level6:", error);
                 });
             }, 2000);
         }
@@ -318,5 +333,95 @@ export class LevelManager {
                 }, 3000);
             }, 500);
         }, 100);
+    }
+
+    _createRocketTransitionEffect() {
+        const overlay = document.createElement("div");
+        overlay.id = "levelTransitionOverlay";
+        overlay.style.position = "absolute";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100%";
+        overlay.style.height = "100%";
+        overlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+        overlay.style.transition = "background-color 1s ease-in-out";
+        overlay.style.zIndex = "1000";
+        overlay.style.pointerEvents = "none";
+        document.body.appendChild(overlay);
+
+        const warningText = document.createElement("div");
+        warningText.id = "transitionWarningText";
+        warningText.textContent = "🚀 MISSION : CONSTRUIRE LA FUSÉE D'ÉVACUATION ! 🚀";
+        warningText.style.position = "absolute";
+        warningText.style.top = "50%";
+        warningText.style.left = "50%";
+        warningText.style.transform = "translate(-50%, -50%) scale(0)";
+        warningText.style.color = "#FFD700";
+        warningText.style.fontSize = "36px";
+        warningText.style.fontWeight = "bold";
+        warningText.style.fontFamily = "Arial, sans-serif";
+        warningText.style.textAlign = "center";
+        warningText.style.textShadow = "0 0 10px rgba(255, 215, 0, 0.7)";
+        warningText.style.transition = "transform 0.5s ease-in-out";
+        warningText.style.zIndex = "1001";
+        warningText.style.opacity = "0";
+        overlay.appendChild(warningText);
+
+        setTimeout(() => {
+            overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+            setTimeout(() => {
+                warningText.style.opacity = "1";
+                warningText.style.transform = "translate(-50%, -50%) scale(1)";
+                
+                let scale = 1;
+                let growing = false;
+                const pulseInterval = setInterval(() => {
+                    if (growing) {
+                        scale += 0.05;
+                        if (scale >= 1.2) growing = false;
+                    } else {
+                        scale -= 0.05;
+                        if (scale <= 1) growing = true;
+                    }
+                    warningText.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                }, 100);
+                
+                setTimeout(() => {
+                    clearInterval(pulseInterval);
+                    warningText.style.transform = "translate(-50%, -50%) scale(0)";
+                    warningText.style.opacity = "0";
+                    overlay.style.backgroundColor = "rgba(0, 0, 0, 0)";
+                    
+                    setTimeout(() => {
+                        if (overlay.parentNode) {
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                    }, 1000);
+                }, 3000);
+            }, 500);
+        }, 100);
+    }
+
+    async goToLevel(levelNumber) {
+        // Nettoyer le niveau actuel si nécessaire
+        if (this.levels[this.currentLevel]) {
+            if (this.levels[this.currentLevel].dispose) {
+                this.levels[this.currentLevel].dispose();
+            }
+            this._cleanupMessages();
+            this._cleanupAllies();
+        }
+
+        // Changer de niveau
+        this.currentLevel = levelNumber;
+
+        // Initialiser le nouveau niveau
+        if (this.levels[this.currentLevel]) {
+            if (this.currentLevel === 6) {
+                await this.levels[this.currentLevel].initialize();
+            } else {
+                await this.levels[this.currentLevel].init();
+            }
+        }
     }
 }

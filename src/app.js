@@ -17,6 +17,7 @@ import { MainMenu } from "./ui/mainMenu.js";
 import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
 import { WelcomePage } from "./ui/welcomePage.js";
+import { LevelSelector } from "./ui/levelSelector.js";
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -122,6 +123,10 @@ const initBabylon = async () => {
             const levelManager = new LevelManager(scene);
             await levelManager.levels[1].init();
             scene.metadata.levelManager = levelManager;
+
+            // Initialiser le sélecteur de niveau
+            const levelSelector = new LevelSelector(levelManager);
+            
             return levelManager;
           }
         }

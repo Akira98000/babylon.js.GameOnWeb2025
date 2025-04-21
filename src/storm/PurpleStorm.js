@@ -197,9 +197,16 @@ export class PurpleStorm {
         this.isActive = false;
         if (this.scene.metadata?.level5) {
             this.scene.metadata.level5._showMessage("🎉 Félicitations ! Vous avez survécu à la tempête violette ! 🎉", 5000);
+            
+            // Nettoyer la scène et passer au niveau suivant après un court délai
             setTimeout(() => {
-                this.scene.metadata.level5._victoire();
-            }, 2000);
+                if (this.scene.metadata?.level5) {
+                    this.scene.metadata.level5.dispose(); // Nettoyer le niveau 5
+                    if (this.scene.metadata?.levelManager) {
+                        this.scene.metadata.levelManager.goToNextLevel(); // Passer au niveau 6
+                    }
+                }
+            }, 6000);
         }
         this.dispose();
     }

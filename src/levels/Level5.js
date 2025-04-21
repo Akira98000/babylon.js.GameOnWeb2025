@@ -259,13 +259,15 @@ export class Level5 {
     }
 
     _victoire() {
+        if (this.isCompleted) return; // Éviter les appels multiples
+        
         this.isCompleted = true;
         this._showMessage("Félicitations! Vous avez libéré tous les quartiers de la ville!", 5000);
-        setTimeout(() => {
-            if (this.scene.metadata && this.scene.metadata.levelManager) {
-                this.scene.metadata.levelManager.goToNextLevel();
-            }
-        }, 6000);
+        
+        // Si la tempête n'a pas encore commencé, on la démarre
+        if (!this.stormStarted) {
+            this._startPurpleStorm();
+        }
     }
 
     _createMessage(text, id) {
