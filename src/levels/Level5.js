@@ -247,22 +247,14 @@ export class Level5 {
     }
 
     _startPurpleStorm() {
-        this.stormStarted = true;
-        this._showMessage("Une violente tempête violette s'abat sur la ville! Restez dans l'œil de la tempête pour survivre!", 5000);
-        
-        // Créer et démarrer la tempête
-        this.purpleStorm = new PurpleStorm(this.scene);
-        this.purpleStorm.start();
-        
-        // Jouer un son d'orage si disponible
-        try {
-            const stormSound = new BABYLON.Sound("stormSound", "/son/storm.mp3", this.scene, null, {
-                volume: 0.3,
-                loop: true,
-                autoplay: true
-            });
-        } catch (error) {
-            console.warn("Impossible de jouer le son de la tempête:", error);
+        if (!this.stormStarted) {
+            this.stormStarted = true;
+            this.purpleStorm = new PurpleStorm(this.scene);
+            // Donner accès à l'instance de Level5 à la tempête
+            if (!this.scene.metadata) this.scene.metadata = {};
+            this.scene.metadata.level5 = this;
+            this.purpleStorm.start();
+            this._showMessage("⚠️ Une tempête violette approche! Restez dans la zone sûre! ⚠️", 5000);
         }
     }
 
