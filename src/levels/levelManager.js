@@ -5,6 +5,8 @@ import { Level4 } from './Level4.js';
 import { Level5 } from './Level5.js';
 import { Level6 } from './level6.js';
 import { AmiAI } from '../amis/AmiAI.js';
+import * as BABYLON from '@babylonjs/core';
+import '@babylonjs/loaders';
 
 export class LevelManager {
     constructor(scene) {
@@ -23,6 +25,9 @@ export class LevelManager {
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
         this.levels[4].onComplete = this.goToNextLevel.bind(this);
+
+        // Démarrer l'animation du GLB
+        this.loadAndAnimateGLB();
     }
 
     async initCurrentLevel() {
@@ -422,6 +427,68 @@ export class LevelManager {
             } else {
                 await this.levels[this.currentLevel].init();
             }
+        }
+    }
+
+    async loadAndAnimateGLB() {
+        try {
+            const result = await BABYLON.SceneLoader.ImportMeshAsync(
+                "", 
+                "./public/pnj/road/",  
+                "pnj_poo.glb",        
+                this.scene
+            );
+            
+            const mesh = result.meshes[0];
+            const startPosition = new BABYLON.Vector3(-121.14, 0.10, -1.51); 
+            const endPosition = new BABYLON.Vector3(22.75, 0.10, -1.51);
+            const vehicleSpawnPosition = startPosition.clone();
+            const vehicleDespawnPosition = endPosition.clone();
+    
+            mesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+            mesh.position = startPosition.clone();
+    
+            const frameRate = 15;      
+            const totalFrames = 300;   
+    
+            const moveGLB = () => {
+                BABYLON.Animation.CreateAndStartAnimation(
+                    'move', mesh, 'position',
+                    frameRate, totalFrames,
+                    startPosition, endPosition,
+                    BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+                );
+            };
+    
+            const spawnVehicle = () => {
+                const vehicle = mesh.clone('vehicle');
+                vehicle.position = vehicleSpawnPosition.clone();
+                
+                BABYLON.Animation.CreateAndStartAnimation(
+                    'vehicleMove', 
+                    vehicle, 
+                    'position', 
+                    frameRate, 
+                    totalFrames, 
+                    vehicleSpawnPosition, 
+                    vehicleDespawnPosition, 
+                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                );
+                
+                const durationMs = (totalFrames / frameRate) * 1000;
+                setTimeout(() => {
+                    vehicle.dispose();
+                }, durationMs);
+            };
+    
+            const spawnInterval = 2000; 
+            setInterval(() => {
+                moveGLB();
+                spawnVehicle();
+            }, spawnInterval);
+    
+        } catch (error) {
+            console.error("Erreur lors du chargement du modèle GLB:", error);
         }
     }
 }
