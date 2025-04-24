@@ -7,7 +7,7 @@ export let mapPartsData = [];
 // FONCTION : CHARGEMENT DES PARTIES DE LA MAP
 export async function loadMapParts(scene) {
   const basePath = "/map/";
-  const partNames = ["test5.glb", "test3.glb", "test2.glb", "test4.glb"];
+  const partNames = ["test.glb", "test3.glb", "test2.glb", "test4.glb"];
   mapPartsData = [];
   const parts = await Promise.all(
     partNames.map((fileName) => importMapPart(scene, basePath, fileName))
