@@ -445,11 +445,7 @@ export class Level6 {
             this.countdownElement.parentNode.removeChild(this.countdownElement);
             this.countdownElement = null;
         }
-        
-        // Afficher un message de lancement
         this._showMessage("Décollage !", 3000);
-        
-        // Créer l'animation de décollage
         if (this.completedRocket) {
             const frameRate = 30;
             const rocketAnimation = new Animation(
@@ -460,7 +456,6 @@ export class Level6 {
                 Animation.ANIMATIONLOOPMODE_CONSTANT
             );
             
-            // Position initiale et finale de la fusée
             const keyFrames = [
                 { frame: 0, value: this.completedRocket.position.y },
                 { frame: frameRate * 4, value: this.completedRocket.position.y + 30 }

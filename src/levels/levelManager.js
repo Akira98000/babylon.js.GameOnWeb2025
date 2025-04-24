@@ -433,16 +433,14 @@ export class LevelManager {
     async loadAndAnimateGLB() {
         try {
             const glbModels = [
-                "pnj_poo.glb",
+                "pnj_poo2.glb",
             ];
             
-            // Premier trajet (horizontal)
             const startPosition = new BABYLON.Vector3(-121.14, 0.10, -1.51); 
             const endPosition = new BABYLON.Vector3(22.75, 0.10, -1.51);
             const vehicleSpawnPosition = startPosition.clone();
             const vehicleDespawnPosition = endPosition.clone();
             
-            // Deuxième trajet (avec virages)
             const secondTrajectory = [
                 new BABYLON.Vector3(-4.55, 0.10, 44.61),   // Point de départ
                 new BABYLON.Vector3(-4.55, 0.10, -45.36),  // Tourne à droite
@@ -457,106 +455,85 @@ export class LevelManager {
                 this.scene
             );
             
-            const mesh = result.meshes[0];
-            mesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
-            mesh.position = startPosition.clone();
-            mesh.isVisible = false; 
-    
+            const originalMesh = result.meshes[0];
+            originalMesh.isVisible = false;
+            originalMesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+            
             const frameRate = 15;      
             const totalFrames = 300;   
     
-            const spawnVehicle = async (trajectory) => {
-                const randomIndex = Math.floor(Math.random() * glbModels.length);
-                const selectedModel = glbModels[randomIndex];
+            const spawnVehicle = (trajectory) => {
+                const vehicle = originalMesh.clone("pnj_clone");
+                vehicle.isVisible = true;
                 
-                try {
-                    const vehicleResult = await BABYLON.SceneLoader.ImportMeshAsync(
-                        "",
-                        "./public/pnj/road/",
-                        selectedModel,
-                        this.scene
+                if (trajectory === "main") {
+                    vehicle.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+                    vehicle.position = vehicleSpawnPosition.clone();
+                    
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        'vehicleMove', 
+                        vehicle, 
+                        'position', 
+                        frameRate, 
+                        totalFrames, 
+                        vehicleSpawnPosition, 
+                        vehicleDespawnPosition, 
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                     );
                     
-                    const vehicle = vehicleResult.meshes[0];
-                    vehicle.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0); // -90 degrés
-
-                    vehicle.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+                    const durationMs = (totalFrames / frameRate) * 1000;
+                    setTimeout(() => {
+                        vehicle.dispose();
+                    }, durationMs);
+                } else if (trajectory === "second") {
+                    vehicle.position = secondTrajectory[0].clone();
+                    vehicle.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0);
                     
-                    if (trajectory === "main") {
-                        // Premier trajet (linéaire)
-                        vehicle.position = vehicleSpawnPosition.clone();
-                        
+                    const segmentFrames = Math.floor(totalFrames / 3);
+                    const segmentDuration = (segmentFrames / frameRate) * 1000;
+                    
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        'vehicleMove1', 
+                        vehicle, 
+                        'position', 
+                        frameRate, 
+                        segmentFrames, 
+                        secondTrajectory[0], 
+                        secondTrajectory[1], 
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+                    
+                    setTimeout(() => {  
+                        vehicle.rotation = new BABYLON.Vector3(0, -0, 0);
                         BABYLON.Animation.CreateAndStartAnimation(
-                            'vehicleMove', 
-                            vehicle, 
-                            'position', 
-                            frameRate, 
-                            totalFrames, 
-                            vehicleSpawnPosition, 
-                            vehicleDespawnPosition, 
-                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-                        );
-                        
-                        const durationMs = (totalFrames / frameRate) * 1000;
-                        setTimeout(() => {
-                            vehicle.dispose();
-                        }, durationMs);
-                    } else if (trajectory === "second") {
-                        // Deuxième trajet (avec virages)
-                        vehicle.position = secondTrajectory[0].clone();
-                        
-                        // Créer une animation pour chaque segment du trajet
-                        const segmentFrames = Math.floor(totalFrames / 3); // 3 segments
-                        const segmentDuration = (segmentFrames / frameRate) * 1000;
-                        
-                        // Premier segment
-                        BABYLON.Animation.CreateAndStartAnimation(
-                            'vehicleMove1', 
+                            'vehicleMove2', 
                             vehicle, 
                             'position', 
                             frameRate, 
                             segmentFrames, 
-                            secondTrajectory[0], 
                             secondTrajectory[1], 
+                            secondTrajectory[2], 
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
-                        
-                        setTimeout(() => {  
-                           vehicle.rotation = new BABYLON.Vector3(0, -0, 0);       // -0
-                           BABYLON.Animation.CreateAndStartAnimation(
-                                'vehicleMove2', 
-                                vehicle, 
-                                'position', 
-                                frameRate, 
-                                segmentFrames, 
-                                secondTrajectory[1], 
-                                secondTrajectory[2], 
-                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-                            );
-                        }, segmentDuration);
-                        
-                        // Rotation retour à la normale après le deuxième segment
-                        setTimeout(() => {  
-                            vehicle.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0);                                                    
-                            BABYLON.Animation.CreateAndStartAnimation(
-                                'vehicleMove3', 
-                                vehicle, 
-                                'position', 
-                                frameRate, 
-                                segmentFrames, 
-                                secondTrajectory[2], 
-                                secondTrajectory[3], 
-                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-                            );
-                        }, segmentDuration * 2);
-                        
-                        // Disposer le véhicule après le trajet complet
-                        setTimeout(() => {
-                            vehicle.dispose();
-                        }, segmentDuration * 3);
-                    }
-                } catch (error) {
-                    console.error(`Erreur lors du chargement du modèle ${selectedModel}:`, error);
+                    }, segmentDuration);
+                    
+                    setTimeout(() => {  
+                        vehicle.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0);
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            'vehicleMove3', 
+                            vehicle, 
+                            'position', 
+                            frameRate, 
+                            segmentFrames, 
+                            secondTrajectory[2], 
+                            secondTrajectory[3], 
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                    }, segmentDuration * 2);
+                    
+                    setTimeout(() => {
+                        vehicle.dispose();
+                    }, segmentDuration * 3);
                 }
             };
     
