@@ -8,7 +8,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     const heroBaseSpeed = 0.14;
     const heroStrafeSpeed = 0.08; 
     const targetFPS = 60;
-    const rotationSensitivity = 0.005;
+    const rotationSensitivity = 0.01;
     const shootAnimationDuration = GAME_CONFIG.ANIMATIONS?.SHOOT?.DURATION || 300;
     let animating = false;
     let sambaAnimating = false;
@@ -252,35 +252,24 @@ export function setupControls(scene, hero, animations, camera, canvas) {
 
         const cameraHeight = GAME_CONFIG.CAMERA.FOLLOW?.HEIGHT_OFFSET || 2;
         const cameraDistance = GAME_CONFIG.CAMERA.FOLLOW?.DISTANCE || 6;
-        const positionLerp = GAME_CONFIG.CAMERA.FOLLOW?.POSITION_LERP || 0.2;
         const targetLerp = GAME_CONFIG.CAMERA.FOLLOW?.TARGET_LERP || 0.2;
         
-        // Calculer la position idéale de la caméra basée sur la rotation du héros
-        const cameraOffset = new BABYLON.Vector3(0, cameraHeight, cameraDistance);
-        const rotatedOffset = BABYLON.Vector3.TransformCoordinates(
-            cameraOffset, 
-            BABYLON.Matrix.RotationY(currentRotationY)
-        );
-        const idealPosition = hero.position.add(rotatedOffset);
-        
-        // Vérifier la distance et repositionner la caméra si trop loin
-        const currentDistance = BABYLON.Vector3.Distance(camera.position, idealPosition);
-        const maxAllowedDistance = cameraDistance * 4;
-        
-        if (currentDistance > maxAllowedDistance) {
-            camera.position = idealPosition.clone();
-        } else {
-            // Interpolation douce vers la position idéale
-            camera.position = BABYLON.Vector3.Lerp(camera.position, idealPosition, positionLerp);
-        }
-        
-        // Lerp vers la cible (sur l'axe Y + 1.5)
+        // On garde uniquement le suivi de la cible (le héros)
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
         const currentTarget = camera.getTarget().clone();
         const newTarget = BABYLON.Vector3.Lerp(currentTarget, idealTarget, targetLerp);
         camera.setTarget(newTarget);
 
-        // Synchronisation entre la rotation du joueur et celle de la caméra pour éviter les déviations
+        // Calculer l'angle entre la caméra et l'axe Z
+        const cameraDirection = camera.getTarget().subtract(camera.position);
+        cameraDirection.y = 0; // On ignore la composante verticale
+        cameraDirection.normalize();
+        
+        // Calculer l'angle de rotation nécessaire et ajouter PI pour inverser la direction
+        currentRotationY = Math.atan2(cameraDirection.x, cameraDirection.z) + Math.PI;
+        targetRotationY = currentRotationY;
+        
+        // Appliquer la rotation au héros
         hero.rotation.y = currentRotationY;
     });
 
