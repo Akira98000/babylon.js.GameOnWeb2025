@@ -28,50 +28,33 @@ const initBabylon = async () => {
     adaptToDeviceRatio: true,
   });
 
-  // Vérifier si le jeu a déjà été démarré
   const gameStarted = localStorage.getItem('gameStarted');
   
   if (gameStarted === 'true') {
-    // Si le jeu a déjà été démarré, passer directement au chargement
     startGame(canvas, engine);
   } else {
-    // Sinon, afficher le menu principal
     mainMenu = new MainMenu(canvas);
-    
-    // Définir la fonction de callback pour le bouton Jouer
-    // Cette fonction sera appelée APRÈS que le menu ait été nettoyé
     mainMenu.onPlayButtonClicked = () => {
-      // Éviter les démarrages multiples
       if (isGameLoading) return;
       isGameLoading = true;
-      
-      // Stocker dans localStorage que le jeu a été démarré
       localStorage.setItem('gameStarted', 'true');
-      
-      // Démarrer le jeu
       startGame(canvas, engine);
     };
   }
 
-  // Fonction pour démarrer le jeu
   async function startGame(canvas, engine) {
     try {
-      // Marquer que le jeu est en cours de chargement
       isGameLoading = true;
-      
-      // Initialiser le jeu
       const scene = new BABYLON.Scene(engine);
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
       scene.metadata = {};
       
-      // Créer un écran de chargement indépendant si le menu principal n'existe pas
       if (!mainMenu || !mainMenu.loadingScreen) {
         loadingScreen = new LoadingScreen(canvas);
         loadingScreen.show();
       }
       
-      // Liste des tâches de chargement avec leur poids relatif et descriptions
       const loadingTasks = [
         { 
           name: "environment", 
@@ -91,7 +74,7 @@ const initBabylon = async () => {
           description: "Création du personnage...",
           func: async (camera) => {
             const player = await createPlayer(scene, camera, canvas);
-            scene.metadata.player = player; // Stocker la référence du joueur dans les métadonnées
+            scene.metadata.player = player; 
             return player;
           }
         },
@@ -119,28 +102,20 @@ const initBabylon = async () => {
           description: "Initialisation du niveau...",
           func: async () => {
             const levelManager = new LevelManager(scene);
-            await levelManager.levels[1].init();
+            await levelManager.initCurrentLevel();
             scene.metadata.levelManager = levelManager;
-
-            // Initialiser le sélecteur de niveau
-            const levelSelector = new LevelSelector(levelManager);
-            
             return levelManager;
           }
         }
       ];
       
-      // Calculer le poids total
       const totalWeight = loadingTasks.reduce((sum, task) => sum + task.weight, 0);
       let completedWeight = 0;
-      
-      // Exécuter les tâches de chargement séquentiellement
       let camera, player, animations, levelManager;
       
       for (let i = 0; i < loadingTasks.length; i++) {
         const task = loadingTasks[i];
         try {
-          // Mettre à jour le texte de l'étape de chargement
           const updateLoadingProgress = (progress, description) => {
             if (mainMenu && mainMenu.loadingScreen) {
               mainMenu.loadingScreen.updateProgress(progress, description);
@@ -149,13 +124,11 @@ const initBabylon = async () => {
             }
           };
           
-          // Mettre à jour la progression
           updateLoadingProgress(
             (completedWeight / totalWeight) * 100,
             task.description
           );
           
-          // Pour la tâche du joueur, nous avons besoin de la caméra
           let result;
           if (task.name === "player" && camera) {
             result = await task.func(camera);
@@ -163,17 +136,14 @@ const initBabylon = async () => {
             result = await task.func();
           }
           
-          // Stocker les résultats importants
           if (task.name === "camera") camera = result;
           else if (task.name === "player") player = result;
           else if (task.name === "animations") animations = result;
           else if (task.name === "level") levelManager = result;
           
-          // Mettre à jour la progression
           completedWeight += task.weight;
           const progress = (completedWeight / totalWeight) * 100;
           
-          // Mettre à jour la barre de progression
           updateLoadingProgress(
             progress,
             i < loadingTasks.length - 1 
@@ -181,13 +151,11 @@ const initBabylon = async () => {
               : "Finalisation..."
           );
           
-          // Petite pause pour permettre à l'interface de se mettre à jour
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
           console.error(`Erreur lors du chargement de ${task.name}:`, error);
           
-          // Afficher l'erreur dans l'écran de chargement
           if (mainMenu && mainMenu.loadingScreen) {
             mainMenu.loadingScreen.updateProgress(
               (completedWeight / totalWeight) * 100,
@@ -232,7 +200,6 @@ const initBabylon = async () => {
       
       setTimeout(() => {
         welcomePage = new WelcomePage(() => {
-          // Callback when welcome page is completed
           console.log("Welcome page completed");
         });
         welcomePage.show();
@@ -245,7 +212,6 @@ const initBabylon = async () => {
         maxZ: 90
       };
       
-      // Configurer les contrôles supplémentaires
       if (scene.metadata.controls) {
         const originalHandleKeyDown = scene.metadata.controls.handleKeyDown;
         const originalHandleKeyUp = scene.metadata.controls.handleKeyUp;
@@ -258,7 +224,6 @@ const initBabylon = async () => {
         };
       }
       
-      // Ajouter un événement pour activer l'inspecteur de scène
       window.addEventListener('keydown', (event) => {
         if (event.key.toLowerCase() === 'i') {
           if (scene.debugLayer.isVisible()) {
@@ -268,14 +233,12 @@ const initBabylon = async () => {
           }
         }
         
-        // Ajouter une touche pour réinitialiser le localStorage (retour au menu principal)
         if (event.key.toLowerCase() === 'l' && event.ctrlKey) {
           localStorage.removeItem('gameStarted');
           alert('LocalStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
         }
       });
       
-      // Démarrer la boucle de rendu
       engine.runRenderLoop(() => {
         scene.render();
         player.handleShooting(animations);
@@ -299,5 +262,4 @@ const initBabylon = async () => {
   }
 };
 
-// Initialiser Babylon.js
 initBabylon();

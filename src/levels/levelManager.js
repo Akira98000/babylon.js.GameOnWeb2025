@@ -4,6 +4,7 @@ import { Level3 } from './Level3.js';
 import { Level4 } from './Level4.js';
 import { Level5 } from './Level5.js';
 import { Level6 } from './level6.js';
+import { CutScene } from './CutScene.js';
 import { AmiAI } from '../amis/AmiAI.js';
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/loaders';
@@ -11,7 +12,7 @@ import '@babylonjs/loaders';
 export class LevelManager {
     constructor(scene) {
         this.scene = scene;
-        this.currentLevel = 1;
+        this.currentLevel = 0; // Commencer à 0 pour la cutscene
         this.levels = {
             1: new Level1(scene),
             2: new Level2(scene),
@@ -19,6 +20,15 @@ export class LevelManager {
             4: new Level4(scene),
             5: new Level5(scene),
             6: new Level6(scene)
+        };
+        // Ajouter la cutscene pour le niveau 1
+        this.cutScenes = {
+            1: new CutScene(scene, "NIVEAU 1: LA RENCONTRE"),
+            2: new CutScene(scene, "NIVEAU 2: EXPLORATION"),
+            3: new CutScene(scene, "NIVEAU 3: LA CATASTROPHE"),
+            4: new CutScene(scene, "NIVEAU 4: LA MENACE"),
+            5: new CutScene(scene, "NIVEAU 5: LES QUARTIERS"),
+            6: new CutScene(scene, "NIVEAU 6: L'ULTIME COMBAT")
         };
         this.currentAudio = this.standardAudio;
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
@@ -31,7 +41,19 @@ export class LevelManager {
     }
 
     async initCurrentLevel() {
-        if (this.levels[this.currentLevel]) {
+        if (this.currentLevel === 0) {
+            // Démarrer avec la cutscene du niveau 1
+            if (this.cutScenes[1]) {
+                this.cutScenes[1].onComplete = () => {
+                    this.currentLevel = 1;
+                    this.levels[1].init();
+                };
+                await this.cutScenes[1].init();
+            } else {
+                this.currentLevel = 1;
+                await this.levels[1].init();
+            }
+        } else if (this.levels[this.currentLevel]) {
             await this.levels[this.currentLevel].init();
         }
     }
@@ -47,14 +69,31 @@ export class LevelManager {
         
         if (this.currentLevel === 1) {
             this.currentLevel = 2;
-            await this.levels[2].init();
+            // Afficher la cutscene avant de charger le niveau 2
+            if (this.cutScenes[2]) {
+                this.cutScenes[2].onComplete = () => {
+                    this.levels[2].init();
+                };
+                await this.cutScenes[2].init();
+            } else {
+                await this.levels[2].init();
+            }
         } else if (this.currentLevel === 2) {
             this.currentLevel = 3;
             this.switchToMusic("catastrophe");
-            this.levels[3].init().then(() => {
-            }).catch(error => {
-                console.error("Erreur lors de l'initialisation du Level3:", error);
-            });
+            // Afficher la cutscene avant de charger le niveau 3
+            if (this.cutScenes[3]) {
+                this.cutScenes[3].onComplete = () => {
+                    this.levels[3].init().catch(error => {
+                        console.error("Erreur lors de l'initialisation du Level3:", error);
+                    });
+                };
+                await this.cutScenes[3].init();
+            } else {
+                this.levels[3].init().catch(error => {
+                    console.error("Erreur lors de l'initialisation du Level3:", error);
+                });
+            }
         } else if (this.currentLevel === 3) {
             this._createTransitionEffect();
             if (this.levels[3].forceRestoreColors) {
@@ -63,11 +102,20 @@ export class LevelManager {
             this.currentLevel = 4;
             this.switchToMusic("combat");
             
-            setTimeout(() => {
-                this.levels[4].init().then(() => {
-                }).catch(error => {
-                    console.error("Erreur lors de l'initialisation du Level4:", error);
-                });
+            // Afficher la cutscene avant de charger le niveau 4 après un délai
+            setTimeout(async () => {
+                if (this.cutScenes[4]) {
+                    this.cutScenes[4].onComplete = () => {
+                        this.levels[4].init().catch(error => {
+                            console.error("Erreur lors de l'initialisation du Level4:", error);
+                        });
+                    };
+                    await this.cutScenes[4].init();
+                } else {
+                    this.levels[4].init().catch(error => {
+                        console.error("Erreur lors de l'initialisation du Level4:", error);
+                    });
+                }
             }, 1500);
         } else if (this.currentLevel === 4) {
             this._cleanupAllies();
@@ -75,11 +123,20 @@ export class LevelManager {
             this._createQuartiersTransitionEffect();
             this.currentLevel = 5;
             
-            setTimeout(() => {
-                this.levels[5].init().then(() => {
-                }).catch(error => {
-                    console.error("Erreur lors de l'initialisation du Level5:", error);
-                });
+            // Afficher la cutscene avant de charger le niveau 5 après un délai
+            setTimeout(async () => {
+                if (this.cutScenes[5]) {
+                    this.cutScenes[5].onComplete = () => {
+                        this.levels[5].init().catch(error => {
+                            console.error("Erreur lors de l'initialisation du Level5:", error);
+                        });
+                    };
+                    await this.cutScenes[5].init();
+                } else {
+                    this.levels[5].init().catch(error => {
+                        console.error("Erreur lors de l'initialisation du Level5:", error);
+                    });
+                }
             }, 2000);
         } else if (this.currentLevel === 5) {
             this._cleanupAllies();
@@ -88,11 +145,20 @@ export class LevelManager {
             
             this.levels[6] = new Level6(this.scene, this.scene.getEngine(), this.scene.activeCamera, this.scene.metadata?.player?.hero);
             
-            setTimeout(() => {
-                this.levels[6].initialize().then(() => {
-                }).catch(error => {
-                    console.error("Erreur lors de l'initialisation du Level6:", error);
-                });
+            // Afficher la cutscene avant de charger le niveau 6 après un délai
+            setTimeout(async () => {
+                if (this.cutScenes[6]) {
+                    this.cutScenes[6].onComplete = () => {
+                        this.levels[6].initialize().catch(error => {
+                            console.error("Erreur lors de l'initialisation du Level6:", error);
+                        });
+                    };
+                    await this.cutScenes[6].init();
+                } else {
+                    this.levels[6].initialize().catch(error => {
+                        console.error("Erreur lors de l'initialisation du Level6:", error);
+                    });
+                }
             }, 2000);
         }
     }
@@ -408,24 +474,43 @@ export class LevelManager {
     }
 
     async goToLevel(levelNumber) {
+        if (!this.levels[levelNumber]) return;
+        
+        // Annuler toutes les transitions en cours
+        if (document.getElementById('levelTransitionOverlay')) {
+            document.getElementById('levelTransitionOverlay').remove();
+        }
+        
         // Nettoyer le niveau actuel si nécessaire
         if (this.levels[this.currentLevel]) {
             if (this.levels[this.currentLevel].dispose) {
                 this.levels[this.currentLevel].dispose();
             }
+            if (this.levels[this.currentLevel].cleanup) {
+                this.levels[this.currentLevel].cleanup();
+            }
             this._cleanupMessages();
             this._cleanupAllies();
         }
-
-        // Changer de niveau
+        
         this.currentLevel = levelNumber;
-
-        // Initialiser le nouveau niveau
-        if (this.levels[this.currentLevel]) {
-            if (this.currentLevel === 6) {
-                await this.levels[this.currentLevel].initialize();
+        
+        // Afficher la cutscene avant de charger le niveau sélectionné
+        if (this.cutScenes[levelNumber]) {
+            this.cutScenes[levelNumber].onComplete = () => {
+                if (levelNumber === 6) {
+                    this.levels[levelNumber].initialize();
+                } else {
+                    this.levels[levelNumber].init();
+                }
+            };
+            await this.cutScenes[levelNumber].init();
+        } else {
+            // Initialiser le nouveau niveau
+            if (levelNumber === 6) {
+                await this.levels[levelNumber].initialize();
             } else {
-                await this.levels[this.currentLevel].init();
+                await this.levels[levelNumber].init();
             }
         }
     }
