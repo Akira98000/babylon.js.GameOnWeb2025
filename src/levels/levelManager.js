@@ -334,7 +334,7 @@ export class LevelManager {
                         if (overlay.parentNode) {
                             overlay.parentNode.removeChild(overlay);
                         }
-                    }, 1000);
+                    }, 3000);
                 }, 3000);
             }, 500);
         }, 100);
@@ -434,36 +434,54 @@ export class LevelManager {
         try {
             const glbModels = [
                 "pnj_poo2.glb",
+                "taxi.glb",
+                "car2.glb"
             ];
             
+            // Premier trajet (horizontal)
             const startPosition = new BABYLON.Vector3(-121.14, 0.10, -1.51); 
             const endPosition = new BABYLON.Vector3(22.75, 0.10, -1.51);
             const vehicleSpawnPosition = startPosition.clone();
             const vehicleDespawnPosition = endPosition.clone();
             
+            // Deuxième trajet (avec virages)
             const secondTrajectory = [
                 new BABYLON.Vector3(-4.55, 0.10, 44.61),   // Point de départ
                 new BABYLON.Vector3(-4.55, 0.10, -45.36),  // Tourne à droite
                 new BABYLON.Vector3(-27.26, 0.10, -46.46), // Tourne à gauche
                 new BABYLON.Vector3(-28.52, 0.10, -86.96)  // Point d'arrivée
             ];
+
+            // Troisième trajet (horizontal)
+            const thirdStartPosition = new BABYLON.Vector3(23.59, 0.10, 43.16);
+            const thirdEndPosition = new BABYLON.Vector3(-120.24, 0.10, 43.03);
+
+            // Quatrième trajet (vertical)
+            const fourthStartPosition = new BABYLON.Vector3(-63.44, 0.10, 40.74);
+            const fourthEndPosition = new BABYLON.Vector3(-63.37, 0.10, -40.21);
             
-            const result = await BABYLON.SceneLoader.ImportMeshAsync(
-                "", 
-                "./public/pnj/road/",  
-                glbModels[0],        
-                this.scene
-            );
-            
-            const originalMesh = result.meshes[0];
-            originalMesh.isVisible = false;
-            originalMesh.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+            // Charger les modèles
+            const models = await Promise.all(glbModels.map(async (modelName) => {
+                const result = await BABYLON.SceneLoader.ImportMeshAsync(
+                    "", 
+                    "./public/pnj/road/",  
+                    modelName,        
+                    this.scene
+                );
+                const mesh = result.meshes[0];
+                mesh.isVisible = false;
+                mesh.position = new BABYLON.Vector3(1000, 1000, 1000);
+                mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+                return mesh;
+            }));
             
             const frameRate = 15;      
             const totalFrames = 300;   
     
             const spawnVehicle = (trajectory) => {
-                const vehicle = originalMesh.clone("pnj_clone");
+                // Alterner entre les modèles
+                const randomModel = models[Math.floor(Math.random() * models.length)];
+                const vehicle = randomModel.clone(`vehicle_clone_${Date.now()}`);
                 vehicle.isVisible = true;
                 
                 if (trajectory === "main") {
@@ -534,12 +552,52 @@ export class LevelManager {
                     setTimeout(() => {
                         vehicle.dispose();
                     }, segmentDuration * 3);
+                } else if (trajectory === "third") {
+                    vehicle.rotation = new BABYLON.Vector3(0, 0, 0);
+                    vehicle.position = thirdStartPosition.clone();
+                    
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        'vehicleMove', 
+                        vehicle, 
+                        'position', 
+                        frameRate, 
+                        totalFrames, 
+                        thirdStartPosition, 
+                        thirdEndPosition, 
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+                    
+                    const durationMs = (totalFrames / frameRate) * 1000;
+                    setTimeout(() => {
+                        vehicle.dispose();
+                    }, durationMs);
+                } else if (trajectory === "fourth") {
+                    vehicle.rotation = new BABYLON.Vector3(0, -Math.PI / 2, 0); // Rotation 90° pour le trajet vertical
+                    vehicle.position = fourthStartPosition.clone();
+                    
+                    BABYLON.Animation.CreateAndStartAnimation(
+                        'vehicleMove', 
+                        vehicle, 
+                        'position', 
+                        frameRate, 
+                        totalFrames, 
+                        fourthStartPosition, 
+                        fourthEndPosition, 
+                        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+                    
+                    const durationMs = (totalFrames / frameRate) * 1000;
+                    setTimeout(() => {
+                        vehicle.dispose();
+                    }, durationMs);
                 }
             };
     
-            // Intervalles pour les deux trajets
+            // Intervalles pour les quatre trajets
             const spawnInterval1 = 3000; 
             const spawnInterval2 = 5000;
+            const spawnInterval3 = 4000;
+            const spawnInterval4 = 3500; // Intervalle pour le quatrième trajet
             
             setInterval(() => {
                 spawnVehicle("main");
@@ -548,6 +606,14 @@ export class LevelManager {
             setInterval(() => {
                 spawnVehicle("second");
             }, spawnInterval2);
+
+            setInterval(() => {
+                spawnVehicle("third");
+            }, spawnInterval3);
+
+            setInterval(() => {
+                spawnVehicle("fourth");
+            }, spawnInterval4);
     
         } catch (error) {
             console.error("Erreur lors du chargement des modèles GLB:", error);
