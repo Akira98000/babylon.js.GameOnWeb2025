@@ -14,39 +14,9 @@ export class Tutorial {
         this.typingTimeout = null;
         this.tutorialSteps = [
             {
-                instruction: "Pour avancer, maintenez Z",
-                key: ["Z"],
-                checkComplete: (inputMap) => this._checkKeyHold(inputMap["z"])
-            },
-            {
-                instruction: "Pour tourner et avancer à gauche, maintenez Q",
-                key: ["Q"],
-                checkComplete: (inputMap) => this._checkKeyHold(inputMap["q"])
-            },
-            {
-                instruction: "Pour vous retourner et reculer, maintenez S",
-                key: ["S"],
-                checkComplete: (inputMap) => this._checkKeyHold(inputMap["s"])
-            },
-            {
-                instruction: "Pour tourner et avancer à droite, maintenez D",
-                key: ["D"],
-                checkComplete: (inputMap) => this._checkKeyHold(inputMap["d"])
-            },
-            {
-                instruction: "Pour tirer, cliquez avec le bouton gauche de la souris. Appuyez sur ESPACE pour continuer.",
-                key: ["🖱️ CLIC", "ESPACE"],
+                instruction: "Appuyez sur ESPACE pour continuer",
+                key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
-            },
-            {
-                instruction: "Déplacez la souris pour contrôler la caméra. Appuyez sur ESPACE pour continuer.",
-                key: ["🖱️ ←→", "ESPACE"],
-                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
-            },
-            {
-                instruction: "Pour danser la samba, maintenez B",
-                key: ["B"],
-                checkComplete: (inputMap) => this._checkKeyHold(inputMap["b"])
             }
         ];
         this._createUI();

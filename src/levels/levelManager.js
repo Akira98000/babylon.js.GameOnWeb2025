@@ -464,7 +464,7 @@ export class LevelManager {
             const models = await Promise.all(glbModels.map(async (modelName) => {
                 const result = await BABYLON.SceneLoader.ImportMeshAsync(
                     "", 
-                    "./public/pnj/road/",  
+                    "/pnj/road/",  
                     modelName,        
                     this.scene
                 );

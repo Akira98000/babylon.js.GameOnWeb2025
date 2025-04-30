@@ -25,9 +25,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     if (hero.rotationQuaternion) hero.rotationQuaternion = null;
     hero.rotation.y = targetRotationY;
 
-    // Fonction d'aide pour maintenir les angles dans un intervalle cohérent
     const normalizeAngle = (angle) => {
-        // Maintenir l'angle dans l'intervalle [0, 2π]
         let normalized = angle % (2 * Math.PI);
         if (normalized < 0) normalized += 2 * Math.PI;
         return normalized;

@@ -6,13 +6,11 @@ import { setupCamera } from "./camera/cameraManager.js";
 import { createEnvironmentParticles } from "./effects/visualEffects.js";
 import { createPlayer } from "./joueur/player.js";
 import { setupHUD, initializeHUDUpdates } from "./ui/fpsDisplay.js";
-import { instructions } from "./ui/instruction.js";
 import { loadMapParts } from "./scene/mapGestion.js";
 import { initializeAnimations } from "./joueur/animations.js";
 import { createEnvironment } from "./scene/environment.js";
 import { setupControls } from "./evenement/controls.js";
 import { LevelManager } from "./levels/levelManager.js";
-import { createMiniMap } from "./ui/miniMap.js"; 
 import { MainMenu } from "./ui/mainMenu.js";
 import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
@@ -221,8 +219,6 @@ const initBabylon = async () => {
       
       const fpsDisplay = setupHUD();
       const hudControls = initializeHUDUpdates(fpsDisplay);
-      const instruction = instructions();
-      const miniMap = createMiniMap();
       const compass = setupCompass();
       let mouseMoved = false;
       let currentMouseX = 0;
@@ -248,53 +244,6 @@ const initBabylon = async () => {
         minZ: -90,
         maxZ: 90
       };
-      
-      const mapToggleInfo = document.createElement('div');
-      mapToggleInfo.id = 'mapToggleInfo';
-      mapToggleInfo.textContent = 'Appuyez sur M pour afficher/masquer la carte';
-      document.body.appendChild(mapToggleInfo);
-      
-      const cameraResetInfo = document.createElement('div');
-      cameraResetInfo.id = 'cameraResetInfo';
-      cameraResetInfo.textContent = 'Appuyez sur R pour réinitialiser la caméra';
-      cameraResetInfo.style.position = 'absolute';
-      cameraResetInfo.style.bottom = '260px';
-      cameraResetInfo.style.right = '20px';
-      cameraResetInfo.style.color = 'white';
-      cameraResetInfo.style.fontFamily = 'Arial, sans-serif';
-      cameraResetInfo.style.fontSize = '14px';
-      cameraResetInfo.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-      cameraResetInfo.style.padding = '5px 10px';
-      cameraResetInfo.style.borderRadius = '5px';
-      cameraResetInfo.style.transition = 'opacity 1s ease';
-      document.body.appendChild(cameraResetInfo);
-      
-      // Ajouter des instructions de déplacement
-      const movementInfo = document.createElement('div');
-      movementInfo.id = 'movementInfo';
-      movementInfo.innerHTML = 'Contrôles: <br>Z: Avancer<br>S: Se retourner et reculer<br>Q: Tourner et avancer à gauche<br>D: Tourner et avancer à droite<br>Souris: Contrôler la caméra<br>R: Réinitialiser caméra';
-      movementInfo.style.position = 'absolute';
-      movementInfo.style.bottom = '340px';
-      movementInfo.style.right = '20px';
-      movementInfo.style.color = 'white';
-      movementInfo.style.fontFamily = 'Arial, sans-serif';
-      movementInfo.style.fontSize = '14px';
-      movementInfo.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-      movementInfo.style.padding = '5px 10px';
-      movementInfo.style.borderRadius = '5px';
-      movementInfo.style.transition = 'opacity 1s ease';
-      document.body.appendChild(movementInfo);
-      
-      setTimeout(() => {
-        mapToggleInfo.style.opacity = '0';
-        cameraResetInfo.style.opacity = '0';
-        movementInfo.style.opacity = '0';
-        setTimeout(() => {
-          mapToggleInfo.style.display = 'none';
-          cameraResetInfo.style.display = 'none';
-          movementInfo.style.display = 'none';
-        }, 1000);
-      }, 8000);
       
       // Configurer les contrôles supplémentaires
       if (scene.metadata.controls) {
@@ -335,11 +284,7 @@ const initBabylon = async () => {
           levelManager.checkProximity(player.hero.position);
         }
         if (player.hero) {
-          miniMap.updatePlayerPosition(player.hero.position, player.hero.rotation.y, mapBounds);
           compass.update(player.hero.rotation.y);
-        }
-        if (levelManager.currentLevel === 2) {
-          miniMap.updateBananaMarkers(levelManager.levels[2].bananas, mapBounds);
         }
         
         fpsDisplay.updateFPS(engine.getFps());
