@@ -22,12 +22,12 @@ export class LevelManager {
             6: new Level6(scene)
         };
         this.cutScenes = {
-            1: new CutScene(scene, "NIVEAU 1: LA RENCONTRE"),
-            2: new CutScene(scene, "NIVEAU 2: EXPLORATION"),
-            3: new CutScene(scene, "NIVEAU 3: LA CATASTROPHE"),
-            4: new CutScene(scene, "NIVEAU 4: LA MENACE"),
-            5: new CutScene(scene, "NIVEAU 5: LES QUARTIERS"),
-            6: new CutScene(scene, "NIVEAU 6: L'ULTIME COMBAT")
+            1: new CutScene(scene, "NIVEAU 1: LA RENCONTRE", 3000, 1),
+            2: new CutScene(scene, "NIVEAU 2: EXPLORATION", 3000, 2),
+            3: new CutScene(scene, "NIVEAU 3: LA CATASTROPHE", 3000, 3),
+            4: new CutScene(scene, "NIVEAU 4: LA MENACE", 3000, 4),
+            5: new CutScene(scene, "NIVEAU 5: LES QUARTIERS", 3000, 5),
+            6: new CutScene(scene, "NIVEAU 6: L'ULTIME COMBAT", 3000, 6)
         };
         this.currentAudio = this.standardAudio;
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
