@@ -12,7 +12,7 @@ import '@babylonjs/loaders';
 export class LevelManager {
     constructor(scene) {
         this.scene = scene;
-        this.currentLevel = 0; // Commencer à 0 pour la cutscene
+        this.currentLevel = 0; 
         this.levels = {
             1: new Level1(scene),
             2: new Level2(scene),
@@ -21,7 +21,6 @@ export class LevelManager {
             5: new Level5(scene),
             6: new Level6(scene)
         };
-        // Ajouter la cutscene pour le niveau 1
         this.cutScenes = {
             1: new CutScene(scene, "NIVEAU 1: LA RENCONTRE"),
             2: new CutScene(scene, "NIVEAU 2: EXPLORATION"),
@@ -35,14 +34,11 @@ export class LevelManager {
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
         this.levels[4].onComplete = this.goToNextLevel.bind(this);
-
-        // Démarrer l'animation du GLB
         this.loadAndAnimateGLB();
     }
 
     async initCurrentLevel() {
         if (this.currentLevel === 0) {
-            // Démarrer avec la cutscene du niveau 1
             if (this.cutScenes[1]) {
                 this.cutScenes[1].onComplete = () => {
                     this.currentLevel = 1;
@@ -69,7 +65,6 @@ export class LevelManager {
         
         if (this.currentLevel === 1) {
             this.currentLevel = 2;
-            // Afficher la cutscene avant de charger le niveau 2
             if (this.cutScenes[2]) {
                 this.cutScenes[2].onComplete = () => {
                     this.levels[2].init();
@@ -81,7 +76,6 @@ export class LevelManager {
         } else if (this.currentLevel === 2) {
             this.currentLevel = 3;
             this.switchToMusic("catastrophe");
-            // Afficher la cutscene avant de charger le niveau 3
             if (this.cutScenes[3]) {
                 this.cutScenes[3].onComplete = () => {
                     this.levels[3].init().catch(error => {
@@ -101,8 +95,6 @@ export class LevelManager {
             }
             this.currentLevel = 4;
             this.switchToMusic("combat");
-            
-            // Afficher la cutscene avant de charger le niveau 4 après un délai
             setTimeout(async () => {
                 if (this.cutScenes[4]) {
                     this.cutScenes[4].onComplete = () => {
@@ -122,8 +114,6 @@ export class LevelManager {
             
             this._createQuartiersTransitionEffect();
             this.currentLevel = 5;
-            
-            // Afficher la cutscene avant de charger le niveau 5 après un délai
             setTimeout(async () => {
                 if (this.cutScenes[5]) {
                     this.cutScenes[5].onComplete = () => {
@@ -144,8 +134,6 @@ export class LevelManager {
             this.currentLevel = 6;
             
             this.levels[6] = new Level6(this.scene, this.scene.getEngine(), this.scene.activeCamera, this.scene.metadata?.player?.hero);
-            
-            // Afficher la cutscene avant de charger le niveau 6 après un délai
             setTimeout(async () => {
                 if (this.cutScenes[6]) {
                     this.cutScenes[6].onComplete = () => {

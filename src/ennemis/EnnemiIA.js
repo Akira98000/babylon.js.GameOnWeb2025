@@ -11,37 +11,25 @@ export class EnnemiIA {
         this.scene = scene;
         this.player = player;
         this.position = position;
-
-        // Propriétés spécifiques au niveau 5
-        this.quartier = -1; // Quartier auquel l'ennemi appartient (-1 = non assigné)
-
+        this.quartier = -1;
         this.maxSpeed = 0.15;
         this.maxForce = 0.05;
         this.detectionDistance = 40;
         this.shootingDistance = 15;
         this.keepDistance = 5;
         this.arriveRadius = 3;
-        this.maxAllyDistance = 8; // Distance maximale avec les alliés
-
-        // Wander
+        this.maxAllyDistance = 8;
         this.wanderRadius = 2;
         this.wanderDistance = 4;
         this.wanderAngle = 0;
         this.wanderChange = 0.3;
-
-        // Forces de comportement
         this.separationWeight = 2.0;
         this.pursuitWeight = 1.0;
         this.wanderWeight = 0.5;
-
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.lastShootTime = 0;
         this.shootCooldown = 2000;
-
-        // Assignation d'une position préférée autour du joueur
         this.preferredOffset = (EnnemiIA.allEnemies.length * (2 * Math.PI / 3)) % (2 * Math.PI);
-        
-        // Vie
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.currentHealth = this.health;
@@ -50,29 +38,20 @@ export class EnnemiIA {
         this.hitRecoveryTime = 200;
         this.lastHitTime = 0;
         this.damagePerBullet = 34;
-
-        // Animation
         this.animations = null;
         this.currentAnimation = null;
         this.isRunning = false;
         this.rotationSpeed = 0.1;
         this.targetRotation = 0;
         this.smoothingFactor = 0.2;
-
-        // Offset unique pour chaque ennemi autour du joueur
         this.offsetAngle = Math.random() * Math.PI * 2;
-        
-        // Détection de blocage
         this.lastPositions = [];
-        this.stuckCheckInterval = 50; // Vérifier la position tous les 50 frames
-        this.stuckThreshold = 0.3; // Distance minimale de mouvement
+        this.stuckCheckInterval = 50; 
+        this.stuckThreshold = 0.3; 
         this.frameCounter = 0;
         this.stuckCounter = 0;
-        this.teleportAfterStuckCount = 3; // Nombre de vérifications avant de téléporter
-
-        // Ajouter à la liste statique
+        this.teleportAfterStuckCount = 3; 
         EnnemiIA.allEnemies.push(this);
-
         BABYLON.Engine.UseUBO = false;
         this.loadEnnemi();
     }
