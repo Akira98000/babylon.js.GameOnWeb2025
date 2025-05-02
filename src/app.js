@@ -21,6 +21,7 @@ let mainMenu = null;
 let loadingScreen = null;
 let isGameLoading = false;
 let welcomePage = null;
+let levelSelector = null;
 
 const initBabylon = async () => {
   const canvas = document.getElementById("renderCanvas");
@@ -105,6 +106,10 @@ const initBabylon = async () => {
             levelManager.currentLevel = 0; 
             await levelManager.initCurrentLevel();
             scene.metadata.levelManager = levelManager;
+            
+            // Initialisation du sélecteur de niveaux
+            levelSelector = new LevelSelector(levelManager);
+            
             return levelManager;
           }
         }

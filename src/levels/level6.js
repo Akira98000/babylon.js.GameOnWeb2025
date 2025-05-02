@@ -1,5 +1,6 @@
 import { Vector3, SceneLoader, MeshBuilder, StandardMaterial, Color3, Texture, Animation, TransformNode } from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
+import { loadDamagedMapForLevel6 } from "../scene/mapGestion.js";
 
 export class Level6 {
     constructor(scene) {
@@ -30,6 +31,15 @@ export class Level6 {
     }
 
     async initialize() {
+        // Charger la carte endommagée pour le niveau 6
+        try {
+            await loadDamagedMapForLevel6(this.scene);
+            console.log("Carte endommagée chargée pour le niveau 6");
+            this._showMessage("Bienvenue dans la ville détruite...", 3000);
+        } catch (error) {
+            console.error("Erreur lors du chargement de la carte endommagée:", error);
+        }
+
         await this.loadRocketParts();
         this.setupInputs();
         this.createAssemblyZone();

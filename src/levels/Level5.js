@@ -3,6 +3,7 @@ import { EnnemiIA } from '../ennemis/EnnemiIA.js';
 import { AmiAI } from '../amis/AmiAI.js';
 import { PurpleStorm } from '../storm/PurpleStorm.js';
 import { Level5Hacker } from '../cheats/Level5Hacker.js';
+import { GameMessages } from '../utils/GameMessages.js';
 
 export class Level5 {
     constructor(scene) {
@@ -276,27 +277,20 @@ export class Level5 {
             queen.name = "helpQueen";
             queen.position = queenPosition;
             queen.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
-            
-            // Chercher l'animation "help"
             const helpAnimation = this.scene.getAnimationGroupByName("help");
             if (helpAnimation) {
-                // Lancer l'animation en boucle
                 helpAnimation.start(true);
                 console.log("Animation 'help' démarrée pour la reine");
             } else {
                 console.warn("Animation 'help' non trouvée pour help_queen.glb");
-                
-                // Essayer de trouver d'autres animations disponibles
                 const animations = this.scene.animationGroups;
                 if (animations && animations.length > 0) {
                     console.log("Animations disponibles:", animations.map(a => a.name).join(", "));
-                    // Lancer la première animation disponible
                     animations[0].start(true);
                     console.log(`Animation '${animations[0].name}' démarrée comme fallback`);
                 }
             }
             
-            // Ajouter un effet de lumière sur la reine pour la mettre en évidence
             const queenLight = new BABYLON.PointLight("queenLight", queenPosition.clone(), this.scene);
             queenLight.position.y += 3;
             queenLight.diffuse = new BABYLON.Color3(1, 0.8, 0.4);
@@ -304,7 +298,6 @@ export class Level5 {
             queenLight.range = 15;
             this.lights.push(queenLight);
             
-            // Ajouter un effet de pulsation à la lumière
             const pulseAnimation = new BABYLON.Animation(
                 "pulseAnimation",
                 "intensity",
@@ -323,8 +316,6 @@ export class Level5 {
             this.scene.beginAnimation(queenLight, 0, 30, true);
             
             console.log("Help Queen chargée à la position spécifiée");
-            
-            // Ajouter l'action de clavier pour libérer la reine
             this._setupQueenReleaseAction(queen, queenPosition);
         }).catch(error => {
             console.error("Erreur lors du chargement de help_queen.glb:", error);
@@ -332,10 +323,7 @@ export class Level5 {
     }
 
     _setupQueenReleaseAction(queen, queenPosition) {
-        // Variable pour suivre si la reine a été libérée
         this.queenReleased = false;
-        
-        // Observer pour la touche 'k'
         const inputMap = {};
         this.scene.onKeyboardObservable.add((kbInfo) => {
             switch (kbInfo.type) {
@@ -346,14 +334,10 @@ export class Level5 {
                     inputMap[kbInfo.event.key] = false;
                     break;
             }
-            
-            // Vérifier si la touche 'k' est pressée et si la tempête a commencé
             if (inputMap["k"] && this.stormStarted && !this.queenReleased) {
                 this._releaseQueen(queen, queenPosition);
             }
         });
-        
-        // Afficher le message d'instruction lors du démarrage de la tempête
         this._showMessage("⚠️ Appuyez sur 'K' pour libérer la reine! ⚠️", 5000);
     }
 
@@ -387,61 +371,22 @@ export class Level5 {
             // Ajouter des effets visuels pour la libération
             this._createLiberationEffects(queenPosition);
             
-            // Créer un message de victoire important (grand et coloré)
-            const victorymessage = document.createElement("div");
-            victorymessage.id = "victoryMessage";
-            victorymessage.style.position = "absolute";
-            victorymessage.style.top = "40%";
-            victorymessage.style.left = "50%";
-            victorymessage.style.transform = "translate(-50%, -50%)";
-            victorymessage.style.color = "#FFD700"; // Texte doré
-            victorymessage.style.fontSize = "46px";
-            victorymessage.style.fontFamily = "Arial, sans-serif";
-            victorymessage.style.fontWeight = "bold";
-            victorymessage.style.textAlign = "center";
-            victorymessage.style.textShadow = "0 0 15px rgba(255, 215, 0, 0.8), 0 0 5px rgba(255, 0, 255, 0.8)";
-            victorymessage.style.background = "rgba(0, 0, 0, 0.6)";
-            victorymessage.style.padding = "20px 40px";
-            victorymessage.style.borderRadius = "15px";
-            victorymessage.style.boxShadow = "0 0 30px rgba(128, 0, 128, 0.9)";
-            victorymessage.style.zIndex = "2000";
-            victorymessage.style.opacity = "0";
-            victorymessage.style.transition = "opacity 1s ease-in-out";
-            victorymessage.textContent = "La reine a été libérée! Le royaume est sauvé!";
-            document.body.appendChild(victorymessage);
+            // Marquer le niveau comme terminé
+            this.isCompleted = true;
             
-            // Faire apparaître le message avec animation
-            setTimeout(() => {
-                victorymessage.style.opacity = "1";
-                
-                // Montrer le second message après un délai
-                setTimeout(() => {
-                    victorymessage.style.opacity = "0";
-                    setTimeout(() => {
-                        victorymessage.textContent = "Félicitations! Niveau 5 terminé avec succès!";
-                        victorymessage.style.opacity = "1";
-                        
-                        // Passer au niveau suivant après avoir montré le message
-                        setTimeout(() => {
-                            victorymessage.style.opacity = "0";
-                            setTimeout(() => {
-                                if (victorymessage.parentNode) {
-                                    victorymessage.parentNode.removeChild(victorymessage);
-                                }
-                                
-                                // Marquer le niveau comme terminé
-                                this.isCompleted = true;
-                                
-                                // Nettoyer le niveau et passer au suivant
-                                this.dispose();
-                                if (this.scene.metadata?.levelManager) {
-                                    this.scene.metadata.levelManager.goToNextLevel();
-                                }
-                            }, 1000);
-                        }, 3000);
-                    }, 1000);
-                }, 4000);
-            }, 100);
+            // Utiliser GameMessages pour afficher un message de célébration avec confettis
+            GameMessages.showCelebrationMessage(
+                "Mission Accomplie!",
+                "👑",
+                "La reine a été libérée ! Le royaume est sauvé !<br><br>Vous avez terminé le niveau 5 avec succès !",
+                () => {
+                    // Cette fonction sera appelée quand le message de célébration se termine
+                    this.dispose();
+                    if (this.scene.metadata?.levelManager) {
+                        this.scene.metadata.levelManager.goToNextLevel();
+                    }
+                }
+            );
             
             // Si le jeu a un système de progression entre les niveaux, on peut l'activer ici
             if (this.scene.metadata && this.scene.metadata.gameManager) {
@@ -455,6 +400,22 @@ export class Level5 {
             
         }).catch(error => {
             console.error("Erreur lors du chargement de help_queen_released.glb:", error);
+            
+            // Même en cas d'erreur, afficher un message et terminer le niveau
+            GameMessages.showTemporaryMessage(
+                "Niveau Terminé",
+                "🏆",
+                "Vous avez libéré la reine et sauvé le royaume !",
+                5000,
+                "#FFD700"  // Couleur or
+            );
+            
+            setTimeout(() => {
+                this.dispose();
+                if (this.scene.metadata?.levelManager) {
+                    this.scene.metadata.levelManager.goToNextLevel();
+                }
+            }, 6000);
         });
     }
 

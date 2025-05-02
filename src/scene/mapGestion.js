@@ -17,6 +17,31 @@ export async function loadMapParts(scene) {
   });
 }
 
+// FONCTION : CHARGEMENT SPÉCIFIQUE DE LA MAP POUR LE NIVEAU 6
+export async function loadDamagedMapForLevel6(scene) {
+  const basePath = "/map/";
+  
+  // Nettoyer les données de la carte précédente
+  mapPartsData.forEach(data => {
+    if (data.mainMesh) {
+      data.mainMesh.dispose();
+    }
+  });
+  mapPartsData = [];
+  
+  // Remplacer test.glb par test1_damaged.glb pour le niveau 6
+  const partNames = ["test1_damaged.glb", "test3.glb", "test2.glb", "test4.glb"];
+  
+  const parts = await Promise.all(
+    partNames.map((fileName) => importMapPart(scene, basePath, fileName))
+  );
+  parts.forEach(part => {
+    part.position.set(0, 0, 0);
+  });
+  
+  return parts;
+}
+
 // FONCTION : IMPORTATION DES PARTIES DE LA MAP
 async function importMapPart(scene, basePath, fileName) {
   const result = await BABYLON.SceneLoader.ImportMeshAsync(null, basePath, fileName, scene);
