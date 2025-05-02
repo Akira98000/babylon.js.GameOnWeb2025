@@ -14,13 +14,18 @@ export class Level0 {
         this.stepTransitionDelay = 100;
         this.mouseMoveThreshold = 50;
         this.lastMouseX = 0;
-        this.typingSpeed = 30; // Vitesse d'écriture en millisecondes par caractère
+        this.typingSpeed = 30; 
         this.typingTimeout = null;
         this.tutorialSteps = [
             {
                 instruction: "Appuyez sur ESPACE pour continuer",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
+            },
+            {
+                instruction: "Utilisez la touche Z ou W pour vous déplacer vers l'avant",
+                key: ["Z", "W"],
+                checkComplete: (inputMap) => inputMap["z"] || inputMap["w"]
             },
             {
                 instruction: "Utilisez la touche A ou Q pour vous déplacer vers la gauche",
@@ -38,17 +43,12 @@ export class Level0 {
                 checkComplete: (inputMap) => inputMap["d"]
             },
             {
-                instruction: "Bougez la souris pour regarder autour de vous",
-                key: ["SOURIS"],
-                checkComplete: (inputMap, mouseMoved) => mouseMoved
+                instruction: "Bougez la souris pour regarder autour de vous (Appuyez sur ESPACE si compris)",
+                key: ["ESPACE"],
+                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             },
             {
-                instruction: "Cliquez pour tirer",
-                key: ["CLIC"],
-                checkComplete: (inputMap, mouseMoved, isShooting) => isShooting
-            },
-            {
-                instruction: "Appuyez sur ESPACE pour sauter",
+                instruction: "Cliquez pour tirer (Appuyez sur ESPACE si compris)",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             }
@@ -59,6 +59,9 @@ export class Level0 {
     async init() {
         this.show();
         this._addInputListeners();
+        
+        // Assigner ce tutoriel à scene.metadata.tutorial pour les contrôles
+        this.scene.metadata.tutorial = this;
     }
 
     _addInputListeners() {
@@ -107,17 +110,23 @@ export class Level0 {
     isActionAllowed(action) {
         if (!this.isVisible) return true;
         
-        const allowedActions = {
-            0: ['moveForward', 'turnLeft', 'turnRight', 'turnBack'],
-            1: ['moveLeft', 'turnLeft'],
-            2: ['moveBackward', 'turnBack'],
-            3: ['moveRight', 'turnRight'],
-            4: ['look', 'shoot'],
-            5: ['look'],
-            6: ['dance']
+        // Mapping des actions aux étapes du tutoriel
+        const actionStepMapping = {
+            'moveForward': 1,  // Étape Z/W
+            'moveLeft': 2,     // Étape A/Q
+            'moveBackward': 3, // Étape S
+            'moveRight': 4,    // Étape D
+            'look': 5,         // Étape mouvement souris
+            'shoot': 6         // Étape tir
         };
-        
-        return allowedActions[this.currentStep]?.includes(action) || false;
+
+        // Si l'action n'est pas dans le mapping, on la refuse
+        if (!actionStepMapping.hasOwnProperty(action)) {
+            return false;
+        }
+
+        // On permet l'action dès que son étape est atteinte ou dépassée
+        return this.currentStep >= actionStepMapping[action];
     }
 
     _createUI() {
