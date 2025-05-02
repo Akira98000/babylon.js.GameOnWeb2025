@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import gsap from 'gsap';
+import { GameMessages } from '../utils/GameMessages.js';
 
 export class Level3 {
     constructor(scene) {
@@ -219,69 +220,31 @@ export class Level3 {
     _displayStoryMessage() {
         const storyText = "La ville a perdu ses couleurs ! Récupérez les 6 orbes de couleur dispersées dans la ville pour créer des arcs-en-ciel et redonner vie à ce monde terne.";
         
-        // S'assurer que messageElement est correctement initialisé
-        if (!this.messageElement) {
-            this.messageElement = this._createMessage("", "storyMessage");
-        }
-        
-        // Vérifier si title et icon existent
-        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
-            this.messageElement.title.textContent = "Monde Sans Couleurs";
-        }
-        
-        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
-            this.messageElement.icon.textContent = "🎨";
-        }
-        
-        if (this.messageElement.textElement) {
-            this.messageElement.textElement.innerHTML = "";
-        }
-        
-        this.messageElement.style.display = "flex";
-        this.messageElement.style.opacity = "0";
-        
-        // Animation d'entrée
-        let opacity = 0;
-        const fadeInterval = setInterval(() => {
-            opacity += 0.05;
-            if (opacity >= 1) {
-                opacity = 1;
-                clearInterval(fadeInterval);
-                this._animateText(storyText);
-            }
-            this.messageElement.style.opacity = opacity;
-        }, 20);
+        this.messageElement = GameMessages.showConfirmMessage(
+            "Monde Sans Couleurs",
+            "🎨",
+            storyText,
+            "Compris !",
+            null,
+            15000
+        );
     }
     
     _displayCompletionMessage() {
-        // Forcer la restauration complète des couleurs immédiatement
+        // Forcer la restauration complète des couleurs
         this.forceRestoreColors();
         
-        const completionText = "Magnifique ! Vous avez restauré les couleurs de la ville. Les arcs-en-ciel brillent de mille feux et la vie reprend son cours normal.";
-        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
-            this.messageElement.title.textContent = "Mission Accomplie !";
-        }
+        // Afficher le message de réussite
+        GameMessages.showTemporaryMessage(
+            "Mission Accomplie !",
+            "🌈",
+            "Félicitations ! Vous avez restauré toutes les couleurs du monde !",
+            5000,
+            "#4CAF50"
+        );
         
-        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
-            this.messageElement.icon.textContent = "✨";
-        }
-        
-        if (this.messageElement.textElement) {
-            this.messageElement.textElement.innerHTML = "";
-        }
-        this.messageElement.style.display = "flex";
-        this.messageElement.style.opacity = "0";
-        
-        let opacity = 0;
-        const fadeInterval = setInterval(() => {
-            opacity += 0.05;
-            if (opacity >= 1) {
-                opacity = 1;
-                clearInterval(fadeInterval);
-                this._animateText(completionText);
-            }
-            this.messageElement.style.opacity = opacity;
-        }, 20);
+        // Créer les confettis
+        this._createConfetti();
     }
     
     _animateText(text) {
@@ -516,29 +479,13 @@ export class Level3 {
     }
     
     _showFloatingMessage(text, position) {
-        const messageDiv = document.createElement("div");
-        messageDiv.style.position = "fixed";
-        messageDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-        messageDiv.style.color = "white";
-        messageDiv.style.padding = "10px";
-        messageDiv.style.borderRadius = "5px";
-        messageDiv.style.fontFamily = "Arial, sans-serif";
-        messageDiv.style.fontSize = "18px";
-        messageDiv.style.top = "30%";
-        messageDiv.style.left = "50%";
-        messageDiv.style.transform = "translate(-50%, -50%)";
-        messageDiv.style.zIndex = "1001";
-        messageDiv.innerHTML = text;
-        
-        document.body.appendChild(messageDiv);
-        
-        setTimeout(() => {
-            messageDiv.style.opacity = "0";
-            messageDiv.style.transition = "opacity 1s";
-            setTimeout(() => {
-                document.body.removeChild(messageDiv);
-            }, 1000);
-        }, 3000);
+        GameMessages.showTemporaryMessage(
+            "Couleur Récupérée !",
+            "🎨",
+            text,
+            3000,
+            "#4CAF50"
+        );
     }
     
     _createFinalRainbow() {
@@ -760,11 +707,23 @@ export class Level3 {
     _checkCompletion() {
         if (this.collectedColors.length === this.colorToCollect && !this.isCompleted) {
             this.isCompleted = true;
-            this._showMessage("Félicitations ! Vous avez restauré toutes les couleurs !", 5000);
+            GameMessages.showTemporaryMessage(
+                "Félicitations !",
+                "🌈",
+                "Vous avez restauré toutes les couleurs !",
+                5000,
+                "#4CAF50"
+            );
             
             // Ajouter un message de transition vers le niveau 4
             setTimeout(() => {
-                this._showMessage("Le monde retrouve ses couleurs... mais une menace approche...", 4000);
+                GameMessages.showTemporaryMessage(
+                    "Alerte !",
+                    "⚠️",
+                    "Le monde retrouve ses couleurs... mais une menace approche...",
+                    4000,
+                    "#FFEB3B"
+                );
             }, 5000);
             
             // Ajouter un effet sonore d'alerte
@@ -818,40 +777,12 @@ export class Level3 {
     }
 
     _showMessage(text, duration) {
-        const messageDiv = document.createElement("div");
-        messageDiv.style.position = "fixed";
-        messageDiv.style.top = "30%";
-        messageDiv.style.left = "50%";
-        messageDiv.style.transform = "translate(-50%, -50%)";
-        messageDiv.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-        messageDiv.style.color = "white";
-        messageDiv.style.padding = "20px";
-        messageDiv.style.borderRadius = "10px";
-        messageDiv.style.fontSize = "24px";
-        messageDiv.style.fontFamily = "Arial, sans-serif";
-        messageDiv.style.textAlign = "center";
-        messageDiv.style.zIndex = "1001";
-        messageDiv.style.boxShadow = "0 0 20px rgba(255, 255, 255, 0.3)";
-        messageDiv.innerHTML = text;
-        
-        document.body.appendChild(messageDiv);
-        
-        // Animation d'entrée
-        messageDiv.style.opacity = "0";
-        messageDiv.style.transition = "opacity 0.5s ease-in-out";
-        
-        setTimeout(() => {
-            messageDiv.style.opacity = "1";
-        }, 10);
-        
-        // Suppression après la durée spécifiée
-        setTimeout(() => {
-            messageDiv.style.opacity = "0";
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 500);
-        }, duration);
+        GameMessages.showTemporaryMessage(
+            "Alerte !",
+            "⚠️",
+            text,
+            duration,
+            "#FFEB3B"
+        );
     }
 } 

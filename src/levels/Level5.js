@@ -82,11 +82,9 @@ export class Level5 {
                 ami.followPlayer = true;
                 ami.player = player;
                 
-                // Vérifier la distance avec le joueur
                 if (ami.root && player.position) {
                     const distToPlayer = BABYLON.Vector3.Distance(ami.root.position, player.position);
                     
-                    // Si l'allié est très loin du joueur (plus de 20 unités), le téléporter près du joueur
                     if (distToPlayer > 30) {
                         const randomOffset = new BABYLON.Vector3(
                             (Math.random() - 0.5) * 5,
@@ -109,10 +107,8 @@ export class Level5 {
             const x = position.x.toFixed(2);
             const y = position.y.toFixed(2);
             const z = position.z.toFixed(2);
-            
             let quartierActuel = "Centre";
-            let minDistance = 50; // Distance plus grande pour considérer les quartiers éloignés
-            
+            let minDistance = 50; 
             for (const quartier of this.quartiers) {
                 const distance = BABYLON.Vector3.Distance(position, quartier.position);
                 if (distance < minDistance) {
@@ -120,7 +116,6 @@ export class Level5 {
                     quartierActuel = quartier.name;
                 }
             }
-            
             this.playerCoordinatesElement.textContent = `Position: X: ${x}, Y: ${y}, Z: ${z} | Quartier: ${quartierActuel}`;
         }
     }
@@ -143,36 +138,34 @@ export class Level5 {
     }
 
     _passerAuQuartierSuivant() {
+        if (this.stormStarted) {
+            console.log("La tempête violette a commencé, arrêt de la génération d'ennemis");
+            return;
+        }
+
         if (this.quartierActuel >= this.nombreQuartiers) {
-            // Tous les quartiers sont terminés, victoire
             this._victoire();
             return;
         }
 
         const quartier = this.quartiers[this.quartierActuel];
         this._showMessage(`Quartier ${quartier.name}: Éliminez toutes les pizzas maléfiques!`, 4000);
-
-        // Générer des positions autour du centre du quartier
         const positions = [];
         for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const distance = 3 + Math.random() * 5; // Augmentation de la distance maximale
+            const distance = 3 + Math.random() * 5; 
             positions.push(new BABYLON.Vector3(
                 quartier.position.x + Math.cos(angle) * distance,
-                quartier.position.y, // Utiliser la même hauteur que le point central
+                quartier.position.y, 
                 quartier.position.z + Math.sin(angle) * distance
             ));
         }
-
-        // Réinitialiser le compteur d'ennemis pour ce quartier
         this.ennemisParQuartier[this.quartierActuel] = this.nombreEnnemisParQuartier;
         this.ennemisVaincusParQuartier[this.quartierActuel] = 0;
-
-        // Spawn des ennemis
         for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
             setTimeout(() => {
                 this._spawnEnnemi(positions[i], i);
-            }, i * 800); // Réduction du délai pour accélérer l'apparition
+            }, i * 800); 
         }
 
         this.quartierActuel++;
@@ -185,7 +178,6 @@ export class Level5 {
                 if (mesh.metadata && (mesh.metadata.fromPlayer || mesh.metadata.fromAlly)) {
                     for (let ennemi of this.ennemis) {
                         if (ennemi.mesh && !ennemi.isDead && mesh.intersectsMesh(ennemi.hitbox || ennemi.mesh)) {
-                            // Tous les ennemis prennent les mêmes dégâts
                             const damage = 20;
                             ennemi.takeDamage(damage);
                             if (ennemi.isDead) {
@@ -206,21 +198,13 @@ export class Level5 {
             ennemi.takeDamage(100);
             this.ennemis.splice(index, 1);
             this.nombreEnnemisVaincus++;
-            
-            // Incrémenter le compteur d'ennemis vaincus pour le quartier spécifique
             if (ennemi.quartier >= 0 && ennemi.quartier < this.ennemisVaincusParQuartier.length) {
                 this.ennemisVaincusParQuartier[ennemi.quartier]++;
                 console.log(`Quartier ${ennemi.quartier}: ${this.ennemisVaincusParQuartier[ennemi.quartier]}/${this.ennemisParQuartier[ennemi.quartier]} ennemis vaincus`);
             }
-
-            // Vérifier si tous les ennemis du quartier actuel sont éliminés
             const quartierActif = this.quartierActuel - 1;
-            
-            // Vérifier si nous avons éliminé tous les ennemis du quartier actif
             if (quartierActif >= 0 && 
                 this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
-                
-                // Vérifier si nous devons démarrer la tempête
                 if (quartierActif === 2 && !this.stormStarted) {
                     this._startPurpleStorm();
                 } else if (this.quartierActuel < this.nombreQuartiers) {
@@ -229,19 +213,15 @@ export class Level5 {
                         this._passerAuQuartierSuivant();
                     }, 3000);
                 } else {
-                    // Si c'était le dernier quartier, victoire
                     this._victoire();
                 }
             } else {
-                // Afficher les ennemis restants dans le quartier actuel
                 const quartierIndex = ennemi.quartier;
                 if (quartierIndex >= 0 && quartierIndex < this.quartiers.length) {
                     const restants = this.ennemisParQuartier[quartierIndex] - this.ennemisVaincusParQuartier[quartierIndex];
                     this._showMessage(`Pizza maléfique éliminée! Reste ${restants} pizzas dans le quartier ${this.quartiers[quartierIndex].name}!`, 2000);
                 }
             }
-            
-            // Vérifier après chaque élimination si tous les ennemis ont été tués
             this._checkForLevelCompletion();
         }
     }
@@ -249,13 +229,84 @@ export class Level5 {
     _startPurpleStorm() {
         if (!this.stormStarted) {
             this.stormStarted = true;
+            for (let ennemi of this.ennemis) {
+                if (ennemi.mesh) {
+                    ennemi.mesh.dispose();
+                }
+                if (ennemi.healthBar && ennemi.healthBar.container) {
+                    ennemi.healthBar.container.dispose();
+                }
+            }
+            this.ennemis = [];
             this.purpleStorm = new PurpleStorm(this.scene);
-            // Donner accès à l'instance de Level5 à la tempête
             if (!this.scene.metadata) this.scene.metadata = {};
             this.scene.metadata.level5 = this;
             this.purpleStorm.start();
             this._showMessage("⚠️ Une tempête violette approche! Restez dans la zone sûre! ⚠️", 5000);
+            this._loadHelpQueen();
         }
+    }
+
+    _loadHelpQueen() {
+        // Position centrale de la carte
+        const centralPosition = new BABYLON.Vector3(0, 0, 0);
+        
+        // Charger le modèle help_queen.glb
+        BABYLON.SceneLoader.ImportMeshAsync("", "/personnage/", "help_queen.glb", this.scene).then((result) => {
+            const queen = result.meshes[0];
+            queen.name = "helpQueen";
+            queen.position = centralPosition;
+            queen.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+            
+            // Chercher l'animation "help"
+            const helpAnimation = this.scene.getAnimationGroupByName("help");
+            if (helpAnimation) {
+                // Lancer l'animation en boucle
+                helpAnimation.start(true);
+                console.log("Animation 'help' démarrée pour la reine");
+            } else {
+                console.warn("Animation 'help' non trouvée pour help_queen.glb");
+                
+                // Essayer de trouver d'autres animations disponibles
+                const animations = this.scene.animationGroups;
+                if (animations && animations.length > 0) {
+                    console.log("Animations disponibles:", animations.map(a => a.name).join(", "));
+                    // Lancer la première animation disponible
+                    animations[0].start(true);
+                    console.log(`Animation '${animations[0].name}' démarrée comme fallback`);
+                }
+            }
+            
+            // Ajouter un effet de lumière sur la reine pour la mettre en évidence
+            const queenLight = new BABYLON.PointLight("queenLight", centralPosition.clone(), this.scene);
+            queenLight.position.y += 3;
+            queenLight.diffuse = new BABYLON.Color3(1, 0.8, 0.4);
+            queenLight.intensity = 0.8;
+            queenLight.range = 15;
+            this.lights.push(queenLight);
+            
+            // Ajouter un effet de pulsation à la lumière
+            const pulseAnimation = new BABYLON.Animation(
+                "pulseAnimation",
+                "intensity",
+                30,
+                BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+                BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+            );
+            
+            const keys = [];
+            keys.push({ frame: 0, value: 0.8 });
+            keys.push({ frame: 15, value: 1.2 });
+            keys.push({ frame: 30, value: 0.8 });
+            
+            pulseAnimation.setKeys(keys);
+            queenLight.animations = [pulseAnimation];
+            this.scene.beginAnimation(queenLight, 0, 30, true);
+            
+            console.log("Help Queen chargée au centre de la carte");
+        }).catch(error => {
+            console.error("Erreur lors du chargement de help_queen.glb:", error);
+        });
     }
 
     _victoire() {
@@ -340,6 +391,12 @@ export class Level5 {
     }
 
     _spawnEnnemi(position, index) {
+        // Ne pas créer d'ennemis si la tempête violette a commencé
+        if (this.stormStarted) {
+            console.log("Tentative de création d'ennemi ignorée - La tempête violette est active");
+            return;
+        }
+
         try {
             const player = this.scene.metadata.player.hero;
             if (!player) {
@@ -433,6 +490,7 @@ export class Level5 {
         // Si le niveau est déjà complété, on ne fait rien
         if (this.isCompleted) return;
         
+        // Comportement standard
         // Vérifier si tous les ennemis ont été éliminés
         if (this.ennemis.length === 0) {
             // Vérifier si tous les quartiers ont été visités

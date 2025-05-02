@@ -17,6 +17,9 @@ export class PurpleStorm {
         this.finalPhaseStarted = false;
         this.finalPhaseStartTime = null;
         this.finalPhaseDuration = 20000; // 20 secondes en millisecondes
+        
+        // Propriété pour suivre si nous avons déjà réactivé les contrôles du joueur
+        this.playerControlsEnsured = false;
     }
     
     start() {
@@ -25,10 +28,46 @@ export class PurpleStorm {
         this._createStormParticles();
         this._shrinkStorm();
         
+        // S'assurer que le joueur peut toujours se déplacer
+        this._ensurePlayerControls();
+        
         this.scene.onBeforeRenderObservable.add(() => {
             if (!this.isActive) return;
             this._checkPlayerDamage();
+            
+            // Vérifier périodiquement que le joueur peut se déplacer
+            if (!this.playerControlsEnsured || Math.random() < 0.001) { // Occasionnellement revérifier
+                this._ensurePlayerControls();
+            }
         });
+    }
+    
+    _ensurePlayerControls() {
+        if (this.scene.metadata && this.scene.metadata.player && this.scene.metadata.player.hero) {
+            const player = this.scene.metadata.player.hero;
+            
+            // Réactiver les contrôles du joueur si nécessaire
+            if (player.controller) {
+                player.controller.disableControls = false;
+            }
+            
+            // Réactiver les composants de déplacement
+            if (player.moveComponent) {
+                player.moveComponent.enabled = true;
+            }
+            
+            // Réinitialiser la physique du joueur si elle est bloquée
+            if (player.physicsImpostor) {
+                // Assurez-vous que le joueur n'est pas coincé
+                player.physicsImpostor.setLinearVelocity(new BABYLON.Vector3(0, 0, 0));
+                player.physicsImpostor.setAngularVelocity(new BABYLON.Vector3(0, 0, 0));
+            }
+            
+            // Marquer que nous avons réactivé les contrôles
+            this.playerControlsEnsured = true;
+            
+            console.log("Storm: Player controls ensured");
+        }
     }
     
     _createStormWall() {
@@ -73,17 +112,54 @@ export class PurpleStorm {
     }
     
     _checkPlayerDamage() {
-        const player = this.scene.metadata?.player?.hero;
-        if (!player) return;
-        const distanceFromCenter = BABYLON.Vector3.Distance(
-            new BABYLON.Vector3(player.position.x, 0, player.position.z),
-            this.stormCenter
-        );
+        if (!this.isActive || !this.scene.metadata || !this.scene.metadata.player || !this.scene.metadata.player.hero) {
+            return;
+        }
         
-        // Si le joueur est en dehors de la zone sûre
+        const player = this.scene.metadata.player.hero;
+        
+        // S'assurer que le joueur peut toujours se déplacer, même s'il est dans la tempête
+        if (player.controller) {
+            player.controller.disableControls = false;
+        }
+        
+        // Calculer la distance du joueur par rapport au centre de la tempête
+        const distanceFromCenter = BABYLON.Vector3.Distance(player.position, this.stormCenter);
+        
+        // Si le joueur est en dehors du rayon actuel de la tempête
         if (distanceFromCenter > this.currentRadius) {
-            if (this.scene.metadata?.player?.takeDamage) {
+            // Appliquer des dégâts au joueur seulement si la tempête est active
+            if (this.scene.metadata.player.takeDamage) {
                 this.scene.metadata.player.takeDamage(this.damagePerSecond / 60);
+            }
+            
+            // Effet visuel rouge pour indiquer les dégâts
+            if (!this._damageIndicator) {
+                this._damageIndicator = document.createElement("div");
+                this._damageIndicator.style.position = "absolute";
+                this._damageIndicator.style.top = "0";
+                this._damageIndicator.style.left = "0";
+                this._damageIndicator.style.width = "100%";
+                this._damageIndicator.style.height = "100%";
+                this._damageIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.2)";
+                this._damageIndicator.style.pointerEvents = "none";
+                this._damageIndicator.style.zIndex = "1000";
+                document.body.appendChild(this._damageIndicator);
+                
+                // Faire apparaître progressivement
+                this._damageIndicator.style.opacity = "0";
+                this._damageIndicator.style.transition = "opacity 0.5s";
+                setTimeout(() => {
+                    if (this._damageIndicator) {
+                        this._damageIndicator.style.opacity = "1";
+                    }
+                }, 10);
+            }
+        } else {
+            // Si le joueur est dans la zone sûre, enlever l'indicateur de dégâts
+            if (this._damageIndicator) {
+                document.body.removeChild(this._damageIndicator);
+                this._damageIndicator = null;
             }
         }
     }
@@ -123,10 +199,29 @@ export class PurpleStorm {
         if (this.countdownElement && this.countdownElement.parentNode) {
             this.countdownElement.parentNode.removeChild(this.countdownElement);
         }
+        
+        // Supprimer l'indicateur de dégâts s'il existe
+        if (this._damageIndicator && this._damageIndicator.parentNode) {
+            this._damageIndicator.parentNode.removeChild(this._damageIndicator);
+            this._damageIndicator = null;
+        }
     }
     
     dispose() {
         this.stop();
+        
+        // Supprimer toutes les références
+        this.scene = null;
+        this.stormCenter = null;
+        this.countdownElement = null;
+        
+        // S'assurer que les contrôles du joueur sont restaurés avant de quitter
+        if (this.scene && this.scene.metadata && this.scene.metadata.player && this.scene.metadata.player.hero) {
+            const player = this.scene.metadata.player.hero;
+            if (player.controller) {
+                player.controller.disableControls = false;
+            }
+        }
     }
 
     _shrinkStorm() {

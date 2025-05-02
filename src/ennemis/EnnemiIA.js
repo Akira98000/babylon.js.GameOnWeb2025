@@ -6,51 +6,51 @@ import { AmiAI } from "../amis/AmiAI";
 
 export class EnnemiIA {
     static allEnemies = [];
-
-    constructor(scene, position, player) {
+    constructor(scene, position, player, isBigBoss = false) {
         this.scene = scene;
         this.player = player;
         this.position = position;
         this.quartier = -1;
-        this.maxSpeed = 0.15;
-        this.maxForce = 0.05;
-        this.detectionDistance = 40;
-        this.shootingDistance = 15;
-        this.keepDistance = 5;
-        this.arriveRadius = 3;
-        this.maxAllyDistance = 8;
-        this.wanderRadius = 2;
-        this.wanderDistance = 4;
+        this.isBigBoss = isBigBoss;
+        this.maxSpeed = isBigBoss ? 0.2 : 0.15;
+        this.maxForce = isBigBoss ? 0.05 : 0.05;
+        this.detectionDistance = isBigBoss ? 60 : 40;
+        this.shootingDistance = isBigBoss ? 25 : 15;
+        this.keepDistance = isBigBoss ? 8 : 5;
+        this.arriveRadius = isBigBoss ? 5 : 3;
+        this.maxAllyDistance = isBigBoss ? 12 : 8;
+        this.wanderRadius = isBigBoss ? 3 : 2;
+        this.wanderDistance = isBigBoss ? 6 : 4;
         this.wanderAngle = 0;
-        this.wanderChange = 0.3;
-        this.separationWeight = 2.0;
-        this.pursuitWeight = 1.0;
-        this.wanderWeight = 0.5;
+        this.wanderChange = isBigBoss ? 0.2 : 0.3;
+        this.separationWeight = isBigBoss ? 2.0 : 2.0;
+        this.pursuitWeight = isBigBoss ? 1.5 : 1.0;
+        this.wanderWeight = isBigBoss ? 0.6 : 0.5;
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.lastShootTime = 0;
-        this.shootCooldown = 2000;
+        this.shootCooldown = isBigBoss ? 1500 : 2000;
         this.preferredOffset = (EnnemiIA.allEnemies.length * (2 * Math.PI / 3)) % (2 * Math.PI);
-        this.maxHealth = 100;
+        this.maxHealth = isBigBoss ? 300 : 100;
         this.health = this.maxHealth;
         this.currentHealth = this.health;
         this.isDead = false;
         this.isHit = false;
-        this.hitRecoveryTime = 200;
+        this.hitRecoveryTime = isBigBoss ? 300 : 200;
         this.lastHitTime = 0;
-        this.damagePerBullet = 34;
+        this.damagePerBullet = isBigBoss ? 20 : 34;
         this.animations = null;
         this.currentAnimation = null;
         this.isRunning = false;
-        this.rotationSpeed = 0.1;
+        this.rotationSpeed = isBigBoss ? 0.08 : 0.1;
         this.targetRotation = 0;
-        this.smoothingFactor = 0.2;
+        this.smoothingFactor = isBigBoss ? 0.15 : 0.2;
         this.offsetAngle = Math.random() * Math.PI * 2;
         this.lastPositions = [];
-        this.stuckCheckInterval = 50; 
-        this.stuckThreshold = 0.3; 
+        this.stuckCheckInterval = isBigBoss ? 30 : 50; 
+        this.stuckThreshold = isBigBoss ? 0.1 : 0.3; 
         this.frameCounter = 0;
         this.stuckCounter = 0;
-        this.teleportAfterStuckCount = 3; 
+        this.teleportAfterStuckCount = isBigBoss ? 2 : 3; 
         EnnemiIA.allEnemies.push(this);
         BABYLON.Engine.UseUBO = false;
         this.loadEnnemi();
@@ -58,10 +58,11 @@ export class EnnemiIA {
 
     async loadEnnemi() {
         try {
+            const modelPath = this.isBigBoss ? "bigboss.glb" : "pizza.glb";
             const result = await BABYLON.SceneLoader.ImportMeshAsync(
                 "",
                 "/personnage/",
-                "pizza.glb",
+                modelPath,
                 this.scene
             );
 
@@ -71,21 +72,26 @@ export class EnnemiIA {
             this.mesh = result.meshes[0];
             this.mesh.parent = this.root;
             this.mesh.position = BABYLON.Vector3.Zero();
-            this.mesh.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+            this.mesh.scaling = new BABYLON.Vector3(
+                this.isBigBoss ? 0.6 : 0.4, 
+                this.isBigBoss ? 0.6 : 0.4, 
+                this.isBigBoss ? 0.6 : 0.4
+            );
 
             this.hitbox = BABYLON.MeshBuilder.CreateBox("hitbox", {
-                width: 1.5,
-                height: 2,
-                depth: 1.5
+                width: this.isBigBoss ? 2.5 : 1.5,
+                height: this.isBigBoss ? 3 : 2,
+                depth: this.isBigBoss ? 2.5 : 1.5
             }, this.scene);
             this.hitbox.parent = this.root;
-            this.hitbox.position.y = 1;
+            this.hitbox.position.y = this.isBigBoss ? 1.5 : 1;
             const hitboxMaterial = new BABYLON.StandardMaterial("hitboxMaterial", this.scene);
             hitboxMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
             hitboxMaterial.alpha = 0.3;
             this.hitbox.material = hitboxMaterial;
             this.hitbox.isPickable = true;
             this.hitbox.isEnnemi = true;
+            this.hitbox.isBigBoss = this.isBigBoss;
             
             this.createHealthBar();
 
@@ -114,7 +120,7 @@ export class EnnemiIA {
                         bullet.absolutePosition,
                         this.hitbox.absolutePosition
                     );
-                    if (dist < 1.5) {
+                    if (dist < (this.isBigBoss ? 2.0 : 1.5)) {
                         this.takeDamage(this.damagePerBullet);
                         if (!bullet.isDisposed) bullet.dispose();
                         break;
@@ -122,30 +128,80 @@ export class EnnemiIA {
                 }
             });
 
+            if (this.isBigBoss) {
+                // Événement spécial pour annoncer le BigBoss
+                document.dispatchEvent(new CustomEvent("bigBossSpawned", { detail: { enemy: this } }));
+                
+                // Création d'une aura visuelle pour le BigBoss
+                const aura = BABYLON.MeshBuilder.CreateBox("bossAura", {
+                    width: 3,
+                    height: 0.1,
+                    depth: 3
+                }, this.scene);
+                
+                const auraMaterial = new BABYLON.StandardMaterial("auraMaterial", this.scene);
+                auraMaterial.diffuseColor = new BABYLON.Color3(0.8, 0, 0);
+                auraMaterial.emissiveColor = new BABYLON.Color3(0.8, 0, 0);
+                auraMaterial.alpha = 0.5;
+                
+                aura.material = auraMaterial;
+                aura.parent = this.root;
+                aura.position.y = 0.1;
+                
+                // Animation de l'aura
+                const auraAnimation = new BABYLON.Animation(
+                    "auraAnimation",
+                    "scaling",
+                    30,
+                    BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+                    BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+                );
+                
+                const keyFrames = [];
+                keyFrames.push({
+                    frame: 0,
+                    value: new BABYLON.Vector3(1, 1, 1)
+                });
+                keyFrames.push({
+                    frame: 15,
+                    value: new BABYLON.Vector3(1.2, 1, 1.2)
+                });
+                keyFrames.push({
+                    frame: 30,
+                    value: new BABYLON.Vector3(1, 1, 1)
+                });
+                
+                auraAnimation.setKeys(keyFrames);
+                aura.animations = [auraAnimation];
+                this.scene.beginAnimation(aura, 0, 30, true);
+                
+                this.aura = aura;
+            }
+
         } catch (error) {
             console.error("Erreur lors du chargement de l'ennemi:", error);
         }
     }
 
     createHealthBar() {
-        const healthBarWidth = 0.5;
-        const healthBarHeight = 0.1;
+        const healthBarWidth = this.isBigBoss ? 0.8 : 0.5;
+        const healthBarHeight = this.isBigBoss ? 0.15 : 0.1;
 
         this.healthBar = BABYLON.MeshBuilder.CreatePlane("healthBar", { width: healthBarWidth, height: healthBarHeight }, this.scene);
         const healthMaterial = new BABYLON.StandardMaterial("healthBarMaterial", this.scene);
-        healthMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0);
-        healthMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0);
+        healthMaterial.diffuseColor = this.isBigBoss ? new BABYLON.Color3(1, 0, 0) : new BABYLON.Color3(0, 1, 0);
+        healthMaterial.emissiveColor = this.isBigBoss ? new BABYLON.Color3(1, 0, 0) : new BABYLON.Color3(0, 1, 0);
         healthMaterial.backFaceCulling = false;
         this.healthBar.material = healthMaterial;
 
         this.healthBar.parent = this.root;
-        this.healthBar.position.y = 2.0;
+        this.healthBar.position.y = this.isBigBoss ? 3.0 : 2.0;
         this.healthBar.position.z = 0.01;
         this.healthBar.rotation.y = Math.PI;
 
         this.healthBarBackground = this.healthBar.clone("healthBarBg");
         this.healthBarBackground.parent = this.root;
-        this.healthBarBackground.position.y = 2.0;
+        this.healthBarBackground.position.y = this.isBigBoss ? 3.0 : 2.0;
         this.healthBarBackground.position.z = -0.01;
         this.healthBarBackground.scaling.x = 1;
         const bgMaterial = new BABYLON.StandardMaterial("healthBarBgMaterial", this.scene);
@@ -205,11 +261,16 @@ export class EnnemiIA {
 
         this.mesh.animations = [fadeOut];
         this.scene.beginAnimation(this.mesh, 0, 30, false, 1, () => {
-            [this.healthBar, this.healthBarBackground, this.hitbox, this.mesh, this.root]
-              .forEach(obj => obj && obj.dispose());
+            [this.healthBar, this.healthBarBackground, this.hitbox, this.mesh, this.aura, this.root]
+              .filter(obj => obj)
+              .forEach(obj => obj.dispose());
         });
 
-        document.dispatchEvent(new CustomEvent("enemyKilled", { detail: { enemy: this } }));
+        if (this.isBigBoss) {
+            document.dispatchEvent(new CustomEvent("bigBossKilled", { detail: { enemy: this } }));
+        } else {
+            document.dispatchEvent(new CustomEvent("enemyKilled", { detail: { enemy: this } }));
+        }
     }
 
     findNearestAlly() {
@@ -255,8 +316,29 @@ export class EnnemiIA {
 
         const shootDir = dir.normalize();
         const origin = this.root.position.clone();
-        origin.y += 1.5;
-        createBullet(this.scene, origin, shootDir, false, true, false);
+        origin.y += this.isBigBoss ? 2 : 1.5;
+        
+        if (this.isBigBoss) {
+            // Le BigBoss tire trois balles à la fois
+            const mainBullet = createBullet(this.scene, origin, shootDir, false, true, false);
+            
+            // Balles supplémentaires avec un léger angle
+            const leftDir = shootDir.clone();
+            const rightDir = shootDir.clone();
+            
+            // Rotation des vecteurs pour les balles latérales
+            const rotationMatrix = BABYLON.Matrix.RotationY(0.2);
+            const rotationMatrixRight = BABYLON.Matrix.RotationY(-0.2);
+            
+            leftDir.applyRotationMatrix(rotationMatrix);
+            rightDir.applyRotationMatrix(rotationMatrixRight);
+            
+            createBullet(this.scene, origin, leftDir, false, true, false);
+            createBullet(this.scene, origin, rightDir, false, true, false);
+        } else {
+            createBullet(this.scene, origin, shootDir, false, true, false);
+        }
+        
         this.lastShootTime = now;
     }
 
@@ -354,6 +436,12 @@ export class EnnemiIA {
         // Vérifier si l'ennemi est bloqué
         this._checkIfStuck();
 
+        // Debug log pour le BigBoss
+        if (this.isBigBoss) {
+            console.log(`BigBoss position: ${this.root.position.x.toFixed(2)}, ${this.root.position.y.toFixed(2)}, ${this.root.position.z.toFixed(2)}`);
+            console.log(`BigBoss velocity: ${this.velocity.x.toFixed(2)}, ${this.velocity.y.toFixed(2)}, ${this.velocity.z.toFixed(2)}`);
+        }
+
         const distToPlayer = BABYLON.Vector3.Distance(this.root.position, this.player.position);
         const nearestAllyInfo = this.findNearestAlly();
         
@@ -410,6 +498,15 @@ export class EnnemiIA {
         } else {
             const wanderForce = this.wander();
             force.addInPlace(wanderForce.scale(this.wanderWeight));
+            
+            // Pour le BigBoss, ajoutons une force supplémentaire vers le joueur même s'il est hors de portée
+            if (this.isBigBoss) {
+                const dirToPlayer = this.player.position.subtract(this.root.position).normalize();
+                force.addInPlace(dirToPlayer.scale(this.maxForce * 0.5));
+                shouldTrack = true;
+                targetToTrack = this.player;
+            }
+            
             this.isRunning = true;
             this.currentAnimation = "run";
         }
@@ -619,7 +716,7 @@ export class EnnemiIA {
     _teleportToSafeLocation() {
         if (!this.root || !this.player || this.isDead) return;
         
-        console.log(`Téléportation d'un ennemi ${this.isBoss ? "boss" : "du quartier " + this.quartier} bloqué`);
+        console.log(`Téléportation d'un ennemi ${this.isBigBoss ? "BigBoss" : "du quartier " + this.quartier} bloqué`);
         
         // Direction vers le joueur
         const dirToPlayer = this.player.position.subtract(this.root.position).normalize();

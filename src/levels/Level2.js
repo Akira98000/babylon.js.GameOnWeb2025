@@ -1,4 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
+import { GameMessages } from '../utils/GameMessages.js';
 
 export class Level2 {
     constructor(scene) {
@@ -88,15 +89,20 @@ export class Level2 {
         this._hideProximityMessage();
         
         // Afficher le message de réussite et les confettis
-        this._showConfetti().then(() => {
-            // Nettoyer les bananes avant de passer au niveau suivant
-            this._cleanupBananas();
-            
-            // Appeler le callback pour passer au niveau 3
-            if (typeof this.onComplete === 'function') {
-                this.onComplete();
+        GameMessages.showCelebrationMessage(
+            "Niveau Complété",
+            "🍌",
+            "Félicitations ! Vous avez réussi à vous faire des amis avec toutes les bananes.",
+            () => {
+                // Nettoyer les bananes avant de passer au niveau suivant
+                this._cleanupBananas();
+                
+                // Appeler le callback pour passer au niveau 3
+                if (typeof this.onComplete === 'function') {
+                    this.onComplete();
+                }
             }
-        });
+        );
         
         // Supprimer l'écouteur d'événements
         window.removeEventListener("keydown", this._keyHandler);
@@ -142,86 +148,26 @@ export class Level2 {
     }
     
     _showProximityMessage() {
-        // Approche simplifiée : créer le message directement
-        if (!document.getElementById("bananaMessage")) {
-            const messageDiv = document.createElement("div");
-            messageDiv.id = "bananaMessage";
-            messageDiv.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 40%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background-color: rgba(0, 0, 0, 0.75);
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 10px;
-                    text-align: center;
-                    z-index: 10000;
-                    width: 60%;
-                    max-width: 400px;
-                    font-family: Arial, sans-serif;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    backdrop-filter: blur(4px);
-                ">
-                    <h2 style="margin: 5px 0; font-size: 22px; color: #FFEB3B;">Une banane sympathique !</h2>
-                    <div style="font-size: 38px; margin: 10px 0;">🍌</div>
-                    <p style="margin: 8px 0; font-size: 16px;">Appuyez sur <strong style="color: #FFEB3B;">F</strong> pour devenir ami avec cette banane.</p>
-                </div>
-            `;
-            document.body.appendChild(messageDiv);
-        } else {
-            document.getElementById("bananaMessage").style.display = "block";
-        }
+        GameMessages.showProximityMessage(
+            "Une banane sympathique !",
+            "🍌",
+            "Appuyez sur <strong style=\"color: #FFEB3B;\">F</strong> pour devenir ami avec cette banane.",
+            "bananaMessage"
+        );
     }
 
     _hideProximityMessage() {
-        // Masquer le message
-        const message = document.getElementById("bananaMessage");
-        if (message) {
-            message.style.display = "none";
-        }
+        GameMessages.hideMessage("bananaMessage");
     }
 
     _showFriendshipMessage() {
-        // Créer un message dans le même style que le message de proximité
-        if (!document.getElementById("friendshipMessage")) {
-            const messageDiv = document.createElement("div");
-            messageDiv.id = "friendshipMessage";
-            messageDiv.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 40%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background-color: rgba(0, 0, 0, 0.75);
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 10px;
-                    text-align: center;
-                    z-index: 10000;
-                    width: 60%;
-                    max-width: 400px;
-                    font-family: Arial, sans-serif;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    backdrop-filter: blur(4px);
-                ">
-                    <h2 style="margin: 5px 0; font-size: 22px; color: #4CAF50;">Nouvelle amitié forgée !</h2>
-                    <div style="font-size: 38px; margin: 10px 0;">🍌</div>
-                    <p style="margin: 8px 0; font-size: 16px;">(${this.friendCount}/3)</p>
-                </div>
-            `;
-            document.body.appendChild(messageDiv);
-            
-            // Supprimer le message après 2 secondes
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 2000);
-        }
+        GameMessages.showTemporaryMessage(
+            "Nouvelle amitié forgée !",
+            "🍌",
+            `(${this.friendCount}/3)`,
+            2000,
+            "#4CAF50"
+        );
     }
 
     _showConfetti() {

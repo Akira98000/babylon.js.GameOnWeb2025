@@ -27,7 +27,7 @@ export class WelcomePage {
             left: '0',
             width: '100%',
             height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgb(0, 0, 0)',
             color: 'white',
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
             display: 'flex',
