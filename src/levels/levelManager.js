@@ -31,6 +31,43 @@ export class LevelManager {
             5: new CutScene(scene, "NIVEAU 5: LES QUARTIERS", 3000, 5),
             6: new CutScene(scene, "NIVEAU 6: L'ULTIME COMBAT", 3000, 6)
         };
+        this.levelInstructions = {
+            0: {
+                title: "Tutoriel",
+                icon: "💡",
+                text: "Apprenez les contrôles de base du jeu."
+            },
+            1: {
+                title: "La Rencontre",
+                icon: "🐕",
+                text: "Trouvez Ray le chien et appuyez sur K pour en faire votre ami fidèle."
+            },
+            2: {
+                title: "Exploration",
+                icon: "🍌",
+                text: "Trouvez les trois bananes et appuyez sur F à proximité de chacune pour devenir ami avec elles."
+            },
+            3: {
+                title: "La Catastrophe",
+                icon: "⚠️",
+                text: "La nuit tombe et les zombies apparaissent ! Survivez à l'assaut des créatures et défendez-vous."
+            },
+            4: {
+                title: "La Menace",
+                icon: "🧟",
+                text: "Combattez les hordes de zombies et éliminez-les tous pour sauver la ville."
+            },
+            5: {
+                title: "Les Quartiers",
+                icon: "🏙️",
+                text: "Explorez les différents quartiers de la ville et trouvez votre chemin vers la fusée."
+            },
+            6: {
+                title: "L'Ultime Combat",
+                icon: "🚀",
+                text: "Atteignez la fusée et préparez-vous pour l'ultime bataille contre le boss final."
+            }
+        };
         this.currentAudio = this.standardAudio;
         this.levels[0].onComplete = this.goToNextLevel.bind(this);
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
@@ -38,6 +75,8 @@ export class LevelManager {
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
         this.levels[4].onComplete = this.goToNextLevel.bind(this);
         this.loadAndAnimateGLB();
+        
+        this.instructionsElement = this._createInstructionsElement();
     }
 
     async initCurrentLevel() {
@@ -45,13 +84,16 @@ export class LevelManager {
             if (this.cutScenes[0]) {
                 this.cutScenes[0].onComplete = () => {
                     this.levels[0].init();
+                    this._showLevelInstructions();
                 };
                 await this.cutScenes[0].init();
             } else {
                 await this.levels[0].init();
+                this._showLevelInstructions();
             }
         } else if (this.levels[this.currentLevel]) {
             await this.levels[this.currentLevel].init();
+            this._showLevelInstructions();
         }
     }
 
@@ -69,20 +111,24 @@ export class LevelManager {
             if (this.cutScenes[1]) {
                 this.cutScenes[1].onComplete = () => {
                     this.levels[1].init();
+                    this._showLevelInstructions();
                 };
                 await this.cutScenes[1].init();
             } else {
                 await this.levels[1].init();
+                this._showLevelInstructions();
             }
         } else if (this.currentLevel === 1) {
             this.currentLevel = 2;
             if (this.cutScenes[2]) {
                 this.cutScenes[2].onComplete = () => {
                     this.levels[2].init();
+                    this._showLevelInstructions();
                 };
                 await this.cutScenes[2].init();
             } else {
                 await this.levels[2].init();
+                this._showLevelInstructions();
             }
         } else if (this.currentLevel === 2) {
             this.currentLevel = 3;
@@ -92,12 +138,14 @@ export class LevelManager {
                     this.levels[3].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level3:", error);
                     });
+                    this._showLevelInstructions();
                 };
                 await this.cutScenes[3].init();
             } else {
                 this.levels[3].init().catch(error => {
                     console.error("Erreur lors de l'initialisation du Level3:", error);
                 });
+                this._showLevelInstructions();
             }
         } else if (this.currentLevel === 3) {
             this._createTransitionEffect();
@@ -112,12 +160,14 @@ export class LevelManager {
                         this.levels[4].init().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level4:", error);
                         });
+                        this._showLevelInstructions();
                     };
                     await this.cutScenes[4].init();
                 } else {
                     this.levels[4].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level4:", error);
                     });
+                    this._showLevelInstructions();
                 }
             }, 1500);
         } else if (this.currentLevel === 4) {
@@ -131,12 +181,14 @@ export class LevelManager {
                         this.levels[5].init().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level5:", error);
                         });
+                        this._showLevelInstructions();
                     };
                     await this.cutScenes[5].init();
                 } else {
                     this.levels[5].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level5:", error);
                     });
+                    this._showLevelInstructions();
                 }
             }, 2000);
         } else if (this.currentLevel === 5) {
@@ -151,12 +203,14 @@ export class LevelManager {
                         this.levels[6].initialize().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level6:", error);
                         });
+                        this._showLevelInstructions();
                     };
                     await this.cutScenes[6].init();
                 } else {
                     this.levels[6].initialize().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level6:", error);
                     });
+                    this._showLevelInstructions();
                 }
             }, 2000);
         }
@@ -191,7 +245,7 @@ export class LevelManager {
     }
 
     _cleanupMessages() {
-        const messages = document.querySelectorAll('[id$="Message"]');
+        const messages = document.querySelectorAll('[id$="Message"]:not(#celebration-message)');
         messages.forEach(msg => {
             if (msg && msg.parentNode) {
                 msg.parentNode.removeChild(msg);
@@ -702,5 +756,133 @@ export class LevelManager {
         } catch (error) {
             console.error("Erreur lors du chargement des modèles GLB:", error);
         }
+    }
+
+    _createInstructionsElement() {
+        const container = document.createElement("div");
+        container.id = "levelInstructionsContainer";
+        Object.assign(container.style, {
+            position: "fixed",
+            top: "20px",
+            right: "20px",
+            backgroundColor: "rgba(0, 0, 0, 0.85)",
+            padding: "15px",
+            borderRadius: "10px",
+            color: "white",
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            display: "none",
+            zIndex: "1000",
+            width: "300px",
+            backdropFilter: "blur(5px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3)",
+            transition: "opacity 0.5s, transform 0.5s",
+            opacity: "0",
+            transform: "translateY(-20px)"
+        });
+
+        // Titre du niveau
+        const header = document.createElement("div");
+        Object.assign(header.style, {
+            display: "flex",
+            alignItems: "center",
+            marginBottom: "10px",
+            gap: "10px"
+        });
+
+        const icon = document.createElement("div");
+        Object.assign(icon.style, {
+            fontSize: "24px"
+        });
+        
+        const title = document.createElement("div");
+        Object.assign(title.style, {
+            fontSize: "18px",
+            fontWeight: "bold"
+        });
+        
+        header.appendChild(icon);
+        header.appendChild(title);
+        container.appendChild(header);
+        
+        // Instructions du niveau
+        const instructionsText = document.createElement("div");
+        Object.assign(instructionsText.style, {
+            fontSize: "14px",
+            lineHeight: "1.4",
+            marginBottom: "10px"
+        });
+        container.appendChild(instructionsText);
+        
+        // Bouton pour fermer
+        const closeButton = document.createElement("button");
+        closeButton.textContent = "OK";
+        Object.assign(closeButton.style, {
+            padding: "5px 15px",
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            border: "none",
+            borderRadius: "5px",
+            color: "white",
+            cursor: "pointer",
+            marginTop: "5px",
+            width: "100%",
+            transition: "background-color 0.3s"
+        });
+        
+        closeButton.addEventListener("mouseenter", () => {
+            closeButton.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+        });
+        
+        closeButton.addEventListener("mouseleave", () => {
+            closeButton.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+        });
+        
+        closeButton.addEventListener("click", () => {
+            this._hideInstructions();
+        });
+        
+        container.appendChild(closeButton);
+        document.body.appendChild(container);
+        
+        return {
+            container,
+            icon,
+            title,
+            instructionsText,
+            closeButton
+        };
+    }
+    
+    _showLevelInstructions() {
+        const levelInfo = this.levelInstructions[this.currentLevel];
+        if (!levelInfo || !this.instructionsElement) return;
+        
+        this.instructionsElement.icon.textContent = levelInfo.icon;
+        this.instructionsElement.title.textContent = levelInfo.title;
+        this.instructionsElement.instructionsText.textContent = levelInfo.text;
+        
+        this.instructionsElement.container.style.display = "block";
+        
+        // Animation d'entrée
+        setTimeout(() => {
+            this.instructionsElement.container.style.opacity = "1";
+            this.instructionsElement.container.style.transform = "translateY(0)";
+        }, 100);
+        
+        // Masquer automatiquement après 10 secondes
+        setTimeout(() => {
+            this._hideInstructions();
+        }, 10000);
+    }
+    
+    _hideInstructions() {
+        if (!this.instructionsElement) return;
+        
+        this.instructionsElement.container.style.opacity = "0";
+        this.instructionsElement.container.style.transform = "translateY(-20px)";
+        
+        setTimeout(() => {
+            this.instructionsElement.container.style.display = "none";
+        }, 500);
     }
 }

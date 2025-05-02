@@ -123,21 +123,18 @@ export class CutScene {
     }
     
     _preloadVideo() {
-        // Créer un élément vidéo caché pour précharger
         const preloadVideo = document.createElement("video");
         preloadVideo.src = `scene/scene${this.sceneNumber}.mov`;
         preloadVideo.style.display = "none";
         preloadVideo.preload = "auto";
         document.body.appendChild(preloadVideo);
-        
-        // Le supprimer après préchargement
+
         preloadVideo.onloadeddata = () => {
             if (preloadVideo.parentNode) {
                 preloadVideo.parentNode.removeChild(preloadVideo);
             }
         };
         
-        // Gérer l'erreur si la vidéo ne peut pas être chargée
         preloadVideo.onerror = () => {
             console.warn(`Impossible de précharger la vidéo pour le niveau ${this.sceneNumber}`);
             if (preloadVideo.parentNode) {
@@ -148,7 +145,6 @@ export class CutScene {
     
     async playVideo() {
         return new Promise((resolve) => {
-            // Créer le conteneur pour la vidéo
             const videoContainer = document.createElement("div");
             videoContainer.id = "videoContainer";
             Object.assign(videoContainer.style, {
@@ -165,13 +161,11 @@ export class CutScene {
                 overflow: "hidden"
             });
             
-            // Créer l'élément vidéo
             this.videoElement = document.createElement("video");
             this.videoElement.src = `scene/scene${this.sceneNumber}.mov`;
             this.videoElement.muted = false;
             this.videoElement.controls = false;
             
-            // Gérer l'erreur si la vidéo ne peut pas être lue
             this.videoElement.onerror = () => {
                 console.warn(`Erreur lors de la lecture de la vidéo pour le niveau ${this.sceneNumber}`);
                 this.cleanup();
@@ -186,11 +180,9 @@ export class CutScene {
                 transition: "opacity 0.3s ease-in-out"
             });
             
-            // Créer les bandes letterbox
             this.topLetterbox = document.createElement("div");
             this.bottomLetterbox = document.createElement("div");
             
-            // Styles communs pour les bandes letterbox
             const letterboxCommonStyle = {
                 position: "absolute",
                 left: "0",
@@ -201,7 +193,6 @@ export class CutScene {
                 zIndex: "1950"
             };
             
-            // Appliquer les styles spécifiques
             Object.assign(this.topLetterbox.style, {
                 ...letterboxCommonStyle,
                 top: "0"
@@ -212,18 +203,15 @@ export class CutScene {
                 bottom: "0"
             });
             
-            // Ajouter les éléments au DOM
             videoContainer.appendChild(this.videoElement);
             document.body.appendChild(videoContainer);
             document.body.appendChild(this.topLetterbox);
             document.body.appendChild(this.bottomLetterbox);
             
-            // Animer l'apparition des bandes letterbox et de la vidéo immédiatement
-            const letterboxHeight = "15%"; // Hauteur des bandes noires
+            const letterboxHeight = "15%"; 
             this.topLetterbox.style.height = letterboxHeight;
             this.bottomLetterbox.style.height = letterboxHeight;
             
-            // Lancer la vidéo immédiatement
             requestAnimationFrame(() => {
                 this.videoElement.style.opacity = "1";
                 this.videoElement.play()
