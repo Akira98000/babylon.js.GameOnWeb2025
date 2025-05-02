@@ -18,9 +18,9 @@ export class LevelSelector {
         this.container.style.display = 'none';
 
         // Créer le bouton pour chaque niveau
-        for (let i = 1; i <= 6; i++) {
+        for (let i = 0; i <= 6; i++) {
             const button = document.createElement('button');
-            button.textContent = `Niveau ${i}`;
+            button.textContent = i === 0 ? `Tutoriel` : `Niveau ${i}`;
             button.style.display = 'block';
             button.style.margin = '5px';
             button.style.padding = '5px 10px';

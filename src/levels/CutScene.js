@@ -49,41 +49,76 @@ export class CutScene {
             this.overlayElement.appendChild(titleElement);
             document.body.appendChild(this.overlayElement);
             
-            // Préchargement de la vidéo pendant que le titre est affiché
-            this._preloadVideo();
-            
-            // Animer l'apparition
-            setTimeout(() => {
-                this.overlayElement.style.opacity = "1";
-                
+            // Pour le niveau tutoriel (niveau 0), on saute la vidéo
+            if (this.sceneNumber === 0) {
+                // Animer l'apparition
                 setTimeout(() => {
-                    titleElement.style.opacity = "1";
-                    titleElement.style.transform = "translateY(0)";
+                    this.overlayElement.style.opacity = "1";
                     
-                    // Planifier la disparition après la durée spécifiée
                     setTimeout(() => {
-                        titleElement.style.opacity = "0";
-                        titleElement.style.transform = "translateY(-20px)";
+                        titleElement.style.opacity = "1";
+                        titleElement.style.transform = "translateY(0)";
                         
-                        // Lancer immédiatement la vidéo et faire disparaître l'overlay simultanément
-                        this.overlayElement.style.opacity = "0";
+                        // Planifier la disparition après la durée spécifiée
+                        setTimeout(() => {
+                            titleElement.style.opacity = "0";
+                            titleElement.style.transform = "translateY(-20px)";
+                            
+                            // Faire disparaître l'overlay
+                            this.overlayElement.style.opacity = "0";
+                            
+                            // Supprimer l'overlay
+                            setTimeout(() => {
+                                if (this.overlayElement && this.overlayElement.parentNode) {
+                                    this.overlayElement.parentNode.removeChild(this.overlayElement);
+                                }
+                                this.overlayElement = null;
+                                
+                                if (this.onComplete && typeof this.onComplete === 'function') {
+                                    this.onComplete();
+                                }
+                                resolve();
+                            }, 500);
+                        }, this.duration);
+                    }, 500);
+                }, 100);
+            } else {
+                // Pour les autres niveaux, préchargement de la vidéo pendant que le titre est affiché
+                this._preloadVideo();
+                
+                // Animer l'apparition
+                setTimeout(() => {
+                    this.overlayElement.style.opacity = "1";
+                    
+                    setTimeout(() => {
+                        titleElement.style.opacity = "1";
+                        titleElement.style.transform = "translateY(0)";
                         
-                        // Supprimer l'overlay et démarrer la vidéo instantanément
-                        if (this.overlayElement.parentNode) {
-                            this.overlayElement.parentNode.removeChild(this.overlayElement);
-                        }
-                        this.overlayElement = null;
-                        
-                        // Lancer la vidéo immédiatement
-                        this.playVideo().then(() => {
-                            if (this.onComplete && typeof this.onComplete === 'function') {
-                                this.onComplete();
+                        // Planifier la disparition après la durée spécifiée
+                        setTimeout(() => {
+                            titleElement.style.opacity = "0";
+                            titleElement.style.transform = "translateY(-20px)";
+                            
+                            // Lancer immédiatement la vidéo et faire disparaître l'overlay simultanément
+                            this.overlayElement.style.opacity = "0";
+                            
+                            // Supprimer l'overlay et démarrer la vidéo instantanément
+                            if (this.overlayElement.parentNode) {
+                                this.overlayElement.parentNode.removeChild(this.overlayElement);
                             }
-                            resolve();
-                        });
-                    }, this.duration);
-                }, 500);
-            }, 100);
+                            this.overlayElement = null;
+                            
+                            // Lancer la vidéo immédiatement
+                            this.playVideo().then(() => {
+                                if (this.onComplete && typeof this.onComplete === 'function') {
+                                    this.onComplete();
+                                }
+                                resolve();
+                            });
+                        }, this.duration);
+                    }, 500);
+                }, 100);
+            }
         });
     }
     
@@ -97,6 +132,14 @@ export class CutScene {
         
         // Le supprimer après préchargement
         preloadVideo.onloadeddata = () => {
+            if (preloadVideo.parentNode) {
+                preloadVideo.parentNode.removeChild(preloadVideo);
+            }
+        };
+        
+        // Gérer l'erreur si la vidéo ne peut pas être chargée
+        preloadVideo.onerror = () => {
+            console.warn(`Impossible de précharger la vidéo pour le niveau ${this.sceneNumber}`);
             if (preloadVideo.parentNode) {
                 preloadVideo.parentNode.removeChild(preloadVideo);
             }
@@ -127,6 +170,14 @@ export class CutScene {
             this.videoElement.src = `scene/scene${this.sceneNumber}.mov`;
             this.videoElement.muted = false;
             this.videoElement.controls = false;
+            
+            // Gérer l'erreur si la vidéo ne peut pas être lue
+            this.videoElement.onerror = () => {
+                console.warn(`Erreur lors de la lecture de la vidéo pour le niveau ${this.sceneNumber}`);
+                this.cleanup();
+                resolve();
+            };
+            
             Object.assign(this.videoElement.style, {
                 width: "100%",
                 height: "auto",
@@ -175,7 +226,12 @@ export class CutScene {
             // Lancer la vidéo immédiatement
             requestAnimationFrame(() => {
                 this.videoElement.style.opacity = "1";
-                this.videoElement.play();
+                this.videoElement.play()
+                    .catch(error => {
+                        console.warn(`Erreur de lecture de la vidéo pour le niveau ${this.sceneNumber}:`, error);
+                        this.cleanup();
+                        resolve();
+                    });
                 
                 // Événement de fin de vidéo
                 this.videoElement.onended = () => {

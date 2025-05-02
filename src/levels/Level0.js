@@ -1,6 +1,10 @@
-export class Tutorial {
+import * as BABYLON from '@babylonjs/core';
+
+export class Level0 {
     constructor(scene) {
         this.scene = scene;
+        this.isCompleted = false;
+        this.onComplete = null;
         this.tutorialContainer = null;
         this.currentStep = 0;
         this.isVisible = false;
@@ -17,9 +21,59 @@ export class Tutorial {
                 instruction: "Appuyez sur ESPACE pour continuer",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
+            },
+            {
+                instruction: "Utilisez la touche A ou Q pour vous déplacer vers la gauche",
+                key: ["A", "Q"],
+                checkComplete: (inputMap) => inputMap["a"] || inputMap["q"]
+            },
+            {
+                instruction: "Utilisez la touche S pour vous déplacer vers l'arrière",
+                key: ["S"],
+                checkComplete: (inputMap) => inputMap["s"]
+            },
+            {
+                instruction: "Utilisez la touche D pour vous déplacer vers la droite",
+                key: ["D"],
+                checkComplete: (inputMap) => inputMap["d"]
+            },
+            {
+                instruction: "Bougez la souris pour regarder autour de vous",
+                key: ["SOURIS"],
+                checkComplete: (inputMap, mouseMoved) => mouseMoved
+            },
+            {
+                instruction: "Cliquez pour tirer",
+                key: ["CLIC"],
+                checkComplete: (inputMap, mouseMoved, isShooting) => isShooting
+            },
+            {
+                instruction: "Appuyez sur ESPACE pour sauter",
+                key: ["ESPACE"],
+                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             }
         ];
         this._createUI();
+    }
+
+    async init() {
+        this.show();
+        this._addInputListeners();
+    }
+
+    _addInputListeners() {
+        this.updateHandler = (e) => {
+            if (this.scene.metadata && this.scene.metadata.controls) {
+                const inputMap = this.scene.metadata.controls.inputMap || {};
+                const mouseMoved = this._checkMouseMovement(this.scene.metadata.controls.isMouseMoving);
+                const isShooting = this.scene.metadata.controls.isShooting;
+                const mouseX = this.scene.metadata.controls.mouseX || 0;
+                
+                this.update(inputMap, mouseMoved, isShooting, mouseX);
+            }
+        };
+        
+        this.scene.onBeforeRenderObservable.add(this.updateHandler);
     }
 
     _checkKeyHold(isPressed) {
@@ -216,7 +270,7 @@ export class Tutorial {
         });
 
         skipButton.addEventListener('click', () => {
-            this.hide();
+            this._complete();
         });
 
         this.tutorialContainer.appendChild(skipButton);
@@ -239,6 +293,15 @@ export class Tutorial {
             this.tutorialContainer.style.display = 'block';
             this.isVisible = true;
             this._showCurrentStep();
+        }
+    }
+
+    _complete() {
+        this.hide();
+        this.isCompleted = true;
+        
+        if (this.onComplete && typeof this.onComplete === 'function') {
+            this.onComplete();
         }
     }
 
@@ -317,7 +380,7 @@ export class Tutorial {
                 // Animer le message de réussite final
                 this._typeText("Excellent ! Vous avez terminé le tutoriel.");
                 setTimeout(() => {
-                    this.hide();
+                    this._complete();
                 }, 2000);
             } else {
                 setTimeout(() => {
@@ -325,5 +388,25 @@ export class Tutorial {
                 }, this.stepTransitionDelay);
             }
         }
+    }
+
+    cleanup() {
+        if (this.tutorialContainer && this.tutorialContainer.parentNode) {
+            this.tutorialContainer.parentNode.removeChild(this.tutorialContainer);
+        }
+        
+        if (this.updateHandler) {
+            this.scene.onBeforeRenderObservable.removeCallback(this.updateHandler);
+        }
+        
+        if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+            this.typingTimeout = null;
+        }
+    }
+
+    checkProximity() {
+        // Méthode requise pour implémenter l'interface des niveaux
+        // mais non utilisée dans le tutoriel
     }
 } 

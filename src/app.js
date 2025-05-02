@@ -102,6 +102,7 @@ const initBabylon = async () => {
           description: "Initialisation du niveau...",
           func: async () => {
             const levelManager = new LevelManager(scene);
+            levelManager.currentLevel = 0; 
             await levelManager.initCurrentLevel();
             scene.metadata.levelManager = levelManager;
             return levelManager;

@@ -1,3 +1,4 @@
+import { Level0 } from './Level0.js';
 import { Level1 } from './Level1.js';
 import { Level2 } from './Level2.js';
 import { Level3 } from './Level3.js';
@@ -14,6 +15,7 @@ export class LevelManager {
         this.scene = scene;
         this.currentLevel = 0; 
         this.levels = {
+            0: new Level0(scene),
             1: new Level1(scene),
             2: new Level2(scene),
             3: new Level3(scene),
@@ -30,6 +32,7 @@ export class LevelManager {
             6: new CutScene(scene, "NIVEAU 6: L'ULTIME COMBAT", 3000, 6)
         };
         this.currentAudio = this.standardAudio;
+        this.levels[0].onComplete = this.goToNextLevel.bind(this);
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
@@ -39,15 +42,13 @@ export class LevelManager {
 
     async initCurrentLevel() {
         if (this.currentLevel === 0) {
-            if (this.cutScenes[1]) {
-                this.cutScenes[1].onComplete = () => {
-                    this.currentLevel = 1;
-                    this.levels[1].init();
+            if (this.cutScenes[0]) {
+                this.cutScenes[0].onComplete = () => {
+                    this.levels[0].init();
                 };
-                await this.cutScenes[1].init();
+                await this.cutScenes[0].init();
             } else {
-                this.currentLevel = 1;
-                await this.levels[1].init();
+                await this.levels[0].init();
             }
         } else if (this.levels[this.currentLevel]) {
             await this.levels[this.currentLevel].init();
@@ -63,7 +64,17 @@ export class LevelManager {
     async goToNextLevel() {
         this._cleanupMessages();
         
-        if (this.currentLevel === 1) {
+        if (this.currentLevel === 0) {
+            this.currentLevel = 1;
+            if (this.cutScenes[1]) {
+                this.cutScenes[1].onComplete = () => {
+                    this.levels[1].init();
+                };
+                await this.cutScenes[1].init();
+            } else {
+                await this.levels[1].init();
+            }
+        } else if (this.currentLevel === 1) {
             this.currentLevel = 2;
             if (this.cutScenes[2]) {
                 this.cutScenes[2].onComplete = () => {
