@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { EnnemiIA } from '../ennemis/EnnemiIA.js';
 import { AmiAI } from '../amis/AmiAI.js';
 import { PurpleStorm } from '../storm/PurpleStorm.js';
+import { Level5Hacker } from '../cheats/Level5Hacker.js';
 
 export class Level5 {
     constructor(scene) {
@@ -52,6 +53,12 @@ export class Level5 {
         this._spawnAmi(worldOffset2, 1);
         
         this._passerAuQuartierSuivant();
+
+        // Initialiser le hacker pour le niveau 5
+        if (!this.scene.metadata) this.scene.metadata = {};
+        this.scene.metadata.level5 = this;
+        this.hacker = new Level5Hacker(this.scene);
+        this.hacker.init();
 
         // Observer pour mettre à jour les coordonnées et les entités
         this.scene.onBeforeRenderObservable.add(() => {
@@ -242,21 +249,33 @@ export class Level5 {
             if (!this.scene.metadata) this.scene.metadata = {};
             this.scene.metadata.level5 = this;
             this.purpleStorm.start();
-            this._showMessage("⚠️ Une tempête violette approche! Restez dans la zone sûre! ⚠️", 5000);
+            this._showMessage("⚠️ DANGER MORTEL! Une tempête violette DÉVASTATRICE approche! ⚠️", 5000);
+            
+            // Charger la reine qui a besoin d'aide
             this._loadHelpQueen();
+            
+            // Afficher un message après quelques secondes pour indiquer comment libérer la reine
+            setTimeout(() => {
+                this._showMessage("URGENT! La reine est emprisonnée! Appuyez sur 'K' pour la libérer IMMÉDIATEMENT!", 5000);
+            }, 6000);
+            
+            // Avertissement supplémentaire pour l'urgence
+            setTimeout(() => {
+                this._showMessage("⚠️ ALERTE CRITIQUE! La tempête est MORTELLE et ULTRA-RAPIDE! ⚠️", 4000);
+            }, 12000);
         }
     }
 
     _loadHelpQueen() {
-        // Position centrale de la carte
-        const centralPosition = new BABYLON.Vector3(0, 0, 0);
+        // Position spécifiée pour la reine
+        const queenPosition = new BABYLON.Vector3(8.45, 0.10, -12.91);
         
         // Charger le modèle help_queen.glb
         BABYLON.SceneLoader.ImportMeshAsync("", "/personnage/", "help_queen.glb", this.scene).then((result) => {
             const queen = result.meshes[0];
             queen.name = "helpQueen";
-            queen.position = centralPosition;
-            queen.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+            queen.position = queenPosition;
+            queen.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
             
             // Chercher l'animation "help"
             const helpAnimation = this.scene.getAnimationGroupByName("help");
@@ -278,7 +297,7 @@ export class Level5 {
             }
             
             // Ajouter un effet de lumière sur la reine pour la mettre en évidence
-            const queenLight = new BABYLON.PointLight("queenLight", centralPosition.clone(), this.scene);
+            const queenLight = new BABYLON.PointLight("queenLight", queenPosition.clone(), this.scene);
             queenLight.position.y += 3;
             queenLight.diffuse = new BABYLON.Color3(1, 0.8, 0.4);
             queenLight.intensity = 0.8;
@@ -303,10 +322,137 @@ export class Level5 {
             queenLight.animations = [pulseAnimation];
             this.scene.beginAnimation(queenLight, 0, 30, true);
             
-            console.log("Help Queen chargée au centre de la carte");
+            console.log("Help Queen chargée à la position spécifiée");
+            
+            // Ajouter l'action de clavier pour libérer la reine
+            this._setupQueenReleaseAction(queen, queenPosition);
         }).catch(error => {
             console.error("Erreur lors du chargement de help_queen.glb:", error);
         });
+    }
+
+    _setupQueenReleaseAction(queen, queenPosition) {
+        // Variable pour suivre si la reine a été libérée
+        this.queenReleased = false;
+        
+        // Observer pour la touche 'k'
+        const inputMap = {};
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            switch (kbInfo.type) {
+                case BABYLON.KeyboardEventTypes.KEYDOWN:
+                    inputMap[kbInfo.event.key] = true;
+                    break;
+                case BABYLON.KeyboardEventTypes.KEYUP:
+                    inputMap[kbInfo.event.key] = false;
+                    break;
+            }
+            
+            // Vérifier si la touche 'k' est pressée et si la tempête a commencé
+            if (inputMap["k"] && this.stormStarted && !this.queenReleased) {
+                this._releaseQueen(queen, queenPosition);
+            }
+        });
+        
+        // Afficher le message d'instruction lors du démarrage de la tempête
+        this._showMessage("⚠️ Appuyez sur 'K' pour libérer la reine! ⚠️", 5000);
+    }
+
+    _releaseQueen(queen, queenPosition) {
+        // Marquer la reine comme libérée
+        this.queenReleased = true;
+        
+        // Supprimer l'ancien modèle
+        if (queen) {
+            queen.dispose();
+        }
+        
+        // Charger le modèle libéré
+        BABYLON.SceneLoader.ImportMeshAsync("", "/personnage/", "help_queen_released.glb", this.scene).then((result) => {
+            const releasedQueen = result.meshes[0];
+            releasedQueen.name = "releasedQueen";
+            releasedQueen.position = queenPosition;
+            releasedQueen.scaling = new BABYLON.Vector3(0.4, 0.4, 0.4);
+            
+            // Chercher une animation appropriée pour la reine libérée
+            const celebrationAnimation = this.scene.getAnimationGroupByName("celebration");
+            if (celebrationAnimation) {
+                celebrationAnimation.start(true);
+            } else {
+                const animations = this.scene.animationGroups;
+                if (animations && animations.length > 0) {
+                    animations[0].start(true);
+                }
+            }
+            
+            // Ajouter des effets visuels pour la libération
+            this._createLiberationEffects(queenPosition);
+            
+            // Afficher un message de victoire
+            this._showMessage("La reine a été libérée! Le royaume est sauvé!", 5000);
+            
+            // Marquer le niveau comme terminé immédiatement
+            this.isCompleted = true;
+            
+            // Passer au niveau suivant après un délai
+            setTimeout(() => {
+                this._showMessage("Félicitations! Niveau 5 terminé avec succès!", 5000);
+                
+                // Nettoyer le niveau et passer au suivant
+                setTimeout(() => {
+                    this.dispose();
+                    if (this.scene.metadata?.levelManager) {
+                        this.scene.metadata.levelManager.goToNextLevel();
+                    }
+                }, 6000);
+            }, 5000);
+            
+            // Si le jeu a un système de progression entre les niveaux, on peut l'activer ici
+            if (this.scene.metadata && this.scene.metadata.gameManager) {
+                // Informer le gestionnaire de jeu que le niveau est terminé
+                setTimeout(() => {
+                    if (typeof this.scene.metadata.gameManager.levelCompleted === 'function') {
+                        this.scene.metadata.gameManager.levelCompleted(5);
+                    }
+                }, 6000);
+            }
+            
+        }).catch(error => {
+            console.error("Erreur lors du chargement de help_queen_released.glb:", error);
+        });
+    }
+
+    _createLiberationEffects(position) {
+        // Créer des particules ou des effets visuels pour la libération
+        const emitter = BABYLON.ParticleHelper.CreateDefault(
+            new BABYLON.Vector3(position.x, position.y + 2, position.z),
+            200,
+            this.scene
+        );
+        
+        emitter.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
+        emitter.maxEmitBox = new BABYLON.Vector3(1, 0, 1);
+        
+        emitter.color1 = new BABYLON.Color4(0.7, 0.8, 1.0, 1.0);
+        emitter.color2 = new BABYLON.Color4(0.2, 0.5, 1.0, 1.0);
+        
+        emitter.minSize = 0.1;
+        emitter.maxSize = 0.5;
+        
+        emitter.minLifeTime = 0.3;
+        emitter.maxLifeTime = 1.5;
+        
+        emitter.emitRate = 100;
+        emitter.manualEmitCount = 300;
+        
+        emitter.start();
+        
+        // Arrêter les particules après quelques secondes
+        setTimeout(() => {
+            emitter.stop();
+            setTimeout(() => {
+                emitter.dispose();
+            }, 2000);
+        }, 3000);
     }
 
     _victoire() {
@@ -374,6 +520,41 @@ export class Level5 {
             }
         }
         
+        // Nettoyer les modèles de la reine
+        const helpQueen = this.scene.getMeshByName("helpQueen");
+        if (helpQueen) {
+            helpQueen.dispose();
+        }
+        
+        const releasedQueen = this.scene.getMeshByName("releasedQueen");
+        if (releasedQueen) {
+            releasedQueen.dispose();
+        }
+        
+        // Nettoyer les animations
+        const animations = this.scene.animationGroups;
+        if (animations) {
+            for (let i = 0; i < animations.length; i++) {
+                const animation = animations[i];
+                if (animation && (animation.name === "help" || animation.name === "celebration")) {
+                    animation.dispose();
+                }
+            }
+        }
+        
+        // Nettoyer les particules
+        const particleSystems = this.scene.particleSystems;
+        if (particleSystems) {
+            while (particleSystems.length) {
+                particleSystems[0].dispose();
+            }
+        }
+        
+        // Enlever les observables du clavier
+        if (this.scene.onKeyboardObservable) {
+            this.scene.onKeyboardObservable.clear();
+        }
+        
         if (this.messageElement && this.messageElement.parentNode) {
             this.messageElement.parentNode.removeChild(this.messageElement);
         }
@@ -385,6 +566,11 @@ export class Level5 {
         // Nettoyer la tempête
         if (this.purpleStorm) {
             this.purpleStorm.dispose();
+        }
+        
+        // Nettoyer le hacker
+        if (this.hacker) {
+            this.hacker.dispose();
         }
         
         this.amis = [];

@@ -4,7 +4,7 @@ export class PurpleStorm {
     constructor(scene) {
         this.scene = scene;
         this.isActive = false;
-        this.damagePerSecond = 10;
+        this.damagePerSecond = 30;
         this.initialRadius = 100;
         this.currentRadius = this.initialRadius;
         this.finalRadius = 10;
@@ -12,14 +12,15 @@ export class PurpleStorm {
         this.stormParticles = null;
         this.stormCenter = new BABYLON.Vector3(0, 0, 0);
         this.countdownElement = this._createCountdownElement();
-        this.lastEnemySpawnTime = 0;
-        this.enemySpawnInterval = 5000; // 5 secondes en millisecondes
         this.finalPhaseStarted = false;
         this.finalPhaseStartTime = null;
-        this.finalPhaseDuration = 20000; // 20 secondes en millisecondes
+        this.finalPhaseDuration = 7000; 
         
         // Propriété pour suivre si nous avons déjà réactivé les contrôles du joueur
         this.playerControlsEnsured = false;
+        
+        // Facteur d'accélération de la tempête
+        this.stormSpeedFactor = 2.0; // La tempête avance 2x plus vite
     }
     
     start() {
@@ -130,10 +131,11 @@ export class PurpleStorm {
         if (distanceFromCenter > this.currentRadius) {
             // Appliquer des dégâts au joueur seulement si la tempête est active
             if (this.scene.metadata.player.takeDamage) {
-                this.scene.metadata.player.takeDamage(this.damagePerSecond / 60);
+                // Doubler l'effet des dégâts appliqués par frame
+                this.scene.metadata.player.takeDamage(this.damagePerSecond / 30); // Plus de dégâts par frame
             }
             
-            // Effet visuel rouge pour indiquer les dégâts
+            // Effet visuel rouge plus intense pour indiquer les dégâts
             if (!this._damageIndicator) {
                 this._damageIndicator = document.createElement("div");
                 this._damageIndicator.style.position = "absolute";
@@ -141,19 +143,22 @@ export class PurpleStorm {
                 this._damageIndicator.style.left = "0";
                 this._damageIndicator.style.width = "100%";
                 this._damageIndicator.style.height = "100%";
-                this._damageIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.2)";
+                this._damageIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.4)"; // Plus opaque (0.4 au lieu de 0.2)
                 this._damageIndicator.style.pointerEvents = "none";
                 this._damageIndicator.style.zIndex = "1000";
                 document.body.appendChild(this._damageIndicator);
                 
                 // Faire apparaître progressivement
                 this._damageIndicator.style.opacity = "0";
-                this._damageIndicator.style.transition = "opacity 0.5s";
+                this._damageIndicator.style.transition = "opacity 0.3s"; // Plus rapide (0.3s au lieu de 0.5s)
                 setTimeout(() => {
                     if (this._damageIndicator) {
                         this._damageIndicator.style.opacity = "1";
                     }
                 }, 10);
+                
+                // Ajouter un effet de pulsation pour augmenter l'urgence visuelle
+                this._pulseEffect();
             }
         } else {
             // Si le joueur est dans la zone sûre, enlever l'indicateur de dégâts
@@ -162,6 +167,35 @@ export class PurpleStorm {
                 this._damageIndicator = null;
             }
         }
+    }
+    
+    _pulseEffect() {
+        if (!this._damageIndicator) return;
+        
+        let intensity = 0.4;
+        let increasing = false;
+        
+        // Créer un intervalle pour faire pulser l'effet
+        this._pulseInterval = setInterval(() => {
+            if (!this._damageIndicator) {
+                clearInterval(this._pulseInterval);
+                return;
+            }
+            
+            if (increasing) {
+                intensity += 0.03;
+                if (intensity >= 0.6) {
+                    increasing = false;
+                }
+            } else {
+                intensity -= 0.03;
+                if (intensity <= 0.3) {
+                    increasing = true;
+                }
+            }
+            
+            this._damageIndicator.style.backgroundColor = `rgba(255, 0, 0, ${intensity})`;
+        }, 50);
     }
     
     _createCountdownElement() {
@@ -205,6 +239,12 @@ export class PurpleStorm {
             this._damageIndicator.parentNode.removeChild(this._damageIndicator);
             this._damageIndicator = null;
         }
+        
+        // Arrêter l'intervalle de pulsation
+        if (this._pulseInterval) {
+            clearInterval(this._pulseInterval);
+            this._pulseInterval = null;
+        }
     }
     
     dispose() {
@@ -225,17 +265,33 @@ export class PurpleStorm {
     }
 
     _shrinkStorm() {
-        const shrinkDuration = 60; // durée en secondes
+        const shrinkDuration = 30; 
         const shrinkRate = (this.initialRadius - this.finalRadius) / (shrinkDuration * 60); 
 
         this.scene.onBeforeRenderObservable.add(() => {
             if (!this.isActive) return;
 
+            // Réduire le rayon plus rapidement (doublement de la vitesse)
+            this.currentRadius -= shrinkRate * 2;
+            
+            // Mettre à jour le cylindre de la tempête
+            if (this.stormWall) {
+                this.stormWall.scaling.x = this.currentRadius / this.initialRadius;
+                this.stormWall.scaling.z = this.currentRadius / this.initialRadius;
+            }
+            
+            // Mettre à jour les particules
+            if (this.stormParticles) {
+                this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);
+            }
+
             if (!this.finalPhaseStarted && this.currentRadius <= this.finalRadius) {
                 // Démarrer la phase finale
                 this.finalPhaseStarted = true;
                 this.finalPhaseStartTime = Date.now();
-                this._showMessage("⚠️ Phase finale de la tempête ! Tenez bon pendant 20 secondes ! ⚠️", 5000);
+                // Réduire la durée de la phase finale de 20 à 10 secondes
+                this.finalPhaseDuration = 7000; // 7 secondes au lieu de 10
+                this._showMessage("⚠️ Phase finale de la tempête ! Tenez bon pendant 7 secondes ! ⚠️", 5000);
             }
 
             if (this.finalPhaseStarted) {
@@ -248,44 +304,8 @@ export class PurpleStorm {
                     this._endStorm();
                     return;
                 }
-            } else {
-                this.currentRadius -= shrinkRate;
-                
-                // Mise à jour du mur de la tempête
-                if (this.stormWall) {
-                    this.stormWall.scaling.x = this.currentRadius / this.initialRadius;
-                    this.stormWall.scaling.z = this.currentRadius / this.initialRadius;
-                }
-
-                // Mise à jour des particules
-                if (this.stormParticles) {
-                    this.stormParticles.createCylinderEmitter(this.currentRadius, 2, 0, 0);
-                }
-
-                // Spawn des ennemis
-                const currentTime = Date.now();
-                if (currentTime - this.lastEnemySpawnTime >= this.enemySpawnInterval) {
-                    this._spawnEnemy();
-                    this.lastEnemySpawnTime = currentTime;
-                }
             }
         });
-    }
-
-    _spawnEnemy() {
-        if (!this.scene.metadata?.level5) return;
-
-        // Générer une position aléatoire à l'intérieur du cercle actuel
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * this.currentRadius;
-        const position = new BABYLON.Vector3(
-            this.stormCenter.x + Math.cos(angle) * radius,
-            0,
-            this.stormCenter.z + Math.sin(angle) * radius
-        );
-
-        // Utiliser la méthode de spawn d'ennemis de Level5
-        this.scene.metadata.level5._spawnEnnemi(position);
     }
 
     _endStorm() {
