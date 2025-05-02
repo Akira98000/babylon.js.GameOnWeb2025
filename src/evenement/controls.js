@@ -67,7 +67,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
                 }
             }
 
-            if (isActionAllowed('shoot')) {
+            if (isActionAllowed('shoot') && (scene.metadata.shootingEnabled || false)) {
                 scene.metadata.executeShot?.(hero.position, camera.getForwardRay().direction);
             }
         }

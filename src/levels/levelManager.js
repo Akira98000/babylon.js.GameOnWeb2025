@@ -1,6 +1,7 @@
 import { Level0 } from './Level0.js';
 import { Level1 } from './Level1.js';
 import { Level2 } from './Level2.js';
+import { Level2b } from './Level2b.js';
 import { Level3 } from './Level3.js';
 import { Level4 } from './Level4.js';
 import { Level5 } from './Level5.js';
@@ -18,6 +19,7 @@ export class LevelManager {
             0: new Level0(scene),
             1: new Level1(scene),
             2: new Level2(scene),
+            '2b': new Level2b(scene),
             3: new Level3(scene),
             4: new Level4(scene),
             5: new Level5(scene),
@@ -26,6 +28,7 @@ export class LevelManager {
         this.cutScenes = {
             1: new CutScene(scene, "NIVEAU 1: LA RENCONTRE", 3000, 1),
             2: new CutScene(scene, "NIVEAU 2: EXPLORATION", 3000, 2),
+            '2b': new CutScene(scene, "NIVEAU 2B: LE MAGICIEN", 3000, 2.5),
             3: new CutScene(scene, "NIVEAU 3: LA CATASTROPHE", 3000, 3),
             4: new CutScene(scene, "NIVEAU 4: LA MENACE", 3000, 4),
             5: new CutScene(scene, "NIVEAU 5: LES QUARTIERS", 3000, 5),
@@ -46,6 +49,11 @@ export class LevelManager {
                 title: "Exploration",
                 icon: "🍌",
                 text: "Trouvez les trois bananes et appuyez sur F à proximité de chacune pour devenir ami avec elles."
+            },
+            '2b': {
+                title: "Le Magicien",
+                icon: "🧙‍♂️",
+                text: "Trouvez le magicien et apprenez le pouvoir d'éliminer les ennemis."
             },
             3: {
                 title: "La Catastrophe",
@@ -85,7 +93,8 @@ export class LevelManager {
         
         this.levels[0].onComplete = this.goToNextLevel.bind(this);
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
-        this.levels[2].onComplete = this.goToNextLevel.bind(this);
+        this.levels[2].onComplete = this.goToLevel2b.bind(this);
+        this.levels['2b'].onComplete = this.goToNextLevel.bind(this);
         this.levels[3].onComplete = this.goToNextLevel.bind(this);
         this.levels[4].onComplete = this.goToNextLevel.bind(this);
         this.loadAndAnimateGLB();
@@ -125,6 +134,24 @@ export class LevelManager {
         }
     }
 
+    async goToLevel2b() {
+        this._cleanupMessages();
+        
+        this.currentLevel = '2b';
+        if (this.cutScenes['2b']) {
+            this.cutScenes['2b'].onComplete = () => {
+                this.switchToMusic("standard");
+                this.levels['2b'].init();
+                this._showLevelInstructions();
+            };
+            await this.cutScenes['2b'].init();
+        } else {
+            this.switchToMusic("standard");
+            await this.levels['2b'].init();
+            this._showLevelInstructions();
+        }
+    }
+
     async goToNextLevel() {
         this._cleanupMessages();
         
@@ -156,7 +183,7 @@ export class LevelManager {
                 await this.levels[2].init();
                 this._showLevelInstructions();
             }
-        } else if (this.currentLevel === 2) {
+        } else if (this.currentLevel === '2b') {
             this.currentLevel = 3;
             if (this.cutScenes[3]) {
                 this.cutScenes[3].onComplete = () => {

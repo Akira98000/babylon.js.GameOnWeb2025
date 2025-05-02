@@ -245,7 +245,7 @@ export const createPlayer = async (scene, camera, canvas) => {
             
             flashCrosshair();
             
-            if (currentTime - lastShotTime > shootCooldown) {
+            if (currentTime - lastShotTime > shootCooldown && (scene.metadata.shootingEnabled || false)) {
                 lastShotTime = currentTime;
                 const shootDirection = camera.getForwardRay().direction.normalize();
                 const shootPosition = hero.position.clone();
