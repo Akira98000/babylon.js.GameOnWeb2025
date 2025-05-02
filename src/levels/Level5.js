@@ -388,14 +388,14 @@ export class Level5 {
             this._createLiberationEffects(queenPosition);
             
             // Afficher un message de victoire
-            this._showMessage("La reine a été libérée! Le royaume est sauvé!", 5000);
+            this._showMessage("La reine a été libérée! Le royaume est sauvé!", 3000);
             
             // Marquer le niveau comme terminé immédiatement
             this.isCompleted = true;
             
-            // Passer au niveau suivant après un délai
+            // Passer au niveau suivant après un délai réduit
             setTimeout(() => {
-                this._showMessage("Félicitations! Niveau 5 terminé avec succès!", 5000);
+                this._showMessage("Félicitations! Niveau 5 terminé avec succès!", 2000);
                 
                 // Nettoyer le niveau et passer au suivant
                 setTimeout(() => {
@@ -403,8 +403,8 @@ export class Level5 {
                     if (this.scene.metadata?.levelManager) {
                         this.scene.metadata.levelManager.goToNextLevel();
                     }
-                }, 6000);
-            }, 5000);
+                }, 2500);
+            }, 3000);
             
             // Si le jeu a un système de progression entre les niveaux, on peut l'activer ici
             if (this.scene.metadata && this.scene.metadata.gameManager) {
@@ -413,7 +413,7 @@ export class Level5 {
                     if (typeof this.scene.metadata.gameManager.levelCompleted === 'function') {
                         this.scene.metadata.gameManager.levelCompleted(5);
                     }
-                }, 6000);
+                }, 3000);
             }
             
         }).catch(error => {
@@ -437,13 +437,10 @@ export class Level5 {
         
         emitter.minSize = 0.1;
         emitter.maxSize = 0.5;
-        
         emitter.minLifeTime = 0.3;
         emitter.maxLifeTime = 1.5;
-        
         emitter.emitRate = 100;
         emitter.manualEmitCount = 300;
-        
         emitter.start();
         
         // Arrêter les particules après quelques secondes
@@ -456,12 +453,9 @@ export class Level5 {
     }
 
     _victoire() {
-        if (this.isCompleted) return; // Éviter les appels multiples
-        
+        if (this.isCompleted) return; 
         this.isCompleted = true;
         this._showMessage("Félicitations! Vous avez libéré tous les quartiers de la ville!", 5000);
-        
-        // Si la tempête n'a pas encore commencé, on la démarre
         if (!this.stormStarted) {
             this._startPurpleStorm();
         }

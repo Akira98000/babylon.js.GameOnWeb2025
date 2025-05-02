@@ -68,7 +68,21 @@ export class LevelManager {
                 text: "Atteignez la fusée et préparez-vous pour l'ultime bataille contre le boss final."
             }
         };
-        this.currentAudio = this.standardAudio;
+        
+        // Initialisation des musiques
+        this.standardAudio = new Audio("/assets/theme_sound.mp3");
+        this.standardAudio.loop = true;
+        this.standardAudio.volume = 0.5;
+        
+        this.combatAudio = new Audio("/assets/level_fight.mp3");
+        this.combatAudio.loop = true;
+        this.combatAudio.volume = 0.5;
+        
+        this.currentAudio = null;
+        
+        // Démarrer la musique standard au début
+        this.switchToMusic("standard");
+        
         this.levels[0].onComplete = this.goToNextLevel.bind(this);
         this.levels[1].onComplete = this.goToNextLevel.bind(this);
         this.levels[2].onComplete = this.goToNextLevel.bind(this);
@@ -88,10 +102,18 @@ export class LevelManager {
                 };
                 await this.cutScenes[0].init();
             } else {
+                this.switchToMusic("standard");
                 await this.levels[0].init();
                 this._showLevelInstructions();
             }
         } else if (this.levels[this.currentLevel]) {
+            // Jouer la musique appropriée selon le niveau
+            if (this.currentLevel <= 2 || this.currentLevel === 6) {
+                this.switchToMusic("standard");
+            } else {
+                this.switchToMusic("combat");
+            }
+            
             await this.levels[this.currentLevel].init();
             this._showLevelInstructions();
         }
@@ -110,11 +132,13 @@ export class LevelManager {
             this.currentLevel = 1;
             if (this.cutScenes[1]) {
                 this.cutScenes[1].onComplete = () => {
+                    this.switchToMusic("standard");
                     this.levels[1].init();
                     this._showLevelInstructions();
                 };
                 await this.cutScenes[1].init();
             } else {
+                this.switchToMusic("standard");
                 await this.levels[1].init();
                 this._showLevelInstructions();
             }
@@ -122,19 +146,21 @@ export class LevelManager {
             this.currentLevel = 2;
             if (this.cutScenes[2]) {
                 this.cutScenes[2].onComplete = () => {
+                    this.switchToMusic("standard");
                     this.levels[2].init();
                     this._showLevelInstructions();
                 };
                 await this.cutScenes[2].init();
             } else {
+                this.switchToMusic("standard");
                 await this.levels[2].init();
                 this._showLevelInstructions();
             }
         } else if (this.currentLevel === 2) {
             this.currentLevel = 3;
-            this.switchToMusic("catastrophe");
             if (this.cutScenes[3]) {
                 this.cutScenes[3].onComplete = () => {
+                    this.switchToMusic("combat");
                     this.levels[3].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level3:", error);
                     });
@@ -142,6 +168,7 @@ export class LevelManager {
                 };
                 await this.cutScenes[3].init();
             } else {
+                this.switchToMusic("combat");
                 this.levels[3].init().catch(error => {
                     console.error("Erreur lors de l'initialisation du Level3:", error);
                 });
@@ -152,10 +179,10 @@ export class LevelManager {
                 this.levels[3].forceRestoreColors();
             }
             this.currentLevel = 4;
-            this.switchToMusic("combat");
             setTimeout(async () => {
                 if (this.cutScenes[4]) {
                     this.cutScenes[4].onComplete = () => {
+                        this.switchToMusic("combat");
                         this.levels[4].init().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level4:", error);
                         });
@@ -163,6 +190,7 @@ export class LevelManager {
                     };
                     await this.cutScenes[4].init();
                 } else {
+                    this.switchToMusic("combat");
                     this.levels[4].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level4:", error);
                     });
@@ -176,6 +204,7 @@ export class LevelManager {
             setTimeout(async () => {
                 if (this.cutScenes[5]) {
                     this.cutScenes[5].onComplete = () => {
+                        this.switchToMusic("combat");
                         this.levels[5].init().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level5:", error);
                         });
@@ -183,6 +212,7 @@ export class LevelManager {
                     };
                     await this.cutScenes[5].init();
                 } else {
+                    this.switchToMusic("combat");
                     this.levels[5].init().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level5:", error);
                     });
@@ -198,6 +228,7 @@ export class LevelManager {
             setTimeout(async () => {
                 if (this.cutScenes[6]) {
                     this.cutScenes[6].onComplete = () => {
+                        this.switchToMusic("standard");
                         this.levels[6].initialize().catch(error => {
                             console.error("Erreur lors de l'initialisation du Level6:", error);
                         });
@@ -205,6 +236,7 @@ export class LevelManager {
                     };
                     await this.cutScenes[6].init();
                 } else {
+                    this.switchToMusic("standard");
                     this.levels[6].initialize().catch(error => {
                         console.error("Erreur lors de l'initialisation du Level6:", error);
                     });
@@ -254,8 +286,8 @@ export class LevelManager {
     switchToMusic(type) {
         let newAudio;
         switch(type) {
-            case "catastrophe":
-                newAudio = this.catastropheAudio;
+            case "standard":
+                newAudio = this.standardAudio;
                 break;
             case "combat":
                 newAudio = this.combatAudio;
@@ -268,7 +300,9 @@ export class LevelManager {
         if (newAudio === oldAudio) return;
         
         console.log(`Changement de musique vers ${type}`);
-        this.fadeOutAudio(oldAudio);
+        if (oldAudio) {
+            this.fadeOutAudio(oldAudio);
+        }
         
         newAudio.currentTime = 0;
         newAudio.volume = 0;
@@ -424,6 +458,13 @@ export class LevelManager {
         // Afficher la cutscene avant de charger le niveau sélectionné
         if (this.cutScenes[levelNumber]) {
             this.cutScenes[levelNumber].onComplete = () => {
+                // Sélectionner la musique appropriée selon le niveau
+                if (levelNumber <= 2 || levelNumber === 6) {
+                    this.switchToMusic("standard");
+                } else {
+                    this.switchToMusic("combat");
+                }
+                
                 if (levelNumber === 6) {
                     this.levels[levelNumber].initialize();
                 } else {
@@ -432,6 +473,13 @@ export class LevelManager {
             };
             await this.cutScenes[levelNumber].init();
         } else {
+            // Sélectionner la musique appropriée selon le niveau
+            if (levelNumber <= 2 || levelNumber === 6) {
+                this.switchToMusic("standard");
+            } else {
+                this.switchToMusic("combat");
+            }
+            
             // Initialiser le nouveau niveau
             if (levelNumber === 6) {
                 await this.levels[levelNumber].initialize();

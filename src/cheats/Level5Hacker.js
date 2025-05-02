@@ -64,6 +64,7 @@ export class Level5Hacker {
             { label: "Démarrer la tempête", action: "startStorm" },
             { label: "Libérer la reine", action: "releaseQueen" },
             { label: "Terminer le niveau", action: "completeLevel" },
+            { label: "Niveau suivant immédiat", action: "nextLevelImmediate" },
             { label: "Téléporter aux quartiers", action: "teleport" }
         ];
 
@@ -145,6 +146,9 @@ export class Level5Hacker {
                 break;
             case "completeLevel":
                 this._hackCompleteLevel(level5);
+                break;
+            case "nextLevelImmediate":
+                this._nextLevelImmediate(level5);
                 break;
             case "teleport":
                 this._showTeleportOptions(level5);
@@ -247,6 +251,22 @@ export class Level5Hacker {
         } else {
             level5._showMessage("Le niveau est déjà terminé!", 3000);
         }
+    }
+
+    /**
+     * Passe immédiatement au niveau suivant sans aucun délai
+     * @param {Object} level5 - Instance du niveau 5
+     */
+    _nextLevelImmediate(level5) {
+        level5._showMessage("🔓 HACK: Passage immédiat au niveau suivant! 🔓", 1000);
+        
+        // Nettoyer et passer au niveau suivant sans délai
+        setTimeout(() => {
+            level5.dispose();
+            if (level5.scene.metadata?.levelManager) {
+                level5.scene.metadata.levelManager.goToNextLevel();
+            }
+        }, 500); // Juste un court délai pour que le message s'affiche
     }
 
     /**

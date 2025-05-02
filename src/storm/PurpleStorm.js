@@ -270,9 +270,7 @@ export class PurpleStorm {
 
         this.scene.onBeforeRenderObservable.add(() => {
             if (!this.isActive) return;
-
-            // Réduire le rayon plus rapidement (doublement de la vitesse)
-            this.currentRadius -= shrinkRate * 2;
+                this.currentRadius -= shrinkRate * 2;
             
             // Mettre à jour le cylindre de la tempête
             if (this.stormWall) {
@@ -286,11 +284,9 @@ export class PurpleStorm {
             }
 
             if (!this.finalPhaseStarted && this.currentRadius <= this.finalRadius) {
-                // Démarrer la phase finale
                 this.finalPhaseStarted = true;
                 this.finalPhaseStartTime = Date.now();
-                // Réduire la durée de la phase finale de 20 à 10 secondes
-                this.finalPhaseDuration = 7000; // 7 secondes au lieu de 10
+                this.finalPhaseDuration = 7000; 
                 this._showMessage("⚠️ Phase finale de la tempête ! Tenez bon pendant 7 secondes ! ⚠️", 5000);
             }
 
@@ -312,13 +308,11 @@ export class PurpleStorm {
         this.isActive = false;
         if (this.scene.metadata?.level5) {
             this.scene.metadata.level5._showMessage("🎉 Félicitations ! Vous avez survécu à la tempête violette ! 🎉", 5000);
-            
-            // Nettoyer la scène et passer au niveau suivant après un court délai
             setTimeout(() => {
                 if (this.scene.metadata?.level5) {
-                    this.scene.metadata.level5.dispose(); // Nettoyer le niveau 5
+                    this.scene.metadata.level5.dispose(); 
                     if (this.scene.metadata?.levelManager) {
-                        this.scene.metadata.levelManager.goToNextLevel(); // Passer au niveau 6
+                        this.scene.metadata.levelManager.goToNextLevel(); 
                     }
                 }
             }, 6000);
