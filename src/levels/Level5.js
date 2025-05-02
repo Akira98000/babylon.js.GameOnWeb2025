@@ -387,24 +387,61 @@ export class Level5 {
             // Ajouter des effets visuels pour la libération
             this._createLiberationEffects(queenPosition);
             
-            // Afficher un message de victoire
-            this._showMessage("La reine a été libérée! Le royaume est sauvé!", 3000);
+            // Créer un message de victoire important (grand et coloré)
+            const victorymessage = document.createElement("div");
+            victorymessage.id = "victoryMessage";
+            victorymessage.style.position = "absolute";
+            victorymessage.style.top = "40%";
+            victorymessage.style.left = "50%";
+            victorymessage.style.transform = "translate(-50%, -50%)";
+            victorymessage.style.color = "#FFD700"; // Texte doré
+            victorymessage.style.fontSize = "46px";
+            victorymessage.style.fontFamily = "Arial, sans-serif";
+            victorymessage.style.fontWeight = "bold";
+            victorymessage.style.textAlign = "center";
+            victorymessage.style.textShadow = "0 0 15px rgba(255, 215, 0, 0.8), 0 0 5px rgba(255, 0, 255, 0.8)";
+            victorymessage.style.background = "rgba(0, 0, 0, 0.6)";
+            victorymessage.style.padding = "20px 40px";
+            victorymessage.style.borderRadius = "15px";
+            victorymessage.style.boxShadow = "0 0 30px rgba(128, 0, 128, 0.9)";
+            victorymessage.style.zIndex = "2000";
+            victorymessage.style.opacity = "0";
+            victorymessage.style.transition = "opacity 1s ease-in-out";
+            victorymessage.textContent = "La reine a été libérée! Le royaume est sauvé!";
+            document.body.appendChild(victorymessage);
             
-            // Marquer le niveau comme terminé immédiatement
-            this.isCompleted = true;
-            
-            // Passer au niveau suivant après un délai réduit
+            // Faire apparaître le message avec animation
             setTimeout(() => {
-                this._showMessage("Félicitations! Niveau 5 terminé avec succès!", 2000);
+                victorymessage.style.opacity = "1";
                 
-                // Nettoyer le niveau et passer au suivant
+                // Montrer le second message après un délai
                 setTimeout(() => {
-                    this.dispose();
-                    if (this.scene.metadata?.levelManager) {
-                        this.scene.metadata.levelManager.goToNextLevel();
-                    }
-                }, 2500);
-            }, 3000);
+                    victorymessage.style.opacity = "0";
+                    setTimeout(() => {
+                        victorymessage.textContent = "Félicitations! Niveau 5 terminé avec succès!";
+                        victorymessage.style.opacity = "1";
+                        
+                        // Passer au niveau suivant après avoir montré le message
+                        setTimeout(() => {
+                            victorymessage.style.opacity = "0";
+                            setTimeout(() => {
+                                if (victorymessage.parentNode) {
+                                    victorymessage.parentNode.removeChild(victorymessage);
+                                }
+                                
+                                // Marquer le niveau comme terminé
+                                this.isCompleted = true;
+                                
+                                // Nettoyer le niveau et passer au suivant
+                                this.dispose();
+                                if (this.scene.metadata?.levelManager) {
+                                    this.scene.metadata.levelManager.goToNextLevel();
+                                }
+                            }, 1000);
+                        }, 3000);
+                    }, 1000);
+                }, 4000);
+            }, 100);
             
             // Si le jeu a un système de progression entre les niveaux, on peut l'activer ici
             if (this.scene.metadata && this.scene.metadata.gameManager) {
@@ -469,10 +506,15 @@ export class Level5 {
         message.style.left = "50%";
         message.style.transform = "translate(-50%, -50%)";
         message.style.color = "white";
-        message.style.fontSize = "24px";
+        message.style.fontSize = "30px";
         message.style.fontFamily = "Arial, sans-serif";
         message.style.textAlign = "center";
-        message.style.textShadow = "2px 2px 4px rgba(0,0,0,0.5)";
+        message.style.textShadow = "2px 2px 4px rgba(0,0,0,0.8)";
+        message.style.background = "rgba(0, 0, 0, 0.5)";
+        message.style.padding = "15px 25px";
+        message.style.borderRadius = "10px";
+        message.style.boxShadow = "0 0 10px rgba(128, 0, 128, 0.7)";
+        message.style.zIndex = "1500";
         message.style.display = "none";
         document.body.appendChild(message);
         return message;
@@ -480,11 +522,46 @@ export class Level5 {
 
     _showMessage(text, duration) {
         if (this.messageElement) {
+            // Sauvegarder l'ancien message s'il est actuellement affiché
+            const wasDisplayed = this.messageElement.style.display === "block";
+            const oldMessage = this.messageElement.textContent;
+            const oldTimeout = this._currentMessageTimeout;
+            
+            // Effacer le timeout précédent si existant
+            if (this._currentMessageTimeout) {
+                clearTimeout(this._currentMessageTimeout);
+                this._currentMessageTimeout = null;
+            }
+            
+            // Afficher le nouveau message
             this.messageElement.textContent = text;
             this.messageElement.style.display = "block";
+            
+            // Effet d'apparition
+            this.messageElement.style.opacity = "0";
+            this.messageElement.style.transition = "opacity 0.5s ease-in-out";
             setTimeout(() => {
-                this.messageElement.style.display = "none";
+                this.messageElement.style.opacity = "1";
+            }, 50);
+            
+            // Configurer le nouveau timeout pour masquer le message
+            this._currentMessageTimeout = setTimeout(() => {
+                // Effet de disparition
+                this.messageElement.style.opacity = "0";
+                setTimeout(() => {
+                    this.messageElement.style.display = "none";
+                    
+                    // Restaurer l'ancien message si nécessaire
+                    if (wasDisplayed && oldMessage && oldMessage !== text) {
+                        this._showMessage(oldMessage, duration);
+                    }
+                }, 500);
             }, duration);
+            
+            // Journaliser le message pour le débogage
+            console.log(`Message affiché: "${text}" (durée: ${duration}ms)`);
+        } else {
+            console.error("messageElement n'est pas défini");
         }
     }
 
