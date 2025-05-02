@@ -7,7 +7,6 @@ export class Level2 {
         this.bananas = [];
         this.friendCount = 0;
         this.proximityThreshold = 5;
-        this.messageElement = this._createMessage("", "bananaProximityMessage");
         this._keyHandler = this._handleKeyDown.bind(this);
         this.onComplete = null; 
     }
@@ -19,8 +18,8 @@ export class Level2 {
             new BABYLON.Vector3(0, 0, 2),
         ];
         
-        // Afficher le message d'introduction
-        this._displayStoryMessage();
+        // Suppression de l'affichage du message d'introduction
+        // this._displayStoryMessage();
 
         await Promise.all(positions.map(async (pos, i) => {
             const result = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'banana.glb', this.scene);
@@ -41,6 +40,9 @@ export class Level2 {
     checkProximity(playerPosition) {
         if (this.isCompleted) return;
         
+        // Assurons-nous d'avoir une position valide
+        if (!playerPosition) return;
+        
         let nearbyBanana = null;
         for (const bananaObj of this.bananas) {
             if (!bananaObj.isFriend) {
@@ -55,7 +57,7 @@ export class Level2 {
         if (nearbyBanana) {
             this._showProximityMessage();
         } else {
-            this._toggleMessage(this.messageElement, false);
+            this._hideProximityMessage();
         }
     }
 
@@ -68,6 +70,9 @@ export class Level2 {
             if (BABYLON.Vector3.Distance(playerPos, bananaObj.mesh.position) < this.proximityThreshold) {
                 bananaObj.isFriend = true;
                 this.friendCount++;
+                // Masquer le message de proximité
+                this._hideProximityMessage();
+                // Afficher le message d'amitié
                 this._showFriendshipMessage();
                 break;
             }
@@ -79,28 +84,11 @@ export class Level2 {
         if (this.isCompleted) return;
         this.isCompleted = true;
         
-        // Masquer tous les messages d'interaction
-        this._toggleMessage(this.messageElement, false);
+        // Masquer le message de proximité
+        this._hideProximityMessage();
         
-        // Supprimer tous les autres messages qui pourraient être affichés
-        const allMessages = document.querySelectorAll('[id^="bananaProximity"], [id^="message"], [class*="message"]');
-        allMessages.forEach(element => {
-            if (element !== this.messageElement) {
-                element.style.display = "none";
-            }
-        });
-        
-        // Afficher le message de réussite
-        this._displayCompletionMessage();
-        
-        // Supprimer l'écouteur d'événements
-        window.removeEventListener("keydown", this._keyHandler);
-        
-        // Appeler le callback onComplete après un court délai
-        setTimeout(() => {
-            // S'assurer une dernière fois que tous les messages sont masqués
-            this._toggleMessage(this.messageElement, false);
-            
+        // Afficher le message de réussite et les confettis
+        this._showConfetti().then(() => {
             // Nettoyer les bananes avant de passer au niveau suivant
             this._cleanupBananas();
             
@@ -108,7 +96,10 @@ export class Level2 {
             if (typeof this.onComplete === 'function') {
                 this.onComplete();
             }
-        }, 5000);
+        });
+        
+        // Supprimer l'écouteur d'événements
+        window.removeEventListener("keydown", this._keyHandler);
     }
 
     _cleanupBananas() {
@@ -151,94 +142,121 @@ export class Level2 {
     }
     
     _showProximityMessage() {
-        // S'assurer que messageElement est correctement initialisé
-        if (!this.messageElement) {
-            this.messageElement = this._createMessage("", "bananaProximityMessage");
+        // Approche simplifiée : créer le message directement
+        if (!document.getElementById("bananaMessage")) {
+            const messageDiv = document.createElement("div");
+            messageDiv.id = "bananaMessage";
+            messageDiv.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 40%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: rgba(0, 0, 0, 0.75);
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    text-align: center;
+                    z-index: 10000;
+                    width: 60%;
+                    max-width: 400px;
+                    font-family: Arial, sans-serif;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    backdrop-filter: blur(4px);
+                ">
+                    <h2 style="margin: 5px 0; font-size: 22px; color: #FFEB3B;">Une banane sympathique !</h2>
+                    <div style="font-size: 38px; margin: 10px 0;">🍌</div>
+                    <p style="margin: 8px 0; font-size: 16px;">Appuyez sur <strong style="color: #FFEB3B;">F</strong> pour devenir ami avec cette banane.</p>
+                </div>
+            `;
+            document.body.appendChild(messageDiv);
+        } else {
+            document.getElementById("bananaMessage").style.display = "block";
         }
-        
-        // Mettre à jour le message pour devenir ami
-        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
-            this.messageElement.title.textContent = "Une banane sympathique !";
-        }
-        
-        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
-            this.messageElement.icon.textContent = "🍌";
-        }
-        
-        if (this.messageElement.textElement) {
-            this.messageElement.textElement.innerHTML = "Appuyez sur <strong>F</strong> pour devenir ami avec cette banane.";
-        }
-        
-        this.messageElement.style.display = "flex";
     }
-    
+
+    _hideProximityMessage() {
+        // Masquer le message
+        const message = document.getElementById("bananaMessage");
+        if (message) {
+            message.style.display = "none";
+        }
+    }
+
     _showFriendshipMessage() {
-        // Créer un message flottant temporaire
-        const message = document.createElement("div");
-        Object.assign(message.style, {
-            position: "fixed",
-            top: "30%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "rgba(76, 175, 80, 0.9)",
-            color: "white",
-            padding: "15px 25px",
-            borderRadius: "10px",
-            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            fontSize: "20px",
-            fontWeight: "bold",
-            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
-            zIndex: "1001",
-            opacity: "0",
-            transition: "opacity 0.3s, transform 0.3s"
-        });
-        
-        message.textContent = `Nouvelle amitié forgée ! (${this.friendCount}/3)`;
-        document.body.appendChild(message);
-        
-        // Animation d'entrée
-        setTimeout(() => {
-            message.style.opacity = "1";
-            message.style.transform = "translate(-50%, -60%)";
+        // Créer un message dans le même style que le message de proximité
+        if (!document.getElementById("friendshipMessage")) {
+            const messageDiv = document.createElement("div");
+            messageDiv.id = "friendshipMessage";
+            messageDiv.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 40%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background-color: rgba(0, 0, 0, 0.75);
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    text-align: center;
+                    z-index: 10000;
+                    width: 60%;
+                    max-width: 400px;
+                    font-family: Arial, sans-serif;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    backdrop-filter: blur(4px);
+                ">
+                    <h2 style="margin: 5px 0; font-size: 22px; color: #4CAF50;">Nouvelle amitié forgée !</h2>
+                    <div style="font-size: 38px; margin: 10px 0;">🍌</div>
+                    <p style="margin: 8px 0; font-size: 16px;">(${this.friendCount}/3)</p>
+                </div>
+            `;
+            document.body.appendChild(messageDiv);
             
-            // Animation de sortie
+            // Supprimer le message après 2 secondes
             setTimeout(() => {
-                message.style.opacity = "0";
-                message.style.transform = "translate(-50%, -70%)";
-                
-                setTimeout(() => {
-                    message.remove();
-                }, 500);
-            }, 2000);
-        }, 0);
-    }
-
-    _toggleMessage(element, visible) {
-        if (element) element.style.display = visible ? "flex" : "none";
-    }
-
-    _createMessage(text, id) {
-        let element = document.getElementById(id);
-        if (element) {
-            // Vérifier si les propriétés nécessaires existent déjà
-            if (!element.title) {
-                // Recréer les éléments manquants
-                const header = element.querySelector("div");
-                if (header) {
-                    const title = header.querySelector("div:nth-child(2)");
-                    const icon = header.querySelector("div:nth-child(1)");
-                    if (title) element.title = title;
-                    if (icon) element.icon = icon;
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
                 }
-            }
-            return element;
+            }, 2000);
         }
+    }
+
+    _showConfetti() {
+        return new Promise((resolve) => {
+            // Vérifier si la bibliothèque canvas-confetti est déjà chargée
+            if (typeof confetti === 'undefined') {
+                // Charger la bibliothèque canvas-confetti depuis CDN
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js';
+                script.async = true;
+                
+                script.onload = () => {
+                    this._launchConfetti(resolve);
+                };
+                
+                script.onerror = () => {
+                    console.error("Impossible de charger la bibliothèque confetti");
+                    resolve(); // Continuer même en cas d'erreur
+                };
+                
+                document.head.appendChild(script);
+            } else {
+                this._launchConfetti(resolve);
+            }
+        });
+    }
+
+    _launchConfetti(callback) {
+        const duration = 6000; // Durée totale de l'animation en ms
+        const end = Date.now() + duration;
         
-        const container = document.createElement("div");
-        container.id = id;
-        
-        // Style moderne similaire au tutoriel
-        Object.assign(container.style, {
+        // Créer un message de célébration avec le même style que les instructions du jeu
+        const celebrationMsg = document.createElement("div");
+        celebrationMsg.id = 'celebration-message';
+        Object.assign(celebrationMsg.style, {
             position: "fixed",
             top: "50%",
             left: "50%",
@@ -248,243 +266,174 @@ export class Level2 {
             borderRadius: "15px",
             color: "white",
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-            display: "none",
+            display: "block",
             zIndex: "1000",
-            maxWidth: "600px",
             width: "80%",
+            maxWidth: "400px",
             backdropFilter: "blur(5px)",
             border: "1px solid rgba(255, 255, 255, 0.1)",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-            flexDirection: "column",
-            gap: "20px"
+            textAlign: "center",
+            opacity: "1"
         });
-        
-        // En-tête du popup
+
+        // Titre avec icône
         const header = document.createElement("div");
         Object.assign(header.style, {
             display: "flex",
             alignItems: "center",
-            marginBottom: "20px",
-            gap: "15px"
+            marginBottom: "15px",
+            gap: "15px",
+            justifyContent: "center"
         });
-        
+
         const icon = document.createElement("div");
-        Object.assign(icon.style, {
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            backgroundColor: "#4a90e2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "24px"
-        });
         icon.textContent = "🍌";
+        Object.assign(icon.style, {
+            fontSize: "48px"
+        });
         
         const title = document.createElement("div");
+        title.textContent = "Niveau Complété";
         Object.assign(title.style, {
-            fontSize: "22px",
+            fontSize: "24px",
             fontWeight: "bold"
         });
-        title.textContent = "Mission";
         
         header.appendChild(icon);
         header.appendChild(title);
-        container.appendChild(header);
+        celebrationMsg.appendChild(header);
         
-        // Conteneur du message
-        const messageContainer = document.createElement("div");
-        Object.assign(messageContainer.style, {
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "15px",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            padding: "20px",
-            borderRadius: "10px",
-            marginBottom: "20px"
+        // Instructions
+        const messageText = document.createElement("div");
+        messageText.innerHTML = "Félicitations ! Vous avez réussi à vous faire des amis avec toutes les bananes.";
+        Object.assign(messageText.style, {
+            fontSize: "16px",
+            lineHeight: "1.5",
+            marginBottom: "20px",
+            padding: "0 10px"
         });
+        celebrationMsg.appendChild(messageText);
         
-        // Avatar
-        const avatar = document.createElement("div");
-        Object.assign(avatar.style, {
-            width: "50px",
-            height: "50px",
-            borderRadius: "50%",
-            backgroundColor: "#4a90e2",
-            backgroundImage: "url('/assets/avatar.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            flexShrink: "0"
-        });
-        
-        // Texte du message
-        const textElement = document.createElement("div");
-        Object.assign(textElement.style, {
-            fontSize: "18px",
-            lineHeight: "1.6",
-            color: "rgba(255, 255, 255, 0.9)",
-            fontWeight: "400"
-        });
-        textElement.innerHTML = text;
-        
-        messageContainer.appendChild(avatar);
-        messageContainer.appendChild(textElement);
-        container.appendChild(messageContainer);
-        
-        // Bouton OK
+        // Bouton OK (initialement masqué)
         const okButton = document.createElement("button");
-        okButton.textContent = "Compris !";
+        okButton.textContent = "OK";
         Object.assign(okButton.style, {
-            padding: "12px 0",
-            fontSize: "18px",
-            backgroundColor: "#4CAF50",
-            color: "white",
+            padding: "8px 20px",
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "5px",
+            color: "white",
             cursor: "pointer",
-            fontWeight: "bold",
-            transition: "all 0.3s ease",
+            fontSize: "16px",
             width: "100%",
             marginTop: "10px",
+            transition: "background-color 0.3s",
             display: "none"
         });
         
-        okButton.onmouseover = function() {
-            this.style.backgroundColor = "#45a049";
-            this.style.transform = "translateY(-2px)";
-            this.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.2)";
-        };
+        okButton.addEventListener("mouseenter", () => {
+            okButton.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+        });
         
-        okButton.onmouseout = function() {
-            this.style.backgroundColor = "#4CAF50";
-            this.style.transform = "translateY(0)";
-            this.style.boxShadow = "none";
-        };
+        okButton.addEventListener("mouseleave", () => {
+            okButton.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+        });
         
-        okButton.onclick = () => {
-            this._fadeOutElement(container);
-        };
-        
-        container.appendChild(okButton);
-        document.body.appendChild(container);
-        
-        // Stocker les références aux éléments internes
-        container.textElement = textElement;
-        container.okButton = okButton;
-        container.title = title;
-        container.icon = icon;
-        
-        return container;
-    }
-
-    _displayStoryMessage() {
-        const storyText = "Votre mission est de vous faire des amis dans cette carte ! Approchez-vous des bananes et appuyez sur F pour lier amitié avec elles. Trouvez et liez-vous d'amitié avec 3 bananes pour réussir le niveau.";
-        
-        // S'assurer que messageElement est correctement initialisé
-        if (!this.messageElement) {
-            this.messageElement = this._createMessage("", "bananaProximityMessage");
-        }
-        
-        // Vérifier si title et icon existent
-        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
-            this.messageElement.title.textContent = "Faites-vous des Amis !";
-        }
-        
-        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
-            this.messageElement.icon.textContent = "👋";
-        }
-        
-        if (this.messageElement.textElement) {
-            this.messageElement.textElement.innerHTML = "";
-        }
-        
-        this.messageElement.style.display = "flex";
-        this.messageElement.style.opacity = "0";
-        
-        // Animation d'entrée
-        let opacity = 0;
-        const fadeInterval = setInterval(() => {
-            opacity += 0.05;
-            if (opacity >= 1) {
-                opacity = 1;
-                clearInterval(fadeInterval);
-                this._animateText(storyText);
+        okButton.addEventListener("click", () => {
+            if (celebrationMsg.parentNode) {
+                celebrationMsg.parentNode.removeChild(celebrationMsg);
             }
-            this.messageElement.style.opacity = opacity;
-        }, 20);
-    }
-    
-    _displayCompletionMessage() {
-        const completionText = "Félicitations ! Vous avez réussi à vous faire des amis avec toutes les bananes. Votre sociabilité est impressionnante et les bananes parlent déjà de vous en bien !";
+            callback(); // Passer au niveau suivant lorsque l'utilisateur clique sur OK
+        });
         
-        // Vérifier si title et icon existent
-        if (this.messageElement.title && typeof this.messageElement.title.textContent !== 'undefined') {
-            this.messageElement.title.textContent = "Mission Accomplie !";
-        }
+        celebrationMsg.appendChild(okButton);
+        document.body.appendChild(celebrationMsg);
         
-        if (this.messageElement.icon && typeof this.messageElement.icon.textContent !== 'undefined') {
-            this.messageElement.icon.textContent = "🎉";
-        }
+        // Fonction pour créer différents types d'effets de confettis
+        const runConfettiEffect = () => {
+            // Effet de canon au centre
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6, x: 0.5 },
+                colors: ['#FFD700', '#FFA500', '#FF4500', '#87CEEB', '#7FFF00', '#FF69B4']
+            });
+            
+            // Effet latéral gauche
+            setTimeout(() => {
+                confetti({
+                    particleCount: 50,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.65 },
+                    colors: ['#1E90FF', '#32CD32', '#FFD700', '#FF69B4']
+                });
+            }, 250);
+            
+            // Effet latéral droit
+            setTimeout(() => {
+                confetti({
+                    particleCount: 50,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.65 },
+                    colors: ['#FF4500', '#9370DB', '#00CED1', '#FF69B4']
+                });
+            }, 400);
+        };
         
-        if (this.messageElement.textElement) {
-            this.messageElement.textElement.innerHTML = "";
-        }
+        // Lancer le premier effet immédiatement
+        runConfettiEffect();
         
-        this.messageElement.style.display = "flex";
-        this.messageElement.style.opacity = "0";
-        
-        // Animation d'entrée
-        let opacity = 0;
-        const fadeInterval = setInterval(() => {
-            opacity += 0.05;
-            if (opacity >= 1) {
-                opacity = 1;
-                clearInterval(fadeInterval);
-                this._animateText(completionText);
-            }
-            this.messageElement.style.opacity = opacity;
-        }, 20);
-    }
-
-    _animateText(text) {
-        let index = 0;
-        const textInterval = setInterval(() => {
-            if (index < text.length) {
-                this.messageElement.textElement.innerHTML += text.charAt(index);
-                index++;
-            } else {
-                clearInterval(textInterval);
-                this.messageElement.okButton.style.display = "block";
+        // Lancer des effets supplémentaires à intervalles
+        const interval = setInterval(() => {
+            if (Date.now() > end) {
+                clearInterval(interval);
                 
-                // Animation d'entrée du bouton
-                this.messageElement.okButton.style.opacity = "0";
-                this.messageElement.okButton.style.transform = "translateY(20px)";
+                // Un dernier effet spécial à la fin
+                confetti({
+                    particleCount: 200,
+                    spread: 160,
+                    origin: { y: 0.6 },
+                    colors: ['#FFD700', '#FFA500', '#FF4500', '#87CEEB', '#32CD32'],
+                    gravity: 0.5,
+                    scalar: 2,
+                    drift: 1,
+                    ticks: 300
+                });
                 
+                // Afficher le bouton OK après la fin de l'animation
                 setTimeout(() => {
-                    this.messageElement.okButton.style.opacity = "1";
-                    this.messageElement.okButton.style.transform = "translateY(0)";
+                    // Afficher le bouton pour permettre à l'utilisateur de continuer
+                    okButton.style.display = "block";
+                    okButton.style.opacity = "0";
                     
-                    // Fermer automatiquement après un délai
-                    setTimeout(() => {
-                        if (this.messageElement.style.display !== "none") {
-                            this._fadeOutElement(this.messageElement);
+                    // Animer l'apparition du bouton
+                    let opacity = 0;
+                    const fadeInInterval = setInterval(() => {
+                        opacity += 0.1;
+                        if (opacity >= 1) {
+                            opacity = 1;
+                            clearInterval(fadeInInterval);
                         }
-                    }, 15000);
-                }, 300);
+                        okButton.style.opacity = opacity;
+                    }, 50);
+                    
+                    // Si l'utilisateur ne clique pas sur le bouton après un certain temps,
+                    // passer automatiquement au niveau suivant
+                    setTimeout(() => {
+                        if (celebrationMsg.parentNode) {
+                            celebrationMsg.parentNode.removeChild(celebrationMsg);
+                            callback(); // Passer au niveau suivant automatiquement
+                        }
+                    }, 5000);
+                }, 1500);
+                return;
             }
-        }, 30);
-    }
-    
-    _fadeOutElement(element) {
-        let opacity = 1;
-        const fadeInterval = setInterval(() => {
-            opacity -= 0.05;
-            if (opacity <= 0) {
-                opacity = 0;
-                clearInterval(fadeInterval);
-                element.style.display = "none";
-            }
-            element.style.opacity = opacity;
-        }, 20);
+            
+            // Lancer des effets différents à chaque intervalle
+            runConfettiEffect();
+        }, 1200);
     }
 }
