@@ -436,8 +436,6 @@ export class Level6 {
         this.countdownValue = 10;
         this.countdownElement.textContent = this.countdownValue;
         const camera = this.scene.activeCamera;
-        
-        // Variable pour stocker la position initiale de la caméra
         const initialY = camera.parent ? camera.parent.position.y : 0;
         
         if (camera && camera.parent) {
@@ -456,8 +454,6 @@ export class Level6 {
             
             cameraRotation.setKeys(rotationKeyFrames);
             camera.parent.animations = [cameraRotation];
-            
-            // Position plus élevée pour avoir une meilleure vue panoramique
             camera.parent.position.y += 3;
             
             // Démarrer l'animation de rotation
