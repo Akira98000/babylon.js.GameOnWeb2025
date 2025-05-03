@@ -14,23 +14,17 @@ export class MainMenu {
         this.loadingScreen = new LoadingScreen();
         this.isDisposed = false;
         this.showingPressAnyKey = true;
-        this.isMobileDevice = this._checkIfMobile();
 
         this._createScene();
 
         const resizeHandler = () => {
             if (this.engine && !this.isDisposed) {
                 this.engine.resize();
-                this._handleLayoutForMobile();
             }
         };
 
         window.addEventListener('resize', resizeHandler);
         this.resizeHandler = resizeHandler;
-    }
-
-    _checkIfMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     }
 
     _createScene() {
@@ -39,24 +33,6 @@ export class MainMenu {
         this.camera.attachControl(this.canvas, true);
         this._createUI();
         this._startRendering();
-    }
-
-    _handleLayoutForMobile() {
-        const isMobile = this._checkIfMobile();
-        
-        if (this.leftContainer && this.rightContainer) {
-            if (isMobile) {
-                this.leftContainer.style.width = '100%';
-                this.rightContainer.style.display = 'none';
-                
-                if (this.showingPressAnyKey && this.buttonsContainer) {
-                    this._showMainMenu(); // Passer directement aux boutons sur mobile
-                }
-            } else {
-                this.leftContainer.style.width = '55%';
-                this.rightContainer.style.display = 'block';
-            }
-        }
     }
 
     _createUI() {
@@ -70,26 +46,12 @@ export class MainMenu {
 
         const leftContainer = document.createElement('div');
         Object.assign(leftContainer.style, {
-            width: this.isMobileDevice ? '100%' : '55%', 
-            height: '100%', 
-            background: 'linear-gradient(276deg, rgb(0, 0, 0), rgb(0 0 0 / 33%))', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            padding: '0 5%', 
-            position: 'relative', 
-            zIndex: '1'
+            width: '55%', height: '100%', background: 'linear-gradient(276deg, rgb(0, 0, 0), rgb(0 0 0 / 33%))', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '0 5%', position: 'relative', zIndex: '1'
         });
 
         const rightContainer = document.createElement('div');
         Object.assign(rightContainer.style, {
-            width: '45%', 
-            height: '100%', 
-            position: 'relative', 
-            overflow: 'hidden', 
-            background: 'black',
-            display: this.isMobileDevice ? 'none' : 'block'
+            width: '45%', height: '100%', position: 'relative', overflow: 'hidden', background:'black'
         });
 
         const imageElement = document.createElement('div');
@@ -116,40 +78,20 @@ export class MainMenu {
         const gameTitle = document.createElement('h1');
         gameTitle.textContent = 'Dreamfall';
         Object.assign(gameTitle.style, {
-            color: 'white', 
-            fontSize: this.isMobileDevice ? '3rem' : '4rem', 
-            marginBottom: '0.01rem', 
-            textAlign: 'left', 
-            fontWeight: 'bold', 
-            letterSpacing: '2px', 
-            background: 'linear-gradient(to right, white, #86a8e7)', 
-            WebkitBackgroundClip: 'text', 
-            WebkitTextFillColor: 'transparent', 
-            width: '100%'
+            color: 'white', fontSize: '4rem', marginBottom: '0.01rem', textAlign: 'left', fontWeight: 'bold', letterSpacing: '2px', background: 'linear-gradient(to right, white, #86a8e7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', width: '100%'
         });
 
         const subtitle = document.createElement('h2');
         subtitle.textContent = 'The invasion began where dreams were born !';
         Object.assign(subtitle.style, {
-            color: 'white', 
-            fontSize: this.isMobileDevice ? '1rem' : '1.3rem', 
-            marginBottom: '3rem', 
-            marginTop: '0.01rem', 
-            textAlign: 'left', 
-            opacity: '0.9', 
-            width: '100%'
+            color: 'white', fontSize: '1.3rem', marginBottom: '3rem', marginTop: '0.01rem', textAlign: 'left', opacity: '0.9', width: '100%'
         });
 
         const pressAnyKeyContainer = document.createElement('div');
         pressAnyKeyContainer.id = 'pressAnyKeyContainer';
         Object.assign(pressAnyKeyContainer.style, {
-            display: this.isMobileDevice ? 'none' : 'flex', // Cacher sur mobile
-            flexDirection: 'column', 
-            alignItems: 'left', 
-            justifyContent: 'left', 
-            width: '100%', 
-            textAlign: 'left', 
-            marginTop: '1rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'left', justifyContent: 'left', 
+            width: '100%', textAlign: 'left', marginTop: '1rem',
             transition: 'opacity 0.8s ease-out, transform 0.8s ease-out'
         });
 
@@ -165,13 +107,13 @@ export class MainMenu {
         const buttonsContainer = document.createElement('div');
         buttonsContainer.id = 'buttonsContainer';
         Object.assign(buttonsContainer.style, {
-            display: this.isMobileDevice ? 'flex' : 'none', // Afficher directement sur mobile
+            display: 'none',
             flexDirection: 'column', 
             gap: '1.5rem', 
             width: '100%', 
             alignItems: 'flex-start',
-            opacity: this.isMobileDevice ? '1' : '0',
-            transform: this.isMobileDevice ? 'translateY(0)' : 'translateY(20px)',
+            opacity: '0',
+            transform: 'translateY(20px)',
             transition: 'opacity 0.8s ease-in-out, transform 0.8s ease-in-out'
         });
 
@@ -179,19 +121,7 @@ export class MainMenu {
             const button = document.createElement('button');
             button.textContent = text;
             Object.assign(button.style, {
-                backgroundColor: isDisabled ? 'rgba(100, 100, 100, 0.3)' : 'rgba(100, 100, 100, 0.3)', 
-                color: 'white', 
-                border: 'none', 
-                padding: this.isMobileDevice ? '12px 25px' : '15px 30px', 
-                width: this.isMobileDevice ? '200px' : '250px', 
-                fontSize: this.isMobileDevice ? '1.2rem' : '1.5rem', 
-                fontWeight: 'bold', 
-                borderRadius: '15px', 
-                cursor: isDisabled ? 'not-allowed' : 'pointer', 
-                transition: 'all 0.3s ease', 
-                position: 'relative', 
-                overflow: 'hidden', 
-                textAlign: 'left'
+                backgroundColor: isDisabled ? 'rgba(100, 100, 100, 0.3)' : 'rgba(100, 100, 100, 0.3)', color: 'white', border: 'none', padding: '15px 30px', width: '250px', fontSize: '1.5rem', fontWeight: 'bold', borderRadius: '15px', cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden', textAlign: 'left'
             });
 
             if (!isDisabled) {
@@ -241,7 +171,7 @@ export class MainMenu {
         const formTitle = document.createElement('h2');
         formTitle.textContent = 'Enter Your Name';
         Object.assign(formTitle.style, {
-            fontSize: this.isMobileDevice ? '2rem' : '2.5rem',
+            fontSize: '2.5rem',
             marginBottom: '1.5rem',
             background: 'linear-gradient(to right, white, #86a8e7)',
             WebkitBackgroundClip: 'text',
@@ -278,7 +208,7 @@ export class MainMenu {
             padding: '15px',
             fontSize: '1.2rem',
             width: '100%',
-            maxWidth: this.isMobileDevice ? '300px' : '350px',
+            maxWidth: '350px',
             marginBottom: '0.5rem',
             outline: 'none',
             transition: 'all 0.3s ease'
@@ -734,21 +664,13 @@ export class MainMenu {
         const gameSubtitle = document.createElement('div');
         gameSubtitle.textContent = 'GameOnWeb 2025 : Dreamland Theme';
         Object.assign(gameSubtitle.style, {
-            position: 'absolute', 
-            bottom: this.isMobileDevice ? '1.5rem' : '2rem', 
-            left: this.isMobileDevice ? '1.5rem' : '2rem', 
-            color: 'white', 
-            fontSize: this.isMobileDevice ? '0.9rem' : '1rem'
+            position: 'absolute', bottom: '2rem', left: '2rem', color: 'white', fontSize: '1rem'
         });
 
         const copyright = document.createElement('div');
         copyright.textContent = '© Team BabyGame - UnicA';
         Object.assign(copyright.style, {
-            position: 'absolute', 
-            bottom: this.isMobileDevice ? '0.5rem' : '1rem', 
-            left: this.isMobileDevice ? '1.5rem' : '2rem', 
-            color: 'white', 
-            fontSize: this.isMobileDevice ? '0.8rem' : '0.9rem'
+            position: 'absolute', bottom: '1rem', left: '2rem', color: 'white', fontSize: '0.9rem'
         });
 
         const styleSheet = document.createElement('style');
