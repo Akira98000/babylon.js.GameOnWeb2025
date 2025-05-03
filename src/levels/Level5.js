@@ -18,6 +18,19 @@ export class Level5 {
         this.nombreEnnemisVaincus = 0;
         this.lights = [];
         
+        // Système de checkpoints
+        this.checkpoints = [
+            { id: 0, name: "Début", position: new BABYLON.Vector3(-1.84, 0.10, -84.43), reached: true },
+            { id: 1, name: "Quartier Centre-Sud", position: new BABYLON.Vector3(-1.84, 0.10, -84.43), reached: false },
+            { id: 2, name: "Quartier Est", position: new BABYLON.Vector3(-111.76, 0.10, -83.29), reached: false },
+            { id: 3, name: "Quartier Nord", position: new BABYLON.Vector3(-61.82, 0.10, -30.11), reached: false },
+            { id: 4, name: "Tempête Violette", position: new BABYLON.Vector3(8.45, 0.10, -12.91), reached: false }
+        ];
+        this.currentCheckpoint = 0;
+        
+        // Charger le checkpoint si sauvegardé
+        this._loadCheckpoint();
+        
         // Trackers pour les ennemis par quartier
         this.ennemisParQuartier = [0, 0, 0];
         this.ennemisVaincusParQuartier = [0, 0, 0];
@@ -26,6 +39,22 @@ export class Level5 {
             { name: "Centre-Sud", position: new BABYLON.Vector3(-1.84, 0.10, -84.43) },
             { name: "Est", position: new BABYLON.Vector3(-111.76, 0.10, -83.29) },
             { name: "Nord", position: new BABYLON.Vector3(-61.82, 0.10, -30.11) }
+        ];
+        
+        // Définir les périmètres pour chaque groupe d'ennemis
+        this.perimetre = [
+            { // GRP 0 (Centre-Sud)
+                min: { x: -23.84, z: -87.15 },
+                max: { x: 23.39, z: -80.58 }
+            },
+            { // GRP 1 (Est)
+                min: { x: -122.22, z: -86.98 },
+                max: { x: -90.22, z: -78.83 }
+            },
+            { // GRP 2 (Nord)
+                min: { x: -65.27, z: -41.94 },
+                max: { x: -57.69, z: -3.62 }
+            }
         ];
         
         // Élément pour afficher les coordonnées du joueur
@@ -45,6 +74,10 @@ export class Level5 {
         this._showMessage("Niveau 5: La Reconquête des Quartiers!", 5000);
         this._playBattleSound();
         const player = this.scene.metadata.player.hero;
+        
+        // Positionner le joueur au checkpoint actuel
+        this._placePlayerAtCheckpoint(player);
+        
         const offset1 = new BABYLON.Vector3(-2, 0, -2);
         const worldOffset1 = player.position.add(offset1);
         this._spawnAmi(worldOffset1, 0);
@@ -160,13 +193,7 @@ export class Level5 {
         this._showMessage(`Quartier ${quartier.name}: Éliminez toutes les pizzas maléfiques!`, 4000);
         const positions = [];
         for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 3 + Math.random() * 5; 
-            positions.push(new BABYLON.Vector3(
-                quartier.position.x + Math.cos(angle) * distance,
-                quartier.position.y, 
-                quartier.position.z + Math.sin(angle) * distance
-            ));
+            positions.push(this._getPositionDansPerimetre(this.quartierActuel));
         }
         this.ennemisParQuartier[this.quartierActuel] = this.nombreEnnemisParQuartier;
         this.ennemisVaincusParQuartier[this.quartierActuel] = 0;
@@ -177,6 +204,28 @@ export class Level5 {
         }
 
         this.quartierActuel++;
+    }
+
+    // Méthode pour obtenir une position aléatoire dans le périmètre spécifié
+    _getPositionDansPerimetre(groupeIndex) {
+        const perimetre = this.perimetre[groupeIndex];
+        
+        // Générer des coordonnées aléatoires dans le périmètre
+        const x = perimetre.min.x + Math.random() * (perimetre.max.x - perimetre.min.x);
+        const z = perimetre.min.z + Math.random() * (perimetre.max.z - perimetre.min.z);
+        
+        return new BABYLON.Vector3(x, 0.10, z);
+    }
+
+    // Méthode pour vérifier si une position est dans le périmètre d'un groupe
+    estDansPerimetre(position, groupeIndex) {
+        const perimetre = this.perimetre[groupeIndex];
+        return (
+            position.x >= perimetre.min.x && 
+            position.x <= perimetre.max.x && 
+            position.z >= perimetre.min.z && 
+            position.z <= perimetre.max.z
+        );
     }
 
     _checkBulletCollisions() {
@@ -213,6 +262,10 @@ export class Level5 {
             const quartierActif = this.quartierActuel - 1;
             if (quartierActif >= 0 && 
                 this.ennemisVaincusParQuartier[quartierActif] >= this.ennemisParQuartier[quartierActif]) {
+                
+                // Sauvegarder le checkpoint quand un quartier est terminé
+                this._saveCheckpoint(quartierActif + 1);
+                
                 if (quartierActif === 2 && !this.stormStarted) {
                     this._startPurpleStorm();
                 } else if (this.quartierActuel < this.nombreQuartiers) {
@@ -237,6 +290,10 @@ export class Level5 {
     _startPurpleStorm() {
         if (!this.stormStarted) {
             this.stormStarted = true;
+            
+            // Sauvegarder le checkpoint de la tempête
+            this._saveCheckpoint(4);
+            
             for (let ennemi of this.ennemis) {
                 if (ennemi.mesh) {
                     ennemi.mesh.dispose();
@@ -373,6 +430,9 @@ export class Level5 {
             
             // Marquer le niveau comme terminé
             this.isCompleted = true;
+            
+            // Réinitialiser le checkpoint du niveau
+            localStorage.removeItem('level5_checkpoint');
             
             // Utiliser GameMessages pour afficher un message de célébration avec confettis
             GameMessages.showCelebrationMessage(
@@ -552,6 +612,11 @@ export class Level5 {
             }
         }
         
+        // Si le niveau est terminé avec succès, supprimer le checkpoint
+        if (this.isCompleted) {
+            localStorage.removeItem('level5_checkpoint');
+        }
+        
         // Nettoyer les modèles de la reine
         const helpQueen = this.scene.getMeshByName("helpQueen");
         if (helpQueen) {
@@ -646,6 +711,10 @@ export class Level5 {
 
             const ennemi = new EnnemiIA(this.scene, position, player);
             ennemi.quartier = this.quartierActuel - 1;
+            
+            // Assigner le périmètre à l'ennemi
+            ennemi.perimetreIndex = ennemi.quartier;
+            ennemi.perimetre = this.perimetre[ennemi.quartier];
             
             this.ennemis.push(ennemi);
             
@@ -753,6 +822,69 @@ export class Level5 {
         if (tousQuartiersLiberes && this.quartierActuel >= this.nombreQuartiers) {
             if (this.ennemis.length === 0) {
                 this._victoire();
+            }
+        }
+    }
+
+    _placePlayerAtCheckpoint(player) {
+        if (!player) return;
+        
+        const checkpoint = this.checkpoints[this.currentCheckpoint];
+        if (checkpoint) {
+            player.position = checkpoint.position.clone();
+            console.log(`Joueur placé au checkpoint ${checkpoint.id}: ${checkpoint.name}`);
+            this._showMessage(`Checkpoint: ${checkpoint.name}`, 3000);
+        }
+    }
+
+    _saveCheckpoint(checkpointId) {
+        if (checkpointId <= this.currentCheckpoint) return; // Ne pas régresser
+        
+        const checkpoint = this.checkpoints[checkpointId];
+        if (checkpoint) {
+            checkpoint.reached = true;
+            this.currentCheckpoint = checkpointId;
+            
+            // Sauvegarder dans le localStorage
+            localStorage.setItem('level5_checkpoint', checkpointId.toString());
+            console.log(`Checkpoint ${checkpointId} sauvegardé`);
+            
+            // Afficher un message
+            this._showMessage(`Checkpoint atteint: ${checkpoint.name}`, 3000);
+        }
+    }
+    
+    _loadCheckpoint() {
+        const savedCheckpoint = localStorage.getItem('level5_checkpoint');
+        if (savedCheckpoint) {
+            const checkpointId = parseInt(savedCheckpoint);
+            if (!isNaN(checkpointId) && checkpointId >= 0 && checkpointId < this.checkpoints.length) {
+                this.currentCheckpoint = checkpointId;
+                
+                // Marquer tous les checkpoints précédents comme atteints
+                for (let i = 0; i <= checkpointId; i++) {
+                    this.checkpoints[i].reached = true;
+                }
+                
+                console.log(`Checkpoint ${checkpointId} chargé`);
+                
+                // Avancer au quartier correspondant au checkpoint
+                if (checkpointId >= 1 && checkpointId <= 3) {
+                    this.quartierActuel = checkpointId;
+                    
+                    // Marquer les quartiers précédents comme terminés
+                    for (let i = 0; i < checkpointId; i++) {
+                        this.ennemisParQuartier[i] = this.nombreEnnemisParQuartier;
+                        this.ennemisVaincusParQuartier[i] = this.nombreEnnemisParQuartier;
+                    }
+                } else if (checkpointId === 4) {
+                    // Cas spécial: tempête violette
+                    this.quartierActuel = 3;
+                    for (let i = 0; i < 3; i++) {
+                        this.ennemisParQuartier[i] = this.nombreEnnemisParQuartier;
+                        this.ennemisVaincusParQuartier[i] = this.nombreEnnemisParQuartier;
+                    }
+                }
             }
         }
     }

@@ -259,11 +259,17 @@ export const createPlayer = async (scene, camera, canvas) => {
                             // Récupérer le niveau actuel
                             const currentLevel = scene.metadata.levelManager.currentLevel;
                             
-                            // Réinitialiser la position du joueur
-                            hero.position = new BABYLON.Vector3(0, 0, 0);
-                            
-                            // Redémarrer le niveau actuel
-                            scene.metadata.levelManager.goToLevel(currentLevel);
+                            // Vérifier s'il s'agit du niveau 5 pour utiliser les checkpoints
+                            if (currentLevel === 5 && scene.metadata.level5) {
+                                // Redémarrer le niveau 5 en gardant le checkpoint
+                                scene.metadata.levelManager.goToLevel(currentLevel);
+                            } else {
+                                // Pour les autres niveaux, réinitialiser la position du joueur
+                                hero.position = new BABYLON.Vector3(0, 0, 0);
+                                
+                                // Redémarrer le niveau actuel
+                                scene.metadata.levelManager.goToLevel(currentLevel);
+                            }
                         }
                     }, 1000);
                 }

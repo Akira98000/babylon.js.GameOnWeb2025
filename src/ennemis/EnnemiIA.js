@@ -11,6 +11,8 @@ export class EnnemiIA {
         this.player = player;
         this.position = position;
         this.quartier = -1;
+        this.perimetreIndex = -1;
+        this.perimetre = null;
         this.isBigBoss = isBigBoss;
         this.maxSpeed = isBigBoss ? 0.2 : 0.15;
         this.maxForce = isBigBoss ? 0.05 : 0.05;
@@ -544,6 +546,12 @@ export class EnnemiIA {
             this.currentAnimation = "run";
         }
 
+        // Ajouter une force de confinement pour rester dans le périmètre
+        if (this.perimetre && this.perimetreIndex >= 0) {
+            const confinementForce = this._calculateConfinementForce();
+            force.addInPlace(confinementForce);
+        }
+
         force.scaleInPlace(this.smoothingFactor);
         this.velocity.scaleInPlace(1 - this.smoothingFactor);
         this.velocity.addInPlace(force);
@@ -559,6 +567,15 @@ export class EnnemiIA {
         
         // Calculer la nouvelle position
         const newPosition = previousPosition.add(this.velocity);
+        
+        // Vérifier si la nouvelle position reste dans le périmètre
+        if (this.perimetre && this.perimetreIndex >= 0) {
+            if (!this._isPositionDansPerimetre(newPosition)) {
+                // La nouvelle position est hors périmètre, on l'ajuste
+                newPosition.x = Math.max(this.perimetre.min.x, Math.min(this.perimetre.max.x, newPosition.x));
+                newPosition.z = Math.max(this.perimetre.min.z, Math.min(this.perimetre.max.z, newPosition.z));
+            }
+        }
         
         // Vérifier les collisions avec les éléments de la map
         let collisionDetected = false;
@@ -763,22 +780,30 @@ export class EnnemiIA {
         while (!safePosFound && attempts < 10) {
             attempts++;
             
-            // Générer une direction aléatoire mais qui tend vers le joueur
-            const randomAngle = Math.random() * Math.PI * 2;
-            const randomDir = new BABYLON.Vector3(
-                Math.cos(randomAngle),
-                0,
-                Math.sin(randomAngle)
-            );
-            
-            // Combiner la direction aléatoire avec la direction vers le joueur
-            const combinedDir = randomDir.scale(0.7).add(dirToPlayer.scale(0.3)).normalize();
-            
-            // Distance aléatoire entre 5 et 15 unités
-            const distance = 5 + Math.random() * 10;
-            
-            // Nouvelle position potentielle
-            newPosition = this.root.position.add(combinedDir.scale(distance));
+            // Si l'ennemi a un périmètre assigné, on cherche une position à l'intérieur
+            if (this.perimetre && this.perimetreIndex >= 0) {
+                // Générer une position aléatoire dans le périmètre
+                const x = this.perimetre.min.x + Math.random() * (this.perimetre.max.x - this.perimetre.min.x);
+                const z = this.perimetre.min.z + Math.random() * (this.perimetre.max.z - this.perimetre.min.z);
+                newPosition = new BABYLON.Vector3(x, this.root.position.y, z);
+            } else {
+                // Générer une direction aléatoire mais qui tend vers le joueur
+                const randomAngle = Math.random() * Math.PI * 2;
+                const randomDir = new BABYLON.Vector3(
+                    Math.cos(randomAngle),
+                    0,
+                    Math.sin(randomAngle)
+                );
+                
+                // Combiner la direction aléatoire avec la direction vers le joueur
+                const combinedDir = randomDir.scale(0.7).add(dirToPlayer.scale(0.3)).normalize();
+                
+                // Distance aléatoire entre 5 et 15 unités
+                const distance = 5 + Math.random() * 10;
+                
+                // Nouvelle position potentielle
+                newPosition = this.root.position.add(combinedDir.scale(distance));
+            }
             
             // Vérifier que la nouvelle position n'est pas en collision
             safePosFound = this._isPositionSafe(newPosition);
@@ -797,6 +822,11 @@ export class EnnemiIA {
     
     _isPositionSafe(position) {
         if (!mapPartsData || mapPartsData.length === 0) return true;
+        
+        // Vérifier si la position est dans le périmètre
+        if (this.perimetre && this.perimetreIndex >= 0 && !this._isPositionDansPerimetre(position)) {
+            return false;
+        }
         
         // Hauteur de l'ennemi
         const enemyHeight = 2.0;
@@ -854,5 +884,42 @@ export class EnnemiIA {
         }
         
         return true;
+    }
+    
+    // Vérifie si une position est dans le périmètre assigné
+    _isPositionDansPerimetre(position) {
+        if (!this.perimetre) return true;
+        
+        return (
+            position.x >= this.perimetre.min.x && 
+            position.x <= this.perimetre.max.x && 
+            position.z >= this.perimetre.min.z && 
+            position.z <= this.perimetre.max.z
+        );
+    }
+    
+    // Calcule une force pour maintenir l'ennemi dans son périmètre
+    _calculateConfinementForce() {
+        if (!this.perimetre || !this.root) return new BABYLON.Vector3(0, 0, 0);
+        
+        const force = new BABYLON.Vector3(0, 0, 0);
+        const position = this.root.position;
+        const margin = 1.0; // Marge pour commencer à appliquer la force avant d'atteindre la limite
+        
+        // Vérifier les limites en X
+        if (position.x < this.perimetre.min.x + margin) {
+            force.x = this.maxForce * 3 * (1 - (position.x - this.perimetre.min.x) / margin);
+        } else if (position.x > this.perimetre.max.x - margin) {
+            force.x = -this.maxForce * 3 * (1 - (this.perimetre.max.x - position.x) / margin);
+        }
+        
+        // Vérifier les limites en Z
+        if (position.z < this.perimetre.min.z + margin) {
+            force.z = this.maxForce * 3 * (1 - (position.z - this.perimetre.min.z) / margin);
+        } else if (position.z > this.perimetre.max.z - margin) {
+            force.z = -this.maxForce * 3 * (1 - (this.perimetre.max.z - position.z) / margin);
+        }
+        
+        return force;
     }
 }

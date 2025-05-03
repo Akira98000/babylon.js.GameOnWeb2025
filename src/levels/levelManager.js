@@ -419,6 +419,11 @@ export class LevelManager {
         
         this.currentLevel = levelNumber;
         
+        // Si on réinitialise le niveau 5, recréer l'instance pour utiliser les checkpoints sauvegardés
+        if (levelNumber === 5) {
+            this.levels[5] = new Level5(this.scene);
+        }
+        
         // Afficher la cutscene avant de charger le niveau sélectionné
         if (this.cutScenes[levelNumber]) {
             this.cutScenes[levelNumber].onComplete = () => {
