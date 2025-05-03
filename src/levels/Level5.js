@@ -568,8 +568,30 @@ export class Level5 {
         if (animations) {
             for (let i = 0; i < animations.length; i++) {
                 const animation = animations[i];
-                if (animation && (animation.name === "help" || animation.name === "celebration")) {
-                    animation.dispose();
+                // Arrêter toutes les animations au lieu de seulement certaines
+                if (animation) {
+                    animation.stop();
+                    // Arrêter spécifiquement l'animation de danse (samba)
+                    if (animation.name === "help" || animation.name === "celebration" || 
+                        animation.name === "salsa" || animation.name === "samba" || 
+                        animation.name.toLowerCase().includes("dance")) {
+                        animation.dispose();
+                    }
+                }
+            }
+        }
+        
+        // S'assurer que les animations de danse sont arrêtées pour le héros
+        if (this.scene.metadata?.player?.hero) {
+            const hero = this.scene.metadata.player.hero;
+            if (this.scene.metadata.controls) {
+                // Forcer l'arrêt de l'animation de danse si elle est active
+                const controls = this.scene.metadata.controls;
+                if (typeof controls.changeAnimation === 'function') {
+                    const idleAnim = animations?.find(a => a.name === "idle");
+                    if (idleAnim) {
+                        controls.changeAnimation(idleAnim);
+                    }
                 }
             }
         }
