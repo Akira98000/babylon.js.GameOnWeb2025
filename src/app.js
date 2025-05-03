@@ -50,7 +50,7 @@ const initBabylon = async () => {
       scene.collisionsEnabled = true;
       scene.gravity = new BABYLON.Vector3(0, -9.81, 0);
       scene.metadata = {
-        shootingEnabled: false // Le tir est désactivé par défaut jusqu'au niveau 2b
+        shootingEnabled: false
       };
       
       if (!mainMenu || !mainMenu.loadingScreen) {

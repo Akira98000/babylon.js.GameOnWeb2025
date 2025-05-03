@@ -8,6 +8,11 @@ export class LoadingScreen {
         this.loadingStepText = null;
         this.loadingPercentage = 0;
         this.isVisible = false;
+        this.isMobileDevice = this._checkIfMobile();
+    }
+
+    _checkIfMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     }
 
     show() {
@@ -45,7 +50,7 @@ export class LoadingScreen {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '25px',
-            maxWidth: '600px',
+            maxWidth: this.isMobileDevice ? '90%' : '600px',
             width: '90%',
             zIndex: '10'
         });
@@ -113,11 +118,11 @@ export class LoadingScreen {
         const gameLogo = document.createElement('div');
         gameLogo.textContent = 'D';
         Object.assign(gameLogo.style, {
-            fontSize: '6rem',
+            fontSize: this.isMobileDevice ? '4rem' : '6rem',
             fontWeight: 'bold',
-            width: '120px',
-            height: '120px',
-            lineHeight: '120px',
+            width: this.isMobileDevice ? '90px' : '120px',
+            height: this.isMobileDevice ? '90px' : '120px',
+            lineHeight: this.isMobileDevice ? '90px' : '120px',
             background: 'linear-gradient(to right, white, #86a8e7)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -213,108 +218,112 @@ export class LoadingScreen {
         progressInfoContainer.appendChild(this.progressText);
         centerContainer.appendChild(progressInfoContainer);
 
-        // Ajout de conseils en dessous de la barre
-        const tipContainer = document.createElement('div');
-        Object.assign(tipContainer.style, {
-            marginTop: '40px',
-            padding: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.06)',
-            borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            width: '100%',
-            backdropFilter: 'blur(5px)'
-        });
+        // Ajout de conseils en dessous de la barre - UNIQUEMENT pour Desktop
+        if (!this.isMobileDevice) {
+            const tipContainer = document.createElement('div');
+            Object.assign(tipContainer.style, {
+                marginTop: '40px',
+                padding: '20px',
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                width: '100%',
+                backdropFilter: 'blur(5px)'
+            });
 
-        // Titre "Conseils pour gagner"
-        const tipTitle = document.createElement('div');
-        tipTitle.textContent = 'CONSEILS POUR GAGNER';
-        Object.assign(tipTitle.style, {
-            color: 'rgba(255, 255, 255, 0.9)',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            letterSpacing: '1.5px',
-            marginBottom: '15px'
-        });
+            // Titre "Conseils pour gagner"
+            const tipTitle = document.createElement('div');
+            tipTitle.textContent = 'CONSEILS POUR GAGNER';
+            Object.assign(tipTitle.style, {
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                letterSpacing: '1.5px',
+                marginBottom: '15px'
+            });
 
-        // Texte du conseil
-        const tipText = document.createElement('div');
-        Object.assign(tipText.style, {
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: '0.875rem',
-            fontWeight: '400',
-            lineHeight: '1.6',
-            transition: 'opacity 0.5s ease'
-        });
+            // Texte du conseil
+            const tipText = document.createElement('div');
+            Object.assign(tipText.style, {
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '0.875rem',
+                fontWeight: '400',
+                lineHeight: '1.6',
+                transition: 'opacity 0.5s ease'
+            });
 
-        // Liste des conseils
-        const tips = [
-            "Restez attentif aux mouvements des ennemis pour anticiper leurs attaques",
-            "Explorez chaque recoin pour découvrir des bonus cachés",
-            "Les rêves peuvent contenir des indices sur la suite de votre aventure",
-            "Utilisez l'environnement à votre avantage pendant les combats",
-            "Certains objets peuvent être combinés pour créer de puissants outils",
-            "N'hésitez pas à revenir dans des zones déjà explorées après avoir obtenu de nouvelles capacités",
-            "La nuit apporte de nouvelles opportunités et dangers"
-        ];
+            // Liste des conseils
+            const tips = [
+                "Restez attentif aux mouvements des ennemis pour anticiper leurs attaques",
+                "Explorez chaque recoin pour découvrir des bonus cachés",
+                "Les rêves peuvent contenir des indices sur la suite de votre aventure",
+                "Utilisez l'environnement à votre avantage pendant les combats",
+                "Certains objets peuvent être combinés pour créer de puissants outils",
+                "N'hésitez pas à revenir dans des zones déjà explorées après avoir obtenu de nouvelles capacités",
+                "La nuit apporte de nouvelles opportunités et dangers"
+            ];
 
-        // Fonction pour changer les conseils
-        let currentTipIndex = 0;
-        const updateTip = () => {
-            tipText.style.opacity = '0';
-            setTimeout(() => {
-                tipText.textContent = tips[currentTipIndex];
-                tipText.style.opacity = '1';
-                currentTipIndex = (currentTipIndex + 1) % tips.length;
-            }, 500);
-        };
+            // Fonction pour changer les conseils
+            let currentTipIndex = 0;
+            const updateTip = () => {
+                tipText.style.opacity = '0';
+                setTimeout(() => {
+                    tipText.textContent = tips[currentTipIndex];
+                    tipText.style.opacity = '1';
+                    currentTipIndex = (currentTipIndex + 1) % tips.length;
+                }, 500);
+            };
 
-        // Initialiser le premier conseil
-        tipText.textContent = tips[0];
-        setInterval(updateTip, 8000);
+            // Initialiser le premier conseil
+            tipText.textContent = tips[0];
+            setInterval(updateTip, 8000);
 
-        tipContainer.appendChild(tipTitle);
-        tipContainer.appendChild(tipText);
-        centerContainer.appendChild(tipContainer);
+            tipContainer.appendChild(tipTitle);
+            tipContainer.appendChild(tipText);
+            centerContainer.appendChild(tipContainer);
+        }
 
-        // Footer avec le titre du jeu et sous-titre
-        const footerContainer = document.createElement('div');
-        Object.assign(footerContainer.style, {
-            position: 'absolute',
-            bottom: '40px',
-            left: '0',
-            width: '100%',
-            textAlign: 'center',
-            zIndex: '10'
-        });
+        // Footer avec le titre du jeu et sous-titre - UNIQUEMENT pour Desktop
+        if (!this.isMobileDevice) {
+            const footerContainer = document.createElement('div');
+            Object.assign(footerContainer.style, {
+                position: 'absolute',
+                bottom: '40px',
+                left: '0',
+                width: '100%',
+                textAlign: 'center',
+                zIndex: '10'
+            });
 
-        const gameTitle = document.createElement('h1');
-        gameTitle.textContent = 'Dreamfall';
-        Object.assign(gameTitle.style, {
-            color: 'white',
-            fontSize: '4rem',
-            marginBottom: '0.01rem',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            background: 'linear-gradient(to right, white, #86a8e7)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-        });
+            const gameTitle = document.createElement('h1');
+            gameTitle.textContent = 'Dreamfall';
+            Object.assign(gameTitle.style, {
+                color: 'white',
+                fontSize: '4rem',
+                marginBottom: '0.01rem',
+                fontWeight: 'bold',
+                letterSpacing: '2px',
+                background: 'linear-gradient(to right, white, #86a8e7)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+            });
 
-        const subtitle = document.createElement('h2');
-        subtitle.textContent = 'The invasion began where dreams were born !';
-        Object.assign(subtitle.style, {
-            color: 'white',
-            fontSize: '1.3rem',
-            marginTop: '0.01rem',
-            opacity: '0.9'
-        });
+            const subtitle = document.createElement('h2');
+            subtitle.textContent = 'The invasion began where dreams were born !';
+            Object.assign(subtitle.style, {
+                color: 'white',
+                fontSize: '1.3rem',
+                marginTop: '0.01rem',
+                opacity: '0.9'
+            });
 
-        footerContainer.appendChild(gameTitle);
-        footerContainer.appendChild(subtitle);
+            footerContainer.appendChild(gameTitle);
+            footerContainer.appendChild(subtitle);
+            this.loadingContainer.appendChild(footerContainer);
+        }
 
         // Assemblage final des éléments
         this.loadingContainer.appendChild(centerContainer);
-        this.loadingContainer.appendChild(footerContainer);
         document.body.appendChild(this.loadingContainer);
 
         this.isVisible = true;
