@@ -206,6 +206,10 @@ export class LevelManager {
                 this.levels[3].forceRestoreColors();
             }
             this.currentLevel = 4;
+            
+            // Nettoyer les véhicules en passant au niveau 4
+            this._cleanupVehicles();
+            
             setTimeout(async () => {
                 if (this.cutScenes[4]) {
                     this.cutScenes[4].onComplete = () => {
@@ -406,6 +410,11 @@ export class LevelManager {
             }
             this._cleanupMessages();
             this._cleanupAllies();
+            
+            // Si on passe d'un niveau <= 3 à un niveau > 3, nettoyer les véhicules
+            if (this.currentLevel <= 3 && levelNumber > 3) {
+                this._cleanupVehicles();
+            }
         }
         
         this.currentLevel = levelNumber;
@@ -493,6 +502,11 @@ export class LevelManager {
             const totalFrames = 300;   
     
             const spawnVehicle = (trajectory) => {
+                // Vérifier si le niveau actuel est 1, 2, 2b ou 3
+                if (![1, 2, '2b', 3].includes(this.currentLevel)) {
+                    return; // Ne pas générer de véhicules pour les niveaux 4, 5 et 6
+                }
+                
                 // Alterner entre les modèles
                 const randomModel = models[Math.floor(Math.random() * models.length)];
                 const vehicle = randomModel.clone(`vehicle_clone_${Date.now()}`);
@@ -613,21 +627,24 @@ export class LevelManager {
             const spawnInterval3 = 4000;
             const spawnInterval4 = 3500; // Intervalle pour le quatrième trajet
             
-            setInterval(() => {
-                spawnVehicle("main");
-            }, spawnInterval1);
+            // Stocker les références aux intervalles pour pouvoir les arrêter plus tard
+            this.vehicleIntervals = [];
             
-            setInterval(() => {
+            this.vehicleIntervals.push(setInterval(() => {
+                spawnVehicle("main");
+            }, spawnInterval1));
+            
+            this.vehicleIntervals.push(setInterval(() => {
                 spawnVehicle("second");
-            }, spawnInterval2);
+            }, spawnInterval2));
 
-            setInterval(() => {
+            this.vehicleIntervals.push(setInterval(() => {
                 spawnVehicle("third");
-            }, spawnInterval3);
+            }, spawnInterval3));
 
-            setInterval(() => {
+            this.vehicleIntervals.push(setInterval(() => {
                 spawnVehicle("fourth");
-            }, spawnInterval4);
+            }, spawnInterval4));
     
         } catch (error) {
             console.error("Erreur lors du chargement des modèles GLB:", error);
@@ -760,5 +777,25 @@ export class LevelManager {
         setTimeout(() => {
             this.instructionsElement.container.style.display = "none";
         }, 500);
+    }
+
+    _cleanupVehicles() {
+        console.log("Nettoyage des véhicules...");
+        
+        // Supprimer tous les véhicules présents dans la scène
+        const vehicles = this.scene.meshes.filter(mesh => 
+            mesh.name.startsWith('vehicle_clone_'));
+            
+        for (const vehicle of vehicles) {
+            vehicle.dispose();
+        }
+        
+        // Arrêter les intervalles de génération
+        if (this.vehicleIntervals) {
+            this.vehicleIntervals.forEach(interval => clearInterval(interval));
+            this.vehicleIntervals = [];
+        }
+        
+        console.log("Nettoyage des véhicules terminé.");
     }
 }

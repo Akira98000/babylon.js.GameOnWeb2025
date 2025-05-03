@@ -20,44 +20,60 @@ export class Level5Hacker {
             return;
         }
 
-        this._createHackButton();
         this._setupHackFunctions();
     }
 
     /**
-     * Crée le bouton de hack dans l'interface
+     * Configure les fonctions de hack
      */
-    _createHackButton() {
-        // Supprimer le bouton s'il existe déjà
-        if (this.hackButtonElement) {
-            document.body.removeChild(this.hackButtonElement);
-        }
+    _setupHackFunctions() {
+        // Raccourci clavier pour ouvrir le menu (touche H)
+        window.addEventListener("keydown", (event) => {
+            if (event.key.toLowerCase() === "h") {
+                event.preventDefault();
+                
+                // Vérifier le niveau actuel depuis le LevelManager
+                const levelManager = this.scene.metadata?.levelManager;
+                if (!levelManager) return;
+                
+                // Afficher uniquement pour les niveaux 1, 2, 2b et 3
+                const allowedLevels = [1, 2, '2b', 3];
+                if (!allowedLevels.includes(levelManager.currentLevel)) {
+                    console.log("Le menu de hack n'est disponible que dans les niveaux 1, 2, 2b et 3.");
+                    return;
+                }
+                
+                const level5 = this.scene.metadata.level5;
+                if (level5) {
+                    this._showHackOptions(level5);
+                }
+            }
+        });
+    }
 
-        // Créer le bouton de hack
-        this.hackButtonElement = document.createElement("div");
-        this.hackButtonElement.id = "level5HackButton";
-        this.hackButtonElement.style.position = "absolute";
-        this.hackButtonElement.style.top = "80px";
-        this.hackButtonElement.style.right = "20px";
-        this.hackButtonElement.style.backgroundColor = "rgba(255, 0, 0, 0.7)";
-        this.hackButtonElement.style.color = "white";
-        this.hackButtonElement.style.padding = "10px 15px";
-        this.hackButtonElement.style.borderRadius = "5px";
-        this.hackButtonElement.style.fontFamily = "Arial, sans-serif";
-        this.hackButtonElement.style.fontSize = "16px";
-        this.hackButtonElement.style.cursor = "pointer";
-        this.hackButtonElement.style.zIndex = "1000";
-        this.hackButtonElement.style.textAlign = "center";
-        this.hackButtonElement.style.boxShadow = "0 2px 5px rgba(0, 0, 0, 0.3)";
-        this.hackButtonElement.textContent = "HACK NIVEAU 5";
-
-        // Ajouter des options dans un menu déroulant
+    /**
+     * Affiche les options de hack
+     * @param {Object} level5 - Instance du niveau 5
+     */
+    _showHackOptions(level5) {
         const optionsContainer = document.createElement("div");
-        optionsContainer.style.display = "none";
-        optionsContainer.style.marginTop = "10px";
-        optionsContainer.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-        optionsContainer.style.borderRadius = "5px";
-        optionsContainer.style.padding = "5px";
+        optionsContainer.style.position = "absolute";
+        optionsContainer.style.top = "50%";
+        optionsContainer.style.left = "50%";
+        optionsContainer.style.transform = "translate(-50%, -50%)";
+        optionsContainer.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+        optionsContainer.style.padding = "20px";
+        optionsContainer.style.borderRadius = "10px";
+        optionsContainer.style.zIndex = "2000";
+        optionsContainer.style.color = "white";
+        optionsContainer.style.fontFamily = "Arial, sans-serif";
+
+        const title = document.createElement("div");
+        title.textContent = "Menu de Hack";
+        title.style.fontSize = "24px";
+        title.style.marginBottom = "15px";
+        title.style.textAlign = "center";
+        optionsContainer.appendChild(title);
 
         const hackOptions = [
             { label: "Terminer les 3 quartiers", action: "finishAllQuartiers" },
@@ -87,39 +103,36 @@ export class Level5Hacker {
             
             optionButton.addEventListener("click", () => {
                 this._executeHack(option.action);
+                document.body.removeChild(optionsContainer);
             });
             
             optionsContainer.appendChild(optionButton);
         });
 
-        // Déplier/replier le menu au clic
-        this.hackButtonElement.addEventListener("click", () => {
-            if (optionsContainer.style.display === "none") {
-                optionsContainer.style.display = "block";
-            } else {
-                optionsContainer.style.display = "none";
-            }
+        // Ajouter un bouton pour fermer le menu
+        const closeButton = document.createElement("div");
+        closeButton.textContent = "Fermer";
+        closeButton.style.padding = "10px";
+        closeButton.style.margin = "20px 0 10px 0";
+        closeButton.style.backgroundColor = "rgba(150, 0, 0, 0.6)";
+        closeButton.style.borderRadius = "5px";
+        closeButton.style.cursor = "pointer";
+        closeButton.style.textAlign = "center";
+        
+        closeButton.addEventListener("mouseover", () => {
+            closeButton.style.backgroundColor = "rgba(200, 0, 0, 0.8)";
         });
-
-        this.hackButtonElement.appendChild(optionsContainer);
-        document.body.appendChild(this.hackButtonElement);
-    }
-
-    /**
-     * Configure les fonctions de hack
-     */
-    _setupHackFunctions() {
-        // Raccourci clavier pour ouvrir le menu (Ctrl+H)
-        window.addEventListener("keydown", (event) => {
-            if (event.ctrlKey && event.key === "h") {
-                event.preventDefault();
-                if (this.hackButtonElement.style.display === "none") {
-                    this.hackButtonElement.style.display = "block";
-                } else {
-                    this.hackButtonElement.style.display = "none";
-                }
-            }
+        
+        closeButton.addEventListener("mouseout", () => {
+            closeButton.style.backgroundColor = "rgba(150, 0, 0, 0.6)";
         });
+        
+        closeButton.addEventListener("click", () => {
+            document.body.removeChild(optionsContainer);
+        });
+        
+        optionsContainer.appendChild(closeButton);
+        document.body.appendChild(optionsContainer);
     }
 
     /**
@@ -373,8 +386,12 @@ export class Level5Hacker {
      * Supprime l'interface de hack
      */
     dispose() {
-        if (this.hackButtonElement && this.hackButtonElement.parentNode) {
-            this.hackButtonElement.parentNode.removeChild(this.hackButtonElement);
-        }
+        // Supprimer tous les menus de hack qui pourraient être ouverts
+        const hackMenus = document.querySelectorAll('div[style*="rgba(0, 0, 0, 0.8)"]');
+        hackMenus.forEach(menu => {
+            if (menu && menu.parentNode) {
+                menu.parentNode.removeChild(menu);
+            }
+        });
     }
 } 

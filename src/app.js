@@ -109,9 +109,6 @@ const initBabylon = async () => {
             await levelManager.initCurrentLevel();
             scene.metadata.levelManager = levelManager;
             
-            // Initialisation du sélecteur de niveaux
-            levelSelector = new LevelSelector(levelManager);
-            
             return levelManager;
           }
         }
@@ -241,9 +238,14 @@ const initBabylon = async () => {
           }
         }
         
-        if (event.key.toLowerCase() === 'l' && event.ctrlKey) {
-          localStorage.removeItem('gameStarted');
-          alert('LocalStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
+        if (event.key.toLowerCase() === 'l') {
+          if (event.ctrlKey) {
+            localStorage.removeItem('gameStarted');
+            alert('LocalStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
+          } else if (scene.metadata.levelManager) {
+            const levelSelector = new LevelSelector(scene.metadata.levelManager);
+            levelSelector.showModal();
+          }
         }
       });
       
