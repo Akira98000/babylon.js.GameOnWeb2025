@@ -252,23 +252,74 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         const cameraDistance = GAME_CONFIG.CAMERA.FOLLOW?.DISTANCE || 6;
         const targetLerp = GAME_CONFIG.CAMERA.FOLLOW?.TARGET_LERP || 0.2;
         
+        // Stocker la hauteur initiale de la caméra et sa position
+        const originalCameraY = camera.position.y;
+        const originalBeta = camera.beta;
+        
         // On garde uniquement le suivi de la cible (le héros)
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
         const currentTarget = camera.getTarget().clone();
-        const newTarget = BABYLON.Vector3.Lerp(currentTarget, idealTarget, targetLerp);
+        
+        // En cas de recul, maintenir la hauteur constante en modifiant la cible
+        let newTarget;
+        if (inputMap["s"] && isActionAllowed('moveBackward')) {
+            // On utilise la même hauteur que la cible actuelle
+            const adjustedTarget = new BABYLON.Vector3(idealTarget.x, currentTarget.y, idealTarget.z);
+            newTarget = BABYLON.Vector3.Lerp(currentTarget, adjustedTarget, targetLerp);
+        } else {
+            // Comportement normal pour les autres mouvements
+            newTarget = BABYLON.Vector3.Lerp(currentTarget, idealTarget, targetLerp);
+        }
+        
+        // Appliquer la nouvelle cible
         camera.setTarget(newTarget);
-
-        // Calculer l'angle entre la caméra et l'axe Z
-        const cameraDirection = camera.getTarget().subtract(camera.position);
-        cameraDirection.y = 0; // On ignore la composante verticale
-        cameraDirection.normalize();
         
-        // Calculer l'angle de rotation nécessaire et ajouter PI pour inverser la direction
-        currentRotationY = Math.atan2(cameraDirection.x, cameraDirection.z) + Math.PI;
-        targetRotationY = currentRotationY;
+        // Correction de la position verticale de la caméra lors du recul
+        if (inputMap["s"] && isActionAllowed('moveBackward')) {
+            // Désactiver temporairement la contrainte d'angles
+            const oldLowerLimit = camera.lowerBetaLimit;
+            const oldUpperLimit = camera.upperBetaLimit;
+            camera.lowerBetaLimit = null;
+            camera.upperBetaLimit = null;
+            
+            // Forcer la restauration de la hauteur et de l'angle
+            camera.beta = originalBeta;
+            
+            // Calculer un vecteur de position qui maintient la hauteur originale
+            const forwardDir = camera.getTarget().subtract(camera.position);
+            forwardDir.y = 0; // Neutraliser la composante verticale
+            forwardDir.normalize();
+            
+            const horizontalDistance = BABYLON.Vector3.Distance(
+                new BABYLON.Vector3(camera.position.x, 0, camera.position.z),
+                new BABYLON.Vector3(camera.getTarget().x, 0, camera.getTarget().z)
+            );
+            
+            // Recalculer la position horizontale tout en préservant la hauteur
+            const newPos = camera.getTarget().subtract(forwardDir.scale(horizontalDistance));
+            newPos.y = originalCameraY;
+            camera.position = newPos;
+            
+            // Restaurer les contraintes d'angles
+            camera.lowerBetaLimit = oldLowerLimit;
+            camera.upperBetaLimit = oldUpperLimit;
+        }
         
-        // Appliquer la rotation au héros
-        hero.rotation.y = currentRotationY;
+        // On ne modifie pas automatiquement la rotation du héros selon la caméra 
+        // quand le joueur est en train d'utiliser les touches de déplacement latéral
+        if (!(inputMap["q"] || inputMap["d"])) {
+            // Calculer l'angle entre la caméra et l'axe Z
+            const cameraDirection = camera.getTarget().subtract(camera.position);
+            cameraDirection.y = 0; // On ignore la composante verticale
+            cameraDirection.normalize();
+            
+            // Calculer l'angle de rotation nécessaire et ajouter PI pour inverser la direction
+            currentRotationY = Math.atan2(cameraDirection.x, cameraDirection.z) + Math.PI;
+            targetRotationY = currentRotationY;
+            
+            // Appliquer la rotation au héros
+            hero.rotation.y = currentRotationY;
+        }
     });
 
     scene.metadata.executeShot = (position, direction) => {
