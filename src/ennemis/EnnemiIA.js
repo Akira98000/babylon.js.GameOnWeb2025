@@ -87,7 +87,7 @@ export class EnnemiIA {
             this.hitbox.position.y = this.isBigBoss ? 1.5 : 1;
             const hitboxMaterial = new BABYLON.StandardMaterial("hitboxMaterial", this.scene);
             hitboxMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
-            hitboxMaterial.alpha = 0.3;
+            hitboxMaterial.alpha = 0;
             this.hitbox.material = hitboxMaterial;
             this.hitbox.isPickable = true;
             this.hitbox.isEnnemi = true;
@@ -297,10 +297,39 @@ export class EnnemiIA {
         if (now - this.lastShootTime < this.shootCooldown) return;
 
         let dir;
-        if (target === this.player) {
-            dir = this.player.position.subtract(this.root.position);
+        // Vérifier correctement si la cible est le joueur
+        if (!target.root || target === this.player) {
+            // Cas où target est directement le mesh du joueur (this.player)
+            const playerPosition = target.position || this.player.position;
+            // Ajustement: viser légèrement plus bas que la position du joueur
+            const adjustedPlayerPos = playerPosition.clone();
+            // Viser un point plus bas pour augmenter les chances de toucher
+            adjustedPlayerPos.y -= 0.5;
+            
+            dir = adjustedPlayerPos.subtract(this.root.position);
+            
+            // NOUVELLE SOLUTION: Appliquer directement des dégâts au joueur
+            // C'est la solution la plus simple et directe pour s'assurer que le joueur reçoit des dégâts
+            const distToPlayer = BABYLON.Vector3.Distance(this.root.position, playerPosition);
+            
+            // Augmenter légèrement la chance de toucher pour compenser la vitesse plus rapide du joueur
+            const chanceToHit = this.isBigBoss ? 0.85 : 0.6; // Augmenté de 0.8/0.5 à 0.85/0.6
+            
+            if (distToPlayer < this.shootingDistance && Math.random() < chanceToHit) {
+                // Vérifier que la fonction takeDamage est disponible sur l'objet player dans les métadonnées de la scène
+                if (this.scene.metadata && this.scene.metadata.player && this.scene.metadata.player.takeDamage) {
+                    // Appeler directement la fonction de dégâts du joueur
+                    // Dégâts augmentés légèrement pour maintenir le challenge malgré la rapidité des tirs du joueur
+                    const damageAmount = this.isBigBoss ? 18 : 12; // Augmenté de 15/10 à 18/12
+                    this.scene.metadata.player.takeDamage(damageAmount);
+                }
+            }
         } else {
-            dir = target.root.position.subtract(this.root.position);
+            // Cas où target est un autre ennemi (avec propriété root)
+            const targetPos = target.root.position.clone();
+            // Viser un peu plus bas pour les alliés aussi
+            targetPos.y -= 0.3;
+            dir = targetPos.subtract(this.root.position);
         }
         
         this.targetRotation = Math.atan2(dir.x, dir.z);
@@ -315,20 +344,23 @@ export class EnnemiIA {
         }
 
         const shootDir = dir.normalize();
+        // Réduire la hauteur de tir pour mieux toucher le joueur
         const origin = this.root.position.clone();
-        origin.y += this.isBigBoss ? 2 : 1.5;
+        // Hauteur légèrement augmentée pour ajuster le tir
+        origin.y += this.isBigBoss ? 1.4 : 1.1;
         
         if (this.isBigBoss) {
             // Le BigBoss tire trois balles à la fois
-            const mainBullet = createBullet(this.scene, origin, shootDir, false, true, false);
+            // Utilisation explicite de fromEnemy=true pour les balles ennemies
+            createBullet(this.scene, origin, shootDir, false, true, false);
             
             // Balles supplémentaires avec un léger angle
             const leftDir = shootDir.clone();
             const rightDir = shootDir.clone();
             
-            // Rotation des vecteurs pour les balles latérales
-            const rotationMatrix = BABYLON.Matrix.RotationY(0.2);
-            const rotationMatrixRight = BABYLON.Matrix.RotationY(-0.2);
+            // Rotation des vecteurs pour les balles latérales (angle légèrement plus grand)
+            const rotationMatrix = BABYLON.Matrix.RotationY(0.25); // Augmenté de 0.2 à 0.25
+            const rotationMatrixRight = BABYLON.Matrix.RotationY(-0.25); // Augmenté de -0.2 à -0.25
             
             leftDir.applyRotationMatrix(rotationMatrix);
             rightDir.applyRotationMatrix(rotationMatrixRight);
@@ -336,6 +368,7 @@ export class EnnemiIA {
             createBullet(this.scene, origin, leftDir, false, true, false);
             createBullet(this.scene, origin, rightDir, false, true, false);
         } else {
+            // S'assurer que les balles ont bien le drapeau fromEnemy=true
             createBullet(this.scene, origin, shootDir, false, true, false);
         }
         

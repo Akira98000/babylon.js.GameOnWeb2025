@@ -111,7 +111,7 @@ export class AmiAI {
             this.hitbox.position.y = 1;
             const hitboxMaterial = new BABYLON.StandardMaterial("hitboxMaterial", this.scene);
             hitboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1);
-            hitboxMaterial.alpha = 0.3;
+            hitboxMaterial.alpha = 0;
             this.hitbox.material = hitboxMaterial;
             this.hitbox.isPickable = true;
             this.hitbox.isAmi = true;
