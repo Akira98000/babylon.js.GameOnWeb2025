@@ -9,24 +9,19 @@ export class Level2b {
         this.proximityThreshold = 5;
         this._keyHandler = this._handleKeyDown.bind(this);
         this.onComplete = null;
-        // Nouvelle combinaison: haut, haut, bas, gauche, droite, gauche, bas, haut
-        this.keyCombo = "ArrowUpArrowUpArrowDownArrowLeftArrowRightArrowLeftArrowDownArrowUp";
-        this.currentCombo = "";
+        
+        // Nouvelle combinaison avec les touches directionnelles
+        this.keyCombo = [
+            "ArrowUp", "ArrowUp", "ArrowDown", "ArrowUp", 
+            "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowLeft", 
+            "ArrowDown", "ArrowUp"
+        ];
+        this.currentCombo = [];
         this.comboDisplay = null;
         this.magicianPosition = new BABYLON.Vector3(-67.99, 0.10, -4.70);
-        this.isComboActive = false;
-        this.keyToDirection = {
-            "ArrowUp": "↑",
-            "ArrowDown": "↓", 
-            "ArrowLeft": "←", 
-            "ArrowRight": "→"
-        };
-        // Stockage des contrôles originaux pour les désactiver pendant la combinaison
-        this.originalControls = null;
-        // Compteur d'essais incorrects
-        this.failedAttempts = 0;
-        // Séquence de solution à afficher
-        this.solutionSequence = ["↑", "↑", "↓", "←", "→", "←", "↓", "↑"];
+        this.isPlayerNearMagician = false;
+        this.comboChallengeActive = false;
+        this.originalKeyDownHandlers = {};
     }
 
     async init() {
@@ -34,9 +29,9 @@ export class Level2b {
             const result = await BABYLON.SceneLoader.ImportMeshAsync('', '/personnage/', 'magic.glb', this.scene);
             this.magician = result.meshes[0];
             this.magician.name = 'levelMagician';
-            this.magician.scaling.set(0.5, 0.5, 0.5);
-            this.magician.rotation = new BABYLON.Vector3(0, Math.PI, 0);
+            this.magician.scaling.set(0.5, 0.5, 0.5); // Échelle réduite à 0.5
             this.magician.position = this.magicianPosition;
+            this.magician.rotation.y = Math.PI; // Rotation de 180 degrés
             
             // Tentative de récupération et démarrage de l'animation d'idle du magicien si disponible
             const idleAnimation = this.scene.getAnimationGroupByName("idle");
@@ -92,156 +87,211 @@ export class Level2b {
         if (!playerPosition) return;
         
         const distance = BABYLON.Vector3.Distance(playerPosition, this.proximityArea.position);
-        const isNear = distance < this.proximityThreshold;
+        const wasNear = this.isPlayerNearMagician;
+        this.isPlayerNearMagician = distance < this.proximityThreshold;
         
-        // Si le joueur est près du magicien et que le défi n'est pas encore actif
-        if (isNear && !this.isComboActive) {
-            this._startComboChallenge();
-            this.isComboActive = true;
-        } else if (!isNear && this.isComboActive) {
-            // Si le joueur s'éloigne, cacher l'interface de combinaison et restaurer les contrôles
-            this.comboDisplay.style.display = "none";
-            this.isComboActive = false;
-            this.currentCombo = "";
-            this._restorePlayerControls();
-        }
-    }
-
-    _handleKeyDown(event) {
-        // Si le défi de combinaison est actif, capturer les touches pour la combinaison
-        if (this.isComboActive && !this.isCompleted) {
-            const key = event.key;
-            
-            // Filtrer uniquement les touches directionnelles
-            if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
-                // Empêcher le comportement par défaut pour éviter le mouvement de la caméra
-                event.preventDefault();
-                event.stopPropagation();
-                
-                this.currentCombo += key;
-                
-                // Mettre à jour l'affichage de la combinaison
-                this._updateComboDisplay();
-                
-                // Vérifier si la combinaison est correcte
-                if (this.keyCombo.startsWith(this.currentCombo)) {
-                    if (this.currentCombo === this.keyCombo) {
-                        // La combinaison complète est correcte
-                        this._completeComboChallenge();
-                    }
-                } else {
-                    // La combinaison est incorrecte, réinitialiser
-                    this.currentCombo = "";
-                    this.failedAttempts++;
-                    
-                    if (this.failedAttempts >= 3) {
-                        // Après 3 tentatives, montrer la solution
-                        this._updateComboDisplay("Voici la solution :", true);
-                    } else {
-                        this._updateComboDisplay(`Séquence incorrecte, essayez encore... (${this.failedAttempts}/3)`);
-                    }
+        // Si le statut de proximité a changé
+        if (wasNear !== this.isPlayerNearMagician) {
+            if (this.isPlayerNearMagician) {
+                if (!this.comboChallengeActive) {
+                    this._startComboChallenge();
+                }
+            } else {
+                if (this.comboChallengeActive && !this.isCompleted) {
+                    this._hideComboChallenge();
                 }
             }
         }
     }
 
+    _handleKeyDown(event) {
+        // On ne gère plus les touches directionnelles ici, car elles sont interceptées
+        // directement au niveau du document dans _backupAndDisableCameraControls
+        return true;
+    }
+
     _startComboChallenge() {
-        // Réinitialiser le compteur d'essais
-        this.failedAttempts = 0;
-        
         // Afficher le défi de combinaison
-        this.currentCombo = "";
+        this.currentCombo = [];
         this.comboDisplay.style.display = "block";
+        this.comboChallengeActive = true;
         this._updateComboDisplay();
-        
-        // Bloquer les contrôles du joueur pour éviter que les touches fléchées ne déplacent le personnage
-        this._disablePlayerControls();
         
         // Faire briller le magicien ou jouer une animation
         this._animateMagician();
+        
+        // Sauvegarder les gestionnaires de touches originaux et les désactiver temporairement
+        this._backupAndDisableCameraControls();
     }
-
-    _disablePlayerControls() {
-        // Stocker les contrôles originaux
-        if (this.scene.actionManager) {
-            // Désactiver les actions liées aux touches fléchées
-            const originalActions = this.scene.actionManager.actions.slice();
-            this.originalActions = originalActions;
-            
-            // Vider toutes les actions
-            this.scene.actionManager.actions = [];
-            
-            // Ne garder que notre gestionnaire d'événements clavier
-            window.removeEventListener("keydown", this._keyHandler);
-            document.addEventListener("keydown", this._keyHandler, true);
+    
+    _hideComboChallenge() {
+        if (this.comboDisplay) {
+            this.comboDisplay.style.display = "none";
+            this.comboChallengeActive = false;
         }
+        
+        // Restaurer les gestionnaires de touches originaux
+        this._restoreCameraControls();
     }
-
-    _restorePlayerControls() {
-        // Restaurer les actions originales
-        if (this.originalActions && this.scene.actionManager) {
+    
+    _backupAndDisableCameraControls() {
+        // Sauvegarder temporairement les contrôles originaux
+        if (this.scene.actionManager) {
+            const actions = this.scene.actionManager.actions;
+            this.originalActions = [...actions];
+            
+            // Filtrer les actions pour conserver seulement celles qui ne sont pas liées aux touches directionnelles
+            const filteredActions = actions.filter(action => {
+                if (action.trigger && action.trigger.sourceEvent) {
+                    const key = action.trigger.sourceEvent.key;
+                    return key !== "ArrowUp" && key !== "ArrowDown" && 
+                           key !== "ArrowLeft" && key !== "ArrowRight";
+                }
+                return true;
+            });
+            
+            // Remplacer les actions
+            this.scene.actionManager.actions = filteredActions;
+        }
+        
+        // Désactiver les contrôles de caméra plus directement
+        if (this.scene.activeCamera) {
+            // Sauvegarder l'état des contrôles de caméra
+            this.cameraControlsEnabled = this.scene.activeCamera.inputs.attached.keyboard.detachControl;
+            
+            // Désactiver les entrées clavier pour la caméra
+            if (this.scene.activeCamera.inputs) {
+                if (this.scene.activeCamera.inputs.attached.keyboard) {
+                    this.scene.activeCamera.inputs.attached.keyboard.detachControl(this.scene.getEngine().getRenderingCanvas());
+                }
+                
+                // Sauvegarder le gestionnaire onKeyDown original
+                if (this.scene.onKeyDown) {
+                    this.originalOnKeyDown = this.scene.onKeyDown;
+                    
+                    // Remplacer par une version qui ignore les touches directionnelles
+                    this.scene.onKeyDown = (evt) => {
+                        if (evt.key === "ArrowUp" || evt.key === "ArrowDown" || 
+                            evt.key === "ArrowLeft" || evt.key === "ArrowRight") {
+                            return;
+                        }
+                        if (this.originalOnKeyDown) {
+                            this.originalOnKeyDown(evt);
+                        }
+                    };
+                }
+            }
+        }
+        
+        // Désactiver tous les gestionnaires de touches directionnelles au niveau du document
+        this.originalKeydownHandler = document.onkeydown;
+        document.onkeydown = (evt) => {
+            if (this.comboChallengeActive && (
+                evt.key === "ArrowUp" || evt.key === "ArrowDown" || 
+                evt.key === "ArrowLeft" || evt.key === "ArrowRight")) {
+                evt.preventDefault();
+                evt.stopPropagation();
+                
+                // Ajouter la touche à notre combinaison
+                this.currentCombo.push(evt.key);
+                
+                // Mettre à jour l'affichage
+                this._updateComboDisplay();
+                
+                // Vérifier si la combinaison est correcte
+                let isCorrectSoFar = true;
+                for (let i = 0; i < this.currentCombo.length; i++) {
+                    if (this.currentCombo[i] !== this.keyCombo[i]) {
+                        isCorrectSoFar = false;
+                        break;
+                    }
+                }
+                
+                if (isCorrectSoFar) {
+                    if (this.currentCombo.length === this.keyCombo.length) {
+                        this._completeComboChallenge();
+                    }
+                } else {
+                    this.currentCombo = [];
+                    this._updateComboDisplay("Essayez encore...");
+                }
+                
+                return false;
+            } else if (this.originalKeydownHandler) {
+                return this.originalKeydownHandler(evt);
+            }
+        };
+    }
+    
+    _restoreCameraControls() {
+        // Restaurer les contrôles originaux
+        if (this.scene.actionManager && this.originalActions) {
             this.scene.actionManager.actions = this.originalActions;
             this.originalActions = null;
         }
         
-        // Restaurer notre gestionnaire d'événements
-        document.removeEventListener("keydown", this._keyHandler, true);
-        window.addEventListener("keydown", this._keyHandler);
-    }
-
-    _updateComboDisplay(message, showSolution = false) {
-        if (!this.comboDisplay) return;
-        
-        // Convertir la séquence actuelle en symboles de direction
-        const progressSymbols = this.currentCombo.match(/Arrow(Up|Down|Left|Right)/g)
-            ?.map(key => this.keyToDirection[key]) || [];
-        
-        const progressText = progressSymbols.join(" ");
-        
-        // Calculer le nombre de directions restantes
-        const totalDirections = this.keyCombo.match(/Arrow(Up|Down|Left|Right)/g)?.length || 0;
-        const remainingCount = totalDirections - progressSymbols.length;
-        const remainingText = remainingCount > 0 ? "□ ".repeat(remainingCount).trim() : "";
-        
-        // Préparer l'affichage de la solution si nécessaire
-        let solutionHtml = '';
-        if (showSolution) {
-            solutionHtml = `
-                <div style="margin-top: 20px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                    <p style="color: #ffcc00; margin-bottom: 10px;">Solution :</p>
-                    <div style="font-size: 28px; letter-spacing: 10px;">
-                        ${this.solutionSequence.join(" ")}
-                    </div>
-                </div>
-            `;
+        // Restaurer les contrôles de caméra
+        if (this.scene.activeCamera) {
+            if (this.scene.activeCamera.inputs && this.cameraControlsEnabled) {
+                // Réattacher les contrôles clavier
+                if (this.scene.activeCamera.inputs.attached.keyboard) {
+                    this.scene.activeCamera.inputs.attached.keyboard.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
+                }
+            }
+            
+            // Restaurer le gestionnaire onKeyDown original
+            if (this.originalOnKeyDown) {
+                this.scene.onKeyDown = this.originalOnKeyDown;
+                this.originalOnKeyDown = null;
+            }
         }
         
+        // Restaurer le gestionnaire de touches du document
+        if (this.originalKeydownHandler) {
+            document.onkeydown = this.originalKeydownHandler;
+            this.originalKeydownHandler = null;
+        }
+    }
+
+    _updateComboDisplay(message) {
+        if (!this.comboDisplay) return;
+        
+        // Convertir les touches directionnelles en symboles
+        const keyToSymbol = {
+            "ArrowUp": "↑",
+            "ArrowDown": "↓",
+            "ArrowLeft": "←",
+            "ArrowRight": "→"
+        };
+        
+        // Créer l'affichage du progrès actuel
+        const progressSymbols = this.currentCombo.map(key => keyToSymbol[key]);
+        const progressText = progressSymbols.join(" ");
+        
+        // Créer l'affichage de la combinaison complète
+        const fullComboSymbols = this.keyCombo.map(key => keyToSymbol[key]);
+        const fullComboText = fullComboSymbols.join(" ");
+        
+        // Calculer les cases restantes
+        const remainingCount = this.keyCombo.length - this.currentCombo.length;
+        const remainingText = remainingCount > 0 ? "□ ".repeat(remainingCount).trim() : "";
+        
+        // Afficher la combinaison requise
         this.comboDisplay.innerHTML = `
             <div style="margin-bottom: 20px;">
                 <span style="font-size: 32px;">🧙‍♂️</span>
-                <h2 style="margin: 10px 0;">Saisir la séquence magique</h2>
+                <h2 style="margin: 10px 0;">Séquence magique</h2>
                 ${message ? `<p style="color: orange;">${message}</p>` : ''}
             </div>
-            <div style="font-size: 32px; letter-spacing: 5px; margin: 20px 0;">
-                ${progressText} ${remainingText}
+            <div style="font-size: 32px; letter-spacing: 10px; margin: 15px 0; color: #4CAF50;">
+                ${progressText} <span style="color: #aaa;">${remainingText}</span>
             </div>
-            <p style="margin-top: 20px; font-size: 16px; color: #aaa;">
-                Utilisez les touches fléchées pour saisir la séquence...
+            <p style="margin: 15px 0; font-size: 18px; color: #ffcc00;">
+                Combinaison: <strong>${fullComboText}</strong>
             </p>
-            <div style="display: flex; justify-content: center; margin-top: 15px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; grid-gap: 5px; text-align: center; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;">
-                    <div></div>
-                    <div style="padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">↑</div>
-                    <div></div>
-                    <div style="padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">←</div>
-                    <div></div>
-                    <div style="padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">→</div>
-                    <div></div>
-                    <div style="padding: 10px; background: rgba(255,255,255,0.2); border-radius: 5px;">↓</div>
-                    <div></div>
-                </div>
-            </div>
-            ${solutionHtml}
+            <p style="margin-top: 10px; font-size: 16px; color: #aaa;">
+                Utilisez les touches fléchées pour saisir la combinaison
+            </p>
         `;
     }
 
@@ -254,6 +304,24 @@ export class Level2b {
         if (castSpellAnimation) {
             castSpellAnimation.start(false);
         }
+        
+        // Animation de rotation du magicien
+        const rotateAnimation = new BABYLON.Animation(
+            "magicianRotation",
+            "rotation.y",
+            30,
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+        );
+        
+        const keyFrames = [];
+        keyFrames.push({ frame: 0, value: Math.PI });
+        keyFrames.push({ frame: 60, value: Math.PI + Math.PI * 2 });
+        
+        rotateAnimation.setKeys(keyFrames);
+        this.magician.animations = [rotateAnimation];
+        
+        this.scene.beginAnimation(this.magician, 0, 60, true);
         
         // Création d'un effet de particules autour du magicien
         const particleSystem = new BABYLON.ParticleSystem("magicParticles", 2000, this.scene);
@@ -286,15 +354,19 @@ export class Level2b {
     }
 
     _completeComboChallenge() {
-        // Restaurer les contrôles du joueur
-        this._restorePlayerControls();
-        
-        // Cacher l'affichage de la combinaison
-        this.comboDisplay.style.display = "none";
-        this.isComboActive = false;
+        // Cacher l'interface de combinaison
+        if (this.comboDisplay) {
+            this.comboDisplay.style.display = "none";
+        }
+
+        // Faire disparaître le magicien avec une animation
+        this._fadeOutMagician();
         
         // Activer le pouvoir de tir pour le joueur
         this._enableShooting();
+        
+        // Restaurer les contrôles de caméra
+        this._restoreCameraControls();
         
         // Afficher un message de réussite
         GameMessages.showCelebrationMessage(
@@ -303,6 +375,10 @@ export class Level2b {
             "Le magicien vous a transmis un pouvoir, le pouvoir d'éliminer les ennemis. Il vous considère comme le gardien de ce monde DreamLand.",
             () => {
                 this.isCompleted = true;
+                
+                // Nettoyer tous les éléments d'interface
+                this._cleanupAllUI();
+                
                 if (this.onComplete && typeof this.onComplete === 'function') {
                     this.onComplete();
                 }
@@ -313,28 +389,124 @@ export class Level2b {
         window.removeEventListener("keydown", this._keyHandler);
     }
 
+    _fadeOutMagician() {
+        if (!this.magician || this.magician.isDisposed) return;
+        
+        // Créer une animation pour faire disparaître le magicien
+        const fadeAnimation = new BABYLON.Animation(
+            "magicianFadeOut",
+            "scaling",
+            30,
+            BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+        
+        // Keyframes pour l'animation
+        const keyFrames = [];
+        keyFrames.push({ 
+            frame: 0, 
+            value: this.magician.scaling.clone()
+        });
+        keyFrames.push({ 
+            frame: 30, 
+            value: new BABYLON.Vector3(0, 0, 0)
+        });
+        
+        fadeAnimation.setKeys(keyFrames);
+        
+        // Créer un système de particules pour l'effet de disparition
+        const particleSystem = new BABYLON.ParticleSystem("magicianDisappearParticles", 300, this.scene);
+        particleSystem.particleTexture = new BABYLON.Texture("/textures/sparkle.png", this.scene);
+        particleSystem.emitter = this.magician;
+        particleSystem.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
+        particleSystem.maxEmitBox = new BABYLON.Vector3(1, 2, 1);
+        particleSystem.color1 = new BABYLON.Color4(1, 0.8, 0.2, 1.0);
+        particleSystem.color2 = new BABYLON.Color4(1, 0.5, 0.1, 1.0);
+        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0.2, 0.0);
+        particleSystem.minSize = 0.2;
+        particleSystem.maxSize = 0.5;
+        particleSystem.minLifeTime = 0.5;
+        particleSystem.maxLifeTime = 1.5;
+        particleSystem.emitRate = 100;
+        particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        particleSystem.gravity = new BABYLON.Vector3(0, 8, 0);
+        particleSystem.direction1 = new BABYLON.Vector3(-5, 8, -5);
+        particleSystem.direction2 = new BABYLON.Vector3(5, 8, 5);
+        particleSystem.minAngularSpeed = 0;
+        particleSystem.maxAngularSpeed = Math.PI;
+        particleSystem.minEmitPower = 1;
+        particleSystem.maxEmitPower = 3;
+        particleSystem.updateSpeed = 0.01;
+        
+        // Démarrer les particules
+        particleSystem.start();
+        
+        // Arrêter l'animation continue de rotation
+        this.scene.stopAnimation(this.magician);
+        
+        // Démarrer l'animation de disparition
+        this.scene.beginAnimation(this.magician, 0, 30, false, 1, () => {
+            // Une fois l'animation terminée, supprimer le magicien
+            setTimeout(() => {
+                particleSystem.stop();
+                setTimeout(() => {
+                    particleSystem.dispose();
+                    if (this.magician && !this.magician.isDisposed) {
+                        this.magician.dispose();
+                        this.magician = null;
+                    }
+                    if (this.proximityArea && !this.proximityArea.isDisposed) {
+                        this.proximityArea.dispose();
+                        this.proximityArea = null;
+                    }
+                }, 1500);
+            }, 500);
+        });
+    }
+
+    _cleanupAllUI() {
+        // Supprimer l'affichage de la combinaison
+        if (this.comboDisplay && this.comboDisplay.parentNode) {
+            this.comboDisplay.parentNode.removeChild(this.comboDisplay);
+            this.comboDisplay = null;
+        }
+        
+        // Supprimer tous les messages du GameMessages
+        const messages = document.querySelectorAll('[id$="Message"]');
+        messages.forEach(message => {
+            if (message && message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        });
+    }
+
     _enableShooting() {
         // Activer la capacité de tir pour le joueur
         if (this.scene.onPointerDown) {
-            const originalOnPointerDown = this.scene.onPointerDown;
             this.scene.metadata.shootingEnabled = true;
         }
     }
 
     cleanup() {
-        // Restaurer les contrôles du joueur si nécessaire
-        if (this.isComboActive) {
-            this._restorePlayerControls();
-        }
-        
         // Supprimer le gestionnaire d'événements clavier
         window.removeEventListener("keydown", this._keyHandler);
-        document.removeEventListener("keydown", this._keyHandler, true);
         
-        // Supprimer l'affichage de la combinaison
-        if (this.comboDisplay && this.comboDisplay.parentNode) {
-            this.comboDisplay.parentNode.removeChild(this.comboDisplay);
-            this.comboDisplay = null;
+        // Restaurer les contrôles de caméra si nécessaire
+        this._restoreCameraControls();
+        
+        // Nettoyer tous les éléments d'interface
+        this._cleanupAllUI();
+        
+        // Supprimer le magicien et la zone de proximité
+        if (this.magician && !this.magician.isDisposed) {
+            this.scene.stopAnimation(this.magician);
+            this.magician.dispose();
+            this.magician = null;
+        }
+        
+        if (this.proximityArea && !this.proximityArea.isDisposed) {
+            this.proximityArea.dispose();
+            this.proximityArea = null;
         }
     }
 } 
