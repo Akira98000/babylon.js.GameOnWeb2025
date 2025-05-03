@@ -613,6 +613,7 @@ export const createPlayer = async (scene, camera, canvas) => {
         handleShooting,
         executeShot,
         takeDamage,
+        updateHealthBar,
         get isShooting() {
             return isShooting;
         }

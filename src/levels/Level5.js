@@ -266,6 +266,9 @@ export class Level5 {
                 // Sauvegarder le checkpoint quand un quartier est terminé
                 this._saveCheckpoint(quartierActif + 1);
                 
+                // Augmenter la vie du joueur de 50% lorsqu'un groupe est éliminé
+                this._augmenterVieJoueur();
+                
                 if (quartierActif === 2 && !this.stormStarted) {
                     this._startPurpleStorm();
                 } else if (this.quartierActuel < this.nombreQuartiers) {
@@ -284,6 +287,101 @@ export class Level5 {
                 }
             }
             this._checkForLevelCompletion();
+        }
+    }
+
+    // Méthode pour augmenter la vie du joueur de 50%
+    _augmenterVieJoueur() {
+        if (!this.scene.metadata || !this.scene.metadata.player) return;
+        
+        const player = this.scene.metadata.player;
+        const hero = player.hero;
+        
+        if (hero && hero.currentHealth < hero.maxHealth) {
+            // Calculer le montant de santé à ajouter (50% de la santé maximale)
+            const soinAmount = hero.maxHealth * 0.5;
+            
+            // Limiter la santé au maximum
+            const nouvelleVie = Math.min(hero.currentHealth + soinAmount, hero.maxHealth);
+            const gainReel = nouvelleVie - hero.currentHealth;
+            
+            // Mettre à jour la santé du joueur
+            hero.currentHealth = nouvelleVie;
+            
+            // Afficher un message
+            this._showMessage(`+${Math.round(gainReel)} PV! Groupe d'ennemis éliminé, vous récupérez 50% de votre vie!`, 3000);
+            
+            // Effets visuels de guérison
+            this._createHealingEffect(hero.position);
+            
+            // Si player a une méthode pour mettre à jour l'interface
+            if (typeof player.updateHealthBar === 'function') {
+                player.updateHealthBar();
+            }
+            
+            // Son de guérison
+            this._playHealSound();
+        }
+    }
+    
+    _createHealingEffect(position) {
+        // Créer un système de particules pour l'effet de guérison
+        const healingParticles = new BABYLON.ParticleSystem("healingParticles", 50, this.scene);
+        healingParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
+        
+        // Configurer l'émetteur
+        const emitter = new BABYLON.Vector3(position.x, position.y + 1, position.z);
+        healingParticles.emitter = emitter;
+        
+        // Configurer les propriétés des particules
+        healingParticles.color1 = new BABYLON.Color4(0, 1, 0, 1);
+        healingParticles.color2 = new BABYLON.Color4(0.5, 1, 0.5, 1);
+        healingParticles.colorDead = new BABYLON.Color4(0, 0.5, 0, 0);
+        
+        healingParticles.minSize = 0.3;
+        healingParticles.maxSize = 0.5;
+        
+        healingParticles.minLifeTime = 1.0;
+        healingParticles.maxLifeTime = 2.0;
+        
+        healingParticles.emitRate = 50;
+        
+        healingParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
+        
+        healingParticles.direction1 = new BABYLON.Vector3(-1, 3, -1);
+        healingParticles.direction2 = new BABYLON.Vector3(1, 3, 1);
+        
+        healingParticles.minEmitPower = 1;
+        healingParticles.maxEmitPower = 2;
+        
+        // Créer une lumière verte temporaire
+        const healLight = new BABYLON.PointLight("healLight", emitter, this.scene);
+        healLight.diffuse = new BABYLON.Color3(0, 1, 0);
+        healLight.specular = new BABYLON.Color3(0, 1, 0);
+        healLight.intensity = 1;
+        healLight.range = 10;
+        
+        // Démarrer les particules
+        healingParticles.start();
+        
+        // Arrêter et nettoyer après 2 secondes
+        setTimeout(() => {
+            healingParticles.stop();
+            setTimeout(() => {
+                healingParticles.dispose();
+                healLight.dispose();
+            }, 2000);
+        }, 1000);
+    }
+    
+    _playHealSound() {
+        try {
+            const healSound = new BABYLON.Sound("healSound", "/son/heal.mp3", this.scene, null, {
+                volume: 0.7,
+                autoplay: true
+            });
+        } catch (error) {
+            console.warn("Impossible de jouer le son de guérison:", error);
         }
     }
 
