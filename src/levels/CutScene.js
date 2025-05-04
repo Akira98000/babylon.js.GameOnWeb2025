@@ -11,6 +11,7 @@ export class CutScene {
         this.videoElement = null;
         this.topLetterbox = null;
         this.bottomLetterbox = null;
+        this.skipButton = null;
     }
     
     async init() {
@@ -46,6 +47,9 @@ export class CutScene {
                 transition: "opacity 1s ease-in-out, transform 1s ease-in-out"
             });
             
+            // Créer le bouton pour sauter la cutscene
+            this._createSkipButton();
+            
             this.overlayElement.appendChild(titleElement);
             document.body.appendChild(this.overlayElement);
             
@@ -73,6 +77,8 @@ export class CutScene {
                                     this.overlayElement.parentNode.removeChild(this.overlayElement);
                                 }
                                 this.overlayElement = null;
+                                
+                                this._removeSkipButton();
                                 
                                 if (this.onComplete && typeof this.onComplete === 'function') {
                                     this.onComplete();
@@ -110,6 +116,7 @@ export class CutScene {
                             
                             // Lancer la vidéo immédiatement
                             this.playVideo().then(() => {
+                                this._removeSkipButton();
                                 if (this.onComplete && typeof this.onComplete === 'function') {
                                     this.onComplete();
                                 }
@@ -120,6 +127,98 @@ export class CutScene {
                 }, 100);
             }
         });
+    }
+    
+    _createSkipButton() {
+        this.skipButton = document.createElement("div");
+        this.skipButton.id = "skipCutsceneButton";
+        Object.assign(this.skipButton.style, {
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            width: "60px",
+            height: "60px",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            border: "2px solid white",
+            borderRadius: "50%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            cursor: "pointer",
+            zIndex: "2500",
+            transition: "background-color 0.3s, transform 0.2s",
+            boxShadow: "0 0 10px rgba(0, 0, 0, 0.5)"
+        });
+        
+        // Créer la flèche
+        const arrow = document.createElement("div");
+        Object.assign(arrow.style, {
+            width: "0",
+            height: "0",
+            borderTop: "12px solid transparent",
+            borderBottom: "12px solid transparent",
+            borderLeft: "20px solid white",
+            marginLeft: "5px" // Pour centrer visuellement
+        });
+        
+        this.skipButton.appendChild(arrow);
+        document.body.appendChild(this.skipButton);
+        
+        // Effet de survol
+        this.skipButton.onmouseenter = () => {
+            this.skipButton.style.backgroundColor = "rgba(50, 50, 50, 0.7)";
+            this.skipButton.style.transform = "scale(1.1)";
+        };
+        
+        this.skipButton.onmouseleave = () => {
+            this.skipButton.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+            this.skipButton.style.transform = "scale(1)";
+        };
+        
+        // Action de clic
+        this.skipButton.onclick = () => {
+            this._skipCutscene();
+        };
+    }
+    
+    _removeSkipButton() {
+        if (this.skipButton && this.skipButton.parentNode) {
+            this.skipButton.parentNode.removeChild(this.skipButton);
+            this.skipButton = null;
+        }
+    }
+    
+    _skipCutscene() {
+        // Si nous sommes en affichage du titre
+        if (this.overlayElement) {
+            if (this.overlayElement.parentNode) {
+                this.overlayElement.parentNode.removeChild(this.overlayElement);
+            }
+            this.overlayElement = null;
+        }
+        
+        // Si la vidéo est en cours de lecture
+        if (this.videoElement) {
+            this.videoElement.pause();
+            
+            // Faire disparaître la vidéo
+            this.videoElement.style.opacity = "0";
+            
+            // Faire disparaître les bandes letterbox
+            if (this.topLetterbox) this.topLetterbox.style.height = "0";
+            if (this.bottomLetterbox) this.bottomLetterbox.style.height = "0";
+            
+            // Nettoyer immédiatement
+            this.cleanup();
+        }
+        
+        // Supprimer le bouton de skip
+        this._removeSkipButton();
+        
+        // Exécuter le callback de fin
+        if (this.onComplete && typeof this.onComplete === 'function') {
+            this.onComplete();
+        }
     }
     
     _preloadVideo() {
@@ -260,5 +359,12 @@ export class CutScene {
         if (this.bottomLetterbox && this.bottomLetterbox.parentNode) {
             this.bottomLetterbox.parentNode.removeChild(this.bottomLetterbox);
         }
+        
+        this._removeSkipButton();
+        
+        this.overlayElement = null;
+        this.videoElement = null;
+        this.topLetterbox = null;
+        this.bottomLetterbox = null;
     }
 } 

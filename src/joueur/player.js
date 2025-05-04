@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { GAME_CONFIG } from '../config/gameConfig';
 import { createMuzzleFlash } from '../effects/visualEffects';
 import { createBullet } from '../armes/balles';
+import { EnnemiIA } from '../ennemis/EnnemiIA';
 
 let isShooting = false;
 
@@ -266,6 +267,23 @@ export const createPlayer = async (scene, camera, canvas) => {
                             } else {
                                 // Pour les autres niveaux, réinitialiser la position du joueur
                                 hero.position = new BABYLON.Vector3(0, 0, 0);
+                                
+                                // Forcer la recréation d'une nouvelle instance du niveau pour réinitialiser complètement
+                                // les ennemis et tous les éléments du niveau
+                                if (scene.metadata.levelManager.levels[currentLevel]) {
+                                    // Nettoyer d'abord tous les ennemis existants
+                                    if (EnnemiIA && EnnemiIA.allEnemies) {
+                                        const allEnemies = [...EnnemiIA.allEnemies];
+                                        for (const enemy of allEnemies) {
+                                            if (enemy && enemy.mesh) enemy.die();
+                                        }
+                                        EnnemiIA.allEnemies = [];
+                                    }
+                                    
+                                    // Recréer une instance fraîche du niveau
+                                    const Level = scene.metadata.levelManager.levels[currentLevel].constructor;
+                                    scene.metadata.levelManager.levels[currentLevel] = new Level(scene);
+                                }
                                 
                                 // Redémarrer le niveau actuel
                                 scene.metadata.levelManager.goToLevel(currentLevel);

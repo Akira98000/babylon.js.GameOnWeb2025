@@ -18,6 +18,10 @@ export class Level5 {
         this.nombreEnnemisVaincus = 0;
         this.lights = [];
         
+        // Trackers pour les ennemis par quartier - initialiser avant d'appeler _loadCheckpoint
+        this.ennemisParQuartier = [0, 0, 0];
+        this.ennemisVaincusParQuartier = [0, 0, 0];
+        
         // Système de checkpoints
         this.checkpoints = [
             { id: 0, name: "Début", position: new BABYLON.Vector3(-1.84, 0.10, -84.43), reached: true },
@@ -30,10 +34,6 @@ export class Level5 {
         
         // Charger le checkpoint si sauvegardé
         this._loadCheckpoint();
-        
-        // Trackers pour les ennemis par quartier
-        this.ennemisParQuartier = [0, 0, 0];
-        this.ennemisVaincusParQuartier = [0, 0, 0];
         
         this.quartiers = [
             { name: "Centre-Sud", position: new BABYLON.Vector3(-1.84, 0.10, -84.43) },
@@ -70,6 +70,9 @@ export class Level5 {
             console.error("Player not found in scene metadata");
             return;
         }
+
+        // Nettoyer tous les ennemis existants, y compris ceux dans la liste statique EnnemiIA.allEnemies
+        this._cleanupAllEnemies();
 
         this._showMessage("Niveau 5: La Reconquête des Quartiers!", 5000);
         this._playBattleSound();
@@ -192,12 +195,20 @@ export class Level5 {
         const quartier = this.quartiers[this.quartierActuel];
         this._showMessage(`Quartier ${quartier.name}: Éliminez toutes les pizzas maléfiques!`, 4000);
         const positions = [];
-        for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
+        
+        // Limiter le nombre d'ennemis par quartier à 4 maximum
+        const MAX_ENNEMIS_PAR_QUARTIER = 4;
+        // Utiliser le minimum entre le nombre configuré et le maximum autorisé
+        const nombreEnnemisEffectif = Math.min(this.nombreEnnemisParQuartier, MAX_ENNEMIS_PAR_QUARTIER);
+        
+        for (let i = 0; i < nombreEnnemisEffectif; i++) {
             positions.push(this._getPositionDansPerimetre(this.quartierActuel));
         }
-        this.ennemisParQuartier[this.quartierActuel] = this.nombreEnnemisParQuartier;
+        
+        this.ennemisParQuartier[this.quartierActuel] = nombreEnnemisEffectif;
         this.ennemisVaincusParQuartier[this.quartierActuel] = 0;
-        for (let i = 0; i < this.nombreEnnemisParQuartier; i++) {
+        
+        for (let i = 0; i < nombreEnnemisEffectif; i++) {
             setTimeout(() => {
                 this._spawnEnnemi(positions[i], i);
             }, i * 800); 
@@ -530,7 +541,7 @@ export class Level5 {
             this.isCompleted = true;
             
             // Réinitialiser le checkpoint du niveau
-            localStorage.removeItem('level5_checkpoint');
+            sessionStorage.removeItem('level5_checkpoint');
             
             // Utiliser GameMessages pour afficher un message de célébration avec confettis
             GameMessages.showCelebrationMessage(
@@ -685,11 +696,8 @@ export class Level5 {
     }
 
     dispose() {
-        for (let ennemi of this.ennemis) {
-            if (ennemi.mesh) {
-                ennemi.mesh.dispose();
-            }
-        }
+        // Utiliser notre méthode de nettoyage pour tous les ennemis
+        this._cleanupAllEnemies();
         
         for (let ami of this.amis) {
             if (ami.mesh) {
@@ -712,7 +720,7 @@ export class Level5 {
         
         // Si le niveau est terminé avec succès, supprimer le checkpoint
         if (this.isCompleted) {
-            localStorage.removeItem('level5_checkpoint');
+            sessionStorage.removeItem('level5_checkpoint');
         }
         
         // Nettoyer les modèles de la reine
@@ -804,6 +812,30 @@ export class Level5 {
             const player = this.scene.metadata.player.hero;
             if (!player) {
                 console.error("Player not found for enemy targeting");
+                return;
+            }
+
+            // Vérifier le nombre d'ennemis actuels dans ce quartier
+            const quartierActif = this.quartierActuel - 1;
+            let ennemisActuelsDansQuartier = 0;
+            for (const ennemi of this.ennemis) {
+                if (ennemi.quartier === quartierActif && !ennemi.isDead) {
+                    ennemisActuelsDansQuartier++;
+                }
+            }
+            
+            // Vérifier également le nombre d'ennemis dans la liste statique pour ce quartier
+            let ennemisGlobalsDansQuartier = 0;
+            for (const ennemi of EnnemiIA.allEnemies) {
+                if (ennemi.quartier === quartierActif && !ennemi.isDead) {
+                    ennemisGlobalsDansQuartier++;
+                }
+            }
+            
+            // Limiter à maximum 4 ennemis par quartier
+            const MAX_ENNEMIS_PAR_QUARTIER = 4;
+            if (ennemisActuelsDansQuartier >= MAX_ENNEMIS_PAR_QUARTIER || ennemisGlobalsDansQuartier >= MAX_ENNEMIS_PAR_QUARTIER) {
+                console.log(`Limite d'ennemis atteinte pour le quartier ${quartierActif} (${ennemisActuelsDansQuartier}/${MAX_ENNEMIS_PAR_QUARTIER}), spawn ignoré`);
                 return;
             }
 
@@ -943,9 +975,9 @@ export class Level5 {
             checkpoint.reached = true;
             this.currentCheckpoint = checkpointId;
             
-            // Sauvegarder dans le localStorage
-            localStorage.setItem('level5_checkpoint', checkpointId.toString());
-            console.log(`Checkpoint ${checkpointId} sauvegardé`);
+            // Utiliser sessionStorage au lieu de localStorage
+            sessionStorage.setItem('level5_checkpoint', checkpointId.toString());
+            console.log(`Checkpoint ${checkpointId} sauvegardé dans la session`);
             
             // Afficher un message
             this._showMessage(`Checkpoint atteint: ${checkpoint.name}`, 3000);
@@ -953,7 +985,7 @@ export class Level5 {
     }
     
     _loadCheckpoint() {
-        const savedCheckpoint = localStorage.getItem('level5_checkpoint');
+        const savedCheckpoint = sessionStorage.getItem('level5_checkpoint');
         if (savedCheckpoint) {
             const checkpointId = parseInt(savedCheckpoint);
             if (!isNaN(checkpointId) && checkpointId >= 0 && checkpointId < this.checkpoints.length) {
@@ -964,7 +996,7 @@ export class Level5 {
                     this.checkpoints[i].reached = true;
                 }
                 
-                console.log(`Checkpoint ${checkpointId} chargé`);
+                console.log(`Checkpoint ${checkpointId} chargé depuis la session`);
                 
                 // Avancer au quartier correspondant au checkpoint
                 if (checkpointId >= 1 && checkpointId <= 3) {
@@ -985,5 +1017,60 @@ export class Level5 {
                 }
             }
         }
+    }
+
+    // Nouvelle méthode pour nettoyer tous les ennemis existants
+    _cleanupAllEnemies() {
+        console.log("Nettoyage complet des ennemis du niveau 5...");
+        
+        // Nettoyer les ennemis de notre liste locale
+        for (const ennemi of [...this.ennemis]) {
+            if (ennemi.mesh) {
+                // Forcer la mort de l'ennemi pour le retirer proprement
+                if (!ennemi.isDead) {
+                    ennemi.isDead = true;
+                    ennemi.die();
+                } else {
+                    // Forcer la suppression des éléments visuels si l'ennemi est déjà mort
+                    if (ennemi.mesh) ennemi.mesh.dispose();
+                    if (ennemi.root) ennemi.root.dispose();
+                    if (ennemi.hitbox) ennemi.hitbox.dispose();
+                    if (ennemi.healthBar) ennemi.healthBar.dispose();
+                    if (ennemi.healthBarBackground) ennemi.healthBarBackground.dispose();
+                    if (ennemi.aura) ennemi.aura.dispose();
+                }
+            }
+        }
+        this.ennemis = [];
+        
+        // Nettoyer également la liste statique globale
+        const allEnemies = [...EnnemiIA.allEnemies];
+        for (const ennemi of allEnemies) {
+            if (ennemi && !ennemi.isDead) {
+                ennemi.isDead = true;
+                // Si le mesh existe, appeler die() pour le nettoyer correctement
+                if (ennemi.mesh) {
+                    ennemi.die();
+                } else {
+                    // Sinon, le retirer manuellement de la liste
+                    const index = EnnemiIA.allEnemies.indexOf(ennemi);
+                    if (index > -1) {
+                        EnnemiIA.allEnemies.splice(index, 1);
+                    }
+                }
+            }
+        }
+        
+        // S'assurer que tous les meshes nommés "pizza" ou "bigboss" sont supprimés
+        for (const mesh of this.scene.meshes) {
+            if (mesh.name.includes("pizza") || mesh.name.includes("bigboss") || mesh.name.includes("ennemiRoot")) {
+                mesh.dispose();
+            }
+        }
+        
+        // Réinitialiser complètement la liste statique
+        EnnemiIA.allEnemies = [];
+        
+        console.log("Nettoyage des ennemis terminé, liste réinitialisée.");
     }
 } 
