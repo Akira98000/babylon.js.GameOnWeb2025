@@ -1,86 +1,75 @@
 import * as BABYLON from '@babylonjs/core';
 
 export function setupMinimap(scene, player) {
-    // Créer le conteneur principal de la minimap
-    const minimapContainer = document.createElement("div");
-    Object.assign(minimapContainer.style, {
-        position: "absolute",
-        top: "70px",  
-        left: "15px",
-        width: "150px",
-        height: "150px",
-        borderRadius: "50%",
-        overflow: "hidden",
-        border: "2px solid rgba(255, 255, 255, 0.3)",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)",
-        transition: "all 0.3s ease",
-        zIndex: "998"
+    const miniMapContainer = document.createElement('div');
+    miniMapContainer.id = 'miniMapContainer';
+    Object.assign(miniMapContainer.style, {
+        position: 'absolute',
+        top: '70px',
+        left: '15px',
+        width: '150px',
+        height: '150px',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        border: '2px solid rgba(255, 255, 255, 0.3)',
+        borderRadius: '50%',
+        overflow: 'hidden',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+        zIndex: '998',
+        transition: 'all 0.3s ease'
     });
-
-    const mapImageContainer = document.createElement("div");
-    Object.assign(mapImageContainer.style, {
-        position: "absolute",
-        top: "0",
-        left: "0",
-        width: "100%",
-        height: "100%",
-        backgroundImage: "url('/image/map_game.png')",
-        backgroundSize: "400%", 
-        backgroundPosition: "center",
-        filter: "brightness(0.8)",
-        transition: "all 0.3s ease"
-    });
-    minimapContainer.appendChild(mapImageContainer);
-
-    // Indicateur de position du joueur
-    const playerIndicator = document.createElement("div");
-    Object.assign(playerIndicator.style, {
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        width: "20px",
-        height: "20px",
-        backgroundImage: "url('/image/gameIcon.png')",
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        transform: "translate(-50%, -50%) rotate(0deg)",
-        zIndex: "2",
-        transition: "transform 0.2s ease"
-    });
-    minimapContainer.appendChild(playerIndicator);
-
-    // Overlay pour l'effet de radar
-    const radarOverlay = document.createElement("div");
-    radarOverlay.className = "radar-sweep";
-    Object.assign(radarOverlay.style, {
-        position: "absolute",
-        top: "0",
-        left: "0",
-        width: "100%",
-        height: "100%",
-        background: "radial-gradient(circle, rgba(0,200,0,0.1) 0%, rgba(0,200,0,0.2) 70%, rgba(0,150,0,0.3) 100%)",
-        borderRadius: "50%",
-        pointerEvents: "none"
-    });
-    minimapContainer.appendChild(radarOverlay);
-
-    // Bordure circulaire de la minimap
-    const minimapBorder = document.createElement("div");
-    minimapBorder.className = "minimap-border";
-    Object.assign(minimapBorder.style, {
-        position: "absolute",
-        top: "0",
-        left: "0",
-        width: "100%",
-        height: "100%",
-        borderRadius: "50%",
-        pointerEvents: "none",
-        zIndex: "3"
-    });
-    minimapContainer.appendChild(minimapBorder);
     
-    // Étiquette de la minimap
+    const mapImage = document.createElement('div');
+    mapImage.id = 'miniMapImage';
+    Object.assign(mapImage.style, {
+        width: '100%',
+        height: '100%',
+        backgroundImage: 'url("/image/map_game.png")',
+        backgroundSize: '400%',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        transition: 'background-position 0.2s ease',
+        filter: 'brightness(0.9)'
+    });
+    
+    const playerMarker = document.createElement('div');
+    playerMarker.id = 'playerMarker';
+    Object.assign(playerMarker.style, {
+        position: 'absolute',
+        width: '12px',
+        height: '12px',
+        top: '50%',       
+        left: '50%',       
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        borderRadius: '50%',
+        transform: 'translate(-50%, -50%)',
+        boxShadow: '0 0 5px 2px rgba(255, 255, 255, 0.7)',
+        zIndex: '999'
+    });
+    
+    const playerIcon = document.createElement('img');
+    playerIcon.src = '/image/gameIcon.png';
+    Object.assign(playerIcon.style, {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover'
+    });
+    playerMarker.appendChild(playerIcon);
+    
+    const playerDirection = document.createElement('div');
+    playerDirection.id = 'playerDirection';
+    Object.assign(playerDirection.style, {
+        position: 'absolute',
+        top: '-8px',
+        left: '50%',
+        width: '0',
+        height: '0',
+        borderLeft: '4px solid transparent',
+        borderRight: '4px solid transparent',
+        borderBottom: '8px solid rgba(0, 200, 0, 0.8)',
+        transform: 'translateX(-50%)',
+        transformOrigin: 'bottom center'
+    });
+    
     const minimapLabel = document.createElement("div");
     Object.assign(minimapLabel.style, {
         position: "absolute",
@@ -94,234 +83,238 @@ export function setupMinimap(scene, player) {
         textShadow: "0 0 2px rgba(0, 0, 0, 0.8)"
     });
     minimapLabel.textContent = "Appuyez sur M pour agrandir";
-    minimapContainer.appendChild(minimapLabel);
-
-    document.body.appendChild(minimapContainer);
-
-    // Mode agrandi
+    
+    playerMarker.appendChild(playerDirection);
+    miniMapContainer.appendChild(mapImage);
+    miniMapContainer.appendChild(playerMarker);
+    miniMapContainer.appendChild(minimapLabel);
+    document.body.appendChild(miniMapContainer);
+    
     let isExpanded = false;
-
-    // Fonction pour basculer entre le mode minimap et carte complète
-    const toggleExpandedMap = () => {
-        isExpanded = !isExpanded;
-
-        if (isExpanded) {
-            // Mode carte complète
-            Object.assign(minimapContainer.style, {
-                top: "50%",
-                left: "50%",
-                width: "80%",
-                height: "80%",
-                transform: "translate(-50%, -50%)",
-                borderRadius: "10px",
-                zIndex: "1001"
-            });
-
-            Object.assign(mapImageContainer.style, {
-                backgroundSize: "contain",
-                backgroundPosition: "center"
-            });
+    let expandedContainer = null;
+    
+    const updateMinimap = (playerPosition, playerRotation) => {
+        console.log(`Position joueur: x=${playerPosition.x.toFixed(2)}, z=${playerPosition.z.toFixed(2)}`);
+        
+        const mapBounds = {
+            minX: -90,
+            maxX: 90,
+            minZ: -90,
+            maxZ: 90
+        };
+        
+        const adjustedPosition = {
+            x: playerPosition.x + 50,
+            z: playerPosition.z + 19 
+        };
+        
+        const correctedPosition = {
+            x: adjustedPosition.z,  
+            z: -adjustedPosition.x  
+        };
+        
+        console.log(`Position corrigée: x=${correctedPosition.x.toFixed(2)}, z=${correctedPosition.z.toFixed(2)}`);
+        
+        const grandMapPosition = {
+            x: correctedPosition.x,
+            z: correctedPosition.z
+        };
+        
+        if (!isExpanded) {
+            const normalizedX = (grandMapPosition.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ);
+            const normalizedZ = (grandMapPosition.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX);
+            const bgPosX = 50 - normalizedX * 100; 
+            const bgPosY = 50 - normalizedZ * 100; 
+            mapImage.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+            playerDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
+        }
+        else if (expandedContainer) {
+            const expandedMapImage = expandedContainer.querySelector('#expandedMapImage');
+            const expandedPlayerMarker = expandedContainer.querySelector('#expandedPlayerMarker');
+            const expandedDirection = expandedContainer.querySelector('#expandedPlayerDirection');
             
-            // Masquer l'étiquette en mode agrandi
-            minimapLabel.style.display = "none";
-
-            // Ajouter un bouton de fermeture
-            if (!minimapContainer.querySelector('.close-button')) {
-                const closeButton = document.createElement("div");
-                closeButton.className = "close-button";
-                Object.assign(closeButton.style, {
-                    position: "absolute",
-                    top: "10px",
-                    right: "10px",
-                    width: "30px",
-                    height: "30px",
-                    backgroundColor: "rgba(0, 0, 0, 0.7)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    zIndex: "5"
-                });
-                closeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>`;
-                closeButton.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    toggleExpandedMap();
-                });
-                minimapContainer.appendChild(closeButton);
-            }
-
-            // Fond semi-transparent pour bloquer les interactions avec le jeu
-            const mapOverlay = document.createElement("div");
-            mapOverlay.className = "map-overlay";
-            Object.assign(mapOverlay.style, {
-                position: "fixed",
-                top: "0",
-                left: "0",
-                width: "100%",
-                height: "100%",
-                backgroundColor: "rgba(0, 0, 0, 0.7)",
-                zIndex: "1000"
-            });
-            document.body.appendChild(mapOverlay);
-
-            // Légende de la carte
-            const mapLegend = document.createElement("div");
-            mapLegend.className = "map-legend";
-            Object.assign(mapLegend.style, {
-                position: "absolute",
-                bottom: "20px",
-                left: "20px",
-                color: "white",
-                padding: "10px",
-                backgroundColor: "rgba(0, 0, 0, 0.7)",
-                borderRadius: "5px",
-                zIndex: "5",
-                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                fontSize: "14px"
-            });
-            mapLegend.innerHTML = `
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <div style="width: 20px; height: 20px; background-image: url('/image/gameIcon.png'); background-size: contain; margin-right: 10px;"></div>
-                    <span>Votre position</span>
-                </div>
-                <div style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
-                    Appuyez sur <strong>M</strong> ou cliquez sur <strong>✕</strong> pour fermer
-                </div>
-            `;
-            minimapContainer.appendChild(mapLegend);
-
-            // Titre de la carte
-            const mapTitle = document.createElement("div");
-            mapTitle.className = "map-title";
-            Object.assign(mapTitle.style, {
-                position: "absolute",
-                top: "10px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                color: "white",
-                padding: "5px 15px",
-                backgroundColor: "rgba(0, 0, 0, 0.7)",
-                borderRadius: "15px",
-                zIndex: "5",
-                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                fontSize: "16px",
-                fontWeight: "bold"
-            });
-            mapTitle.textContent = "CARTE DE LA VILLE";
-            minimapContainer.appendChild(mapTitle);
-
-            // Désactiver la rotation du joueur en mode carte
-            playerIndicator.style.transform = "translate(-50%, -50%)";
-            
-            // Mettre en pause les contrôles du jeu
-            if (scene.metadata && scene.metadata.controls) {
-                minimapContainer.previousControlsEnabled = scene.metadata.controls.enabled;
-                scene.metadata.controls.enabled = false;
-            }
-
-        } else {
-            // Retour au mode minimap
-            Object.assign(minimapContainer.style, {
-                top: "70px",
-                left: "15px",
-                width: "150px",
-                height: "150px",
-                transform: "none",
-                borderRadius: "50%",
-                zIndex: "998"
-            });
-
-            Object.assign(mapImageContainer.style, {
-                backgroundSize: "400%",
-                backgroundPosition: "center"
-            });
-            
-            // Afficher à nouveau l'étiquette
-            minimapLabel.style.display = "block";
-
-            // Supprimer le bouton de fermeture
-            const closeButton = minimapContainer.querySelector('.close-button');
-            if (closeButton) {
-                minimapContainer.removeChild(closeButton);
-            }
-
-            // Supprimer l'overlay
-            const mapOverlay = document.querySelector('.map-overlay');
-            if (mapOverlay) {
-                document.body.removeChild(mapOverlay);
-            }
-
-            // Supprimer la légende
-            const mapLegend = minimapContainer.querySelector('.map-legend');
-            if (mapLegend) {
-                minimapContainer.removeChild(mapLegend);
-            }
-
-            // Supprimer le titre
-            const mapTitle = minimapContainer.querySelector('.map-title');
-            if (mapTitle) {
-                minimapContainer.removeChild(mapTitle);
-            }
-
-            // Réactiver les contrôles du jeu
-            if (scene.metadata && scene.metadata.controls && minimapContainer.previousControlsEnabled !== undefined) {
-                scene.metadata.controls.enabled = minimapContainer.previousControlsEnabled;
+            if (expandedPlayerMarker && expandedDirection) {
+                const { offsetWidth: w, offsetHeight: h } = expandedContainer;
+                const normalizedX = (grandMapPosition.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ);
+                const normalizedZ = (grandMapPosition.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX);
+                const percentX = normalizedX;
+                const percentZ = 1 - normalizedZ;
+                expandedPlayerMarker.style.left = `${percentX * w}px`;
+                expandedPlayerMarker.style.top = `${percentZ * h}px`;
+                expandedDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
             }
         }
     };
+    
+    const toggleExpandedMap = () => {
+        isExpanded = !isExpanded;
+        if (isExpanded) {
+            expandedContainer = document.createElement('div');
+            expandedContainer.id = 'expandedMapContainer';
+            Object.assign(expandedContainer.style, {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                width: '80%',
+                height: '80%',
+                transform: 'translate(-50%, -50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                border: '2px solid rgba(255, 255, 255, 0.5)',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                zIndex: '1001',
+                boxShadow: '0 0 20px rgba(0, 0, 0, 0.8)'
+            });
+            const expandedMapImage = document.createElement('img');
+            expandedMapImage.id = 'expandedMapImage';
+            expandedMapImage.src = '/image/map_game.png';
+            Object.assign(expandedMapImage.style, {
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain'
+            });
+            
+            const expandedPlayerMarker = document.createElement('div');
+            expandedPlayerMarker.id = 'expandedPlayerMarker';
+            Object.assign(expandedPlayerMarker.style, {
+                position: 'absolute',
+                width: '20px',
+                height: '20px',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                borderRadius: '50%',
+                transform: 'translate(-50%, -50%)',
+                boxShadow: '0 0 8px 3px rgba(255, 255, 255, 0.7)',
+                zIndex: '1002'
+            });
+            
+            const expandedPlayerIcon = document.createElement('img');
+            expandedPlayerIcon.src = '/image/gameIcon.png';
+            Object.assign(expandedPlayerIcon.style, {
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+            });
+            
+            const expandedPlayerDirection = document.createElement('div');
+            expandedPlayerDirection.id = 'expandedPlayerDirection';
+            Object.assign(expandedPlayerDirection.style, {
+                position: 'absolute',
+                top: '-10px',
+                left: '50%',
+                width: '0',
+                height: '0',
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderBottom: '12px solid rgba(0, 200, 0, 0.8)',
+                transform: 'translateX(-50%)',
+                transformOrigin: 'bottom center'
+            });
+            
+            const mapTitle = document.createElement('div');
+            mapTitle.textContent = 'CARTE DE LA VILLE';
+            Object.assign(mapTitle.style, {
+                position: 'absolute',
+                top: '15px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: 'white',
+                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                fontSize: '20px',
+                fontWeight: 'bold',
+                padding: '5px 15px',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                borderRadius: '15px',
+                zIndex: '1003'
+            });
+            
+            const closeButton = document.createElement('div');
+            closeButton.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`;
+            Object.assign(closeButton.style, {
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                cursor: 'pointer',
+                zIndex: '1003'
+            });
+            closeButton.addEventListener('click', toggleExpandedMap);
+            
+            const overlay = document.createElement('div');
+            overlay.id = 'mapOverlay';
+            Object.assign(overlay.style, {
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: '1000'
+            });
+            
+            expandedPlayerMarker.appendChild(expandedPlayerIcon);
+            expandedPlayerMarker.appendChild(expandedPlayerDirection);
+            expandedContainer.appendChild(expandedMapImage);
+            expandedContainer.appendChild(expandedPlayerMarker);
+            expandedContainer.appendChild(mapTitle);
+            expandedContainer.appendChild(closeButton);
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(expandedContainer);
+            miniMapContainer.style.display = 'none';
 
-    // Cliquer sur la minimap pour l'agrandir
-    minimapContainer.addEventListener("click", () => {
+            if (scene.metadata && scene.metadata.controls) {
+                expandedContainer.previousControlsEnabled = scene.metadata.controls.enabled;
+                scene.metadata.controls.enabled = false;
+            }
+        } else {
+            if (expandedContainer) {
+                document.body.removeChild(expandedContainer);
+                expandedContainer = null;
+            }
+            const overlay = document.getElementById('mapOverlay');
+            if (overlay) {
+                document.body.removeChild(overlay);
+            }
+            miniMapContainer.style.display = 'block';
+            if (scene.metadata && scene.metadata.controls && expandedContainer && expandedContainer.previousControlsEnabled !== undefined) {
+                scene.metadata.controls.enabled = expandedContainer.previousControlsEnabled;
+            }
+        }
+    };
+    miniMapContainer.addEventListener('click', () => {
         if (!isExpanded) {
             toggleExpandedMap();
         }
     });
-
-    // Écouteur d'événement pour la touche 'M'
     const handleKeyDown = (event) => {
         if (event.key.toLowerCase() === 'm') {
             toggleExpandedMap();
         }
     };
     window.addEventListener('keydown', handleKeyDown);
-
-    // Mettre à jour la position et rotation sur la minimap
-    const updateMinimap = (playerPosition, playerRotation) => {
-        // Calculer la position sur la minimap
-        const mapSize = { width: 180, height: 180 }; // Taille totale supposée de la carte du jeu
-        const mapCenter = { x: 0, y: 0 }; // Centre de la carte du jeu
-        
-        // Normaliser la position du joueur par rapport aux limites de la carte
-        const normalizedX = (playerPosition.x - mapCenter.x) / mapSize.width;
-        const normalizedZ = (playerPosition.z - mapCenter.z) / mapSize.height;
-        
-        // Déplacer l'arrière-plan de la minimap en fonction de la position normalisée
-        // (inversion de la position pour le déplacement de l'arrière-plan)
-        const backgroundPosX = 50 - normalizedX * 100;
-        const backgroundPosY = 50 + normalizedZ * 100;
-        mapImageContainer.style.backgroundPosition = `${backgroundPosX}% ${backgroundPosY}%`;
-        
-        // Rotation de l'indicateur du joueur (seulement en mode minimap)
-        if (!isExpanded) {
-            playerIndicator.style.transform = `translate(-50%, -50%) rotate(${playerRotation}rad)`;
-        }
-    };
-
-    // Nettoyer les écouteurs d'événements lors de la suppression
+    
     const dispose = () => {
         window.removeEventListener('keydown', handleKeyDown);
-        if (document.body.contains(minimapContainer)) {
-            document.body.removeChild(minimapContainer);
+        if (document.body.contains(miniMapContainer)) {
+            document.body.removeChild(miniMapContainer);
         }
-        const mapOverlay = document.querySelector('.map-overlay');
-        if (mapOverlay) {
-            document.body.removeChild(mapOverlay);
+        if (expandedContainer && document.body.contains(expandedContainer)) {
+            document.body.removeChild(expandedContainer);
+        }
+        const overlay = document.getElementById('mapOverlay');
+        if (overlay) {
+            document.body.removeChild(overlay);
         }
     };
-
+    
     return {
         updateMinimap,
         toggleExpandedMap,
