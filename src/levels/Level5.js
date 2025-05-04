@@ -74,7 +74,14 @@ export class Level5 {
         // Nettoyer tous les ennemis existants, y compris ceux dans la liste statique EnnemiIA.allEnemies
         this._cleanupAllEnemies();
 
-        this._showMessage("Niveau 5: La Reconquête des Quartiers!", 5000);
+        GameMessages.showTemporaryMessage(
+            "Niveau 5",
+            "🏙️",
+            "La Reconquête des Quartiers!",
+            5000,
+            "#FFA500"
+        );
+        
         this._playBattleSound();
         const player = this.scene.metadata.player.hero;
         
@@ -183,7 +190,6 @@ export class Level5 {
 
     _passerAuQuartierSuivant() {
         if (this.stormStarted) {
-            console.log("La tempête violette a commencé, arrêt de la génération d'ennemis");
             return;
         }
 
@@ -193,7 +199,6 @@ export class Level5 {
         }
 
         const quartier = this.quartiers[this.quartierActuel];
-        this._showMessage(`Quartier ${quartier.name}: Éliminez toutes les pizzas maléfiques!`, 4000);
         const positions = [];
         
         // Limiter le nombre d'ennemis par quartier à 4 maximum
@@ -283,7 +288,6 @@ export class Level5 {
                 if (quartierActif === 2 && !this.stormStarted) {
                     this._startPurpleStorm();
                 } else if (this.quartierActuel < this.nombreQuartiers) {
-                    this._showMessage(`Quartier ${this.quartiers[quartierActif].name} libéré! Dirigez-vous vers le quartier ${this.quartiers[this.quartierActuel].name}.`, 3000);
                     setTimeout(() => {
                         this._passerAuQuartierSuivant();
                     }, 3000);
@@ -294,7 +298,6 @@ export class Level5 {
                 const quartierIndex = ennemi.quartier;
                 if (quartierIndex >= 0 && quartierIndex < this.quartiers.length) {
                     const restants = this.ennemisParQuartier[quartierIndex] - this.ennemisVaincusParQuartier[quartierIndex];
-                    this._showMessage(`Pizza maléfique éliminée! Reste ${restants} pizzas dans le quartier ${this.quartiers[quartierIndex].name}!`, 2000);
                 }
             }
             this._checkForLevelCompletion();
@@ -320,7 +323,6 @@ export class Level5 {
             hero.currentHealth = nouvelleVie;
             
             // Afficher un message
-            this._showMessage(`+${Math.round(gainReel)} PV! Groupe d'ennemis éliminé, vous récupérez 50% de votre vie!`, 3000);
             
             // Effets visuels de guérison
             this._createHealingEffect(hero.position);
@@ -416,20 +418,35 @@ export class Level5 {
             if (!this.scene.metadata) this.scene.metadata = {};
             this.scene.metadata.level5 = this;
             this.purpleStorm.start();
-            this._showMessage("⚠️ DANGER MORTEL! Une tempête violette DÉVASTATRICE approche! ⚠️", 5000);
-            
-            // Charger la reine qui a besoin d'aide
+            GameMessages.showTemporaryMessage(
+                "DANGER MORTEL!",
+                "⚠️",
+                "Une tempête violette DÉVASTATRICE est arrivée et mortelle!",
+                3000,
+                "#FF00FF"
+            );
             this._loadHelpQueen();
             
-            // Afficher un message après quelques secondes pour indiquer comment libérer la reine
             setTimeout(() => {
-                this._showMessage("URGENT! La reine est emprisonnée! Appuyez sur 'K' pour la libérer IMMÉDIATEMENT!", 5000);
-            }, 6000);
+                GameMessages.showTemporaryMessage(
+                    "URGENT!",
+                    "👑",
+                    "Le bigboss des pizzas s'est enfui et emprisonné la reine!",
+                    5000,
+                    "#FF0000"
+                );
+            }, 3000);
             
-            // Avertissement supplémentaire pour l'urgence
             setTimeout(() => {
-                this._showMessage("⚠️ ALERTE CRITIQUE! La tempête est MORTELLE et ULTRA-RAPIDE! ⚠️", 4000);
-            }, 12000);
+                GameMessages.showTemporaryMessage(
+                    "URGENT!",
+                    "⚠️",
+                    "Va au centre de la ville et libère la reine, elle t'attends !!",
+                    4000,
+                    "#FF00FF"
+                );
+            }, 6000);
+    
         }
     }
 
@@ -451,9 +468,7 @@ export class Level5 {
                 console.warn("Animation 'help' non trouvée pour help_queen.glb");
                 const animations = this.scene.animationGroups;
                 if (animations && animations.length > 0) {
-                    console.log("Animations disponibles:", animations.map(a => a.name).join(", "));
                     animations[0].start(true);
-                    console.log(`Animation '${animations[0].name}' démarrée comme fallback`);
                 }
             }
             
@@ -482,10 +497,64 @@ export class Level5 {
             this.scene.beginAnimation(queenLight, 0, 30, true);
             
             console.log("Help Queen chargée à la position spécifiée");
+            
+            // Créer une notification persistante au-dessus de la reine
+            this._createQueenNotification(queen);
+            
             this._setupQueenReleaseAction(queen, queenPosition);
         }).catch(error => {
             console.error("Erreur lors du chargement de help_queen.glb:", error);
         });
+    }
+
+    _createQueenNotification(queen) {
+        if (!queen) return;
+        
+        // Créer un panneau 3D au-dessus de la reine
+        const plane = BABYLON.MeshBuilder.CreatePlane("queenNotificationPlane", { width: 2, height: 1 }, this.scene);
+        plane.position = new BABYLON.Vector3(queen.position.x, queen.position.y + 3, queen.position.z);
+        plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+        
+        // Créer une texture dynamique pour le texte
+        const textureResolution = 512;
+        const dynamicTexture = new BABYLON.DynamicTexture("queenNotificationTexture", textureResolution, this.scene, true);
+        const textureContext = dynamicTexture.getContext();
+        
+        // Effacer la texture
+        textureContext.clearRect(0, 0, textureResolution, textureResolution);
+        
+        // Configurer le texte
+        dynamicTexture.drawText("Appuyez sur K", null, 150, "bold 72px Arial", "white", "#8000ff");
+        dynamicTexture.drawText("pour libérer la reine 'K'", null, 250, "bold 48px Arial", "white", "#8000ff");
+        
+        // Appliquer la texture au plan
+        const material = new BABYLON.StandardMaterial("queenNotificationMaterial", this.scene);
+        material.diffuseTexture = dynamicTexture;
+        material.specularColor = new BABYLON.Color3(0, 0, 0);
+        material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        material.backFaceCulling = false;
+        plane.material = material;
+        
+        // Ajouter un effet de clignotement
+        const blinkAnimation = new BABYLON.Animation(
+            "blinkAnimation",
+            "visibility",
+            10,
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+        );
+        
+        const keyframes = [];
+        keyframes.push({ frame: 0, value: 1 });
+        keyframes.push({ frame: 5, value: 0.3 });
+        keyframes.push({ frame: 10, value: 1 });
+        
+        blinkAnimation.setKeys(keyframes);
+        plane.animations = [blinkAnimation];
+        this.scene.beginAnimation(plane, 0, 10, true);
+        
+        // Stocker la référence au panneau pour le nettoyer plus tard
+        this.queenNotificationPlane = plane;
     }
 
     _setupQueenReleaseAction(queen, queenPosition) {
@@ -504,12 +573,40 @@ export class Level5 {
                 this._releaseQueen(queen, queenPosition);
             }
         });
-        this._showMessage("⚠️ Appuyez sur 'K' pour libérer la reine! ⚠️", 5000);
+        
+        // Ajouter également un message à l'écran pour indiquer comment libérer la reine
+        if (!this.queenActionMessageId) {
+            this.queenActionMessageId = `queenReleaseAction_${Date.now()}`;
+            GameMessages.showTemporaryMessage(
+                "Action Importante",
+                "⌨️",
+                "Appuyez sur la touche 'K' pour libérer la reine!",
+                8000,
+                "#FF00FF"
+            );
+        }
     }
 
     _releaseQueen(queen, queenPosition) {
         // Marquer la reine comme libérée
         this.queenReleased = true;
+        
+        // Nettoyer le message de proximité
+        if (this.queenActionMessageId) {
+            GameMessages.hideMessage(this.queenActionMessageId);
+        }
+        
+        // Nettoyer le panneau 3D
+        if (this.queenNotificationPlane) {
+            this.queenNotificationPlane.dispose();
+            this.queenNotificationPlane = null;
+        }
+        
+        // Nettoyer l'observateur si nécessaire
+        if (this.proximityObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.proximityObserver);
+            this.proximityObserver = null;
+        }
         
         // Supprimer l'ancien modèle
         if (queen) {
@@ -570,15 +667,6 @@ export class Level5 {
         }).catch(error => {
             console.error("Erreur lors du chargement de help_queen_released.glb:", error);
             
-            // Même en cas d'erreur, afficher un message et terminer le niveau
-            GameMessages.showTemporaryMessage(
-                "Niveau Terminé",
-                "🏆",
-                "Vous avez libéré la reine et sauvé le royaume !",
-                5000,
-                "#FFD700"  // Couleur or
-            );
-            
             setTimeout(() => {
                 this.dispose();
                 if (this.scene.metadata?.levelManager) {
@@ -622,7 +710,15 @@ export class Level5 {
     _victoire() {
         if (this.isCompleted) return; 
         this.isCompleted = true;
-        this._showMessage("Félicitations! Vous avez libéré tous les quartiers de la ville!", 5000);
+        
+        GameMessages.showTemporaryMessage(
+            "Félicitations!",
+            "🎉",
+            "Vous avez libéré tous les quartiers de la ville!",
+            5000,
+            "#4CAF50"
+        );
+        
         if (!this.stormStarted) {
             this._startPurpleStorm();
         }
@@ -680,11 +776,6 @@ export class Level5 {
                 this.messageElement.style.opacity = "0";
                 setTimeout(() => {
                     this.messageElement.style.display = "none";
-                    
-                    // Restaurer l'ancien message si nécessaire
-                    if (wasDisplayed && oldMessage && oldMessage !== text) {
-                        this._showMessage(oldMessage, duration);
-                    }
                 }, 500);
             }, duration);
             
@@ -696,6 +787,23 @@ export class Level5 {
     }
 
     dispose() {
+        // Nettoyer les messages de proximité
+        if (this.queenActionMessageId) {
+            GameMessages.hideMessage(this.queenActionMessageId);
+        }
+        
+        // Nettoyer le panneau 3D
+        if (this.queenNotificationPlane) {
+            this.queenNotificationPlane.dispose();
+            this.queenNotificationPlane = null;
+        }
+        
+        // Supprimer l'observateur de proximité
+        if (this.proximityObserver) {
+            this.scene.onBeforeRenderObservable.remove(this.proximityObserver);
+            this.proximityObserver = null;
+        }
+        
         // Utiliser notre méthode de nettoyage pour tous les ennemis
         this._cleanupAllEnemies();
         
@@ -847,16 +955,7 @@ export class Level5 {
             ennemi.perimetre = this.perimetre[ennemi.quartier];
             
             this.ennemis.push(ennemi);
-            
-            const messages = [
-                "Une pizza maléfique apparaît dans le quartier!",
-                "Une pizza du quartier vous attaque!",
-                "Voici une pizza ennemie!",
-                "Une pizza hostile a été repérée!",
-                "Attention, pizza maléfique en approche!"
-            ];
-            
-            this._showMessage(messages[index % messages.length], 2000);
+    
         } catch (error) {
             console.error("Erreur lors de la création de l'ennemi:", error);
         }
@@ -869,22 +968,13 @@ export class Level5 {
                 console.error("Player not found for ally targeting");
                 return;
             }
-            
             const ami = new AmiAI(this.scene, position);
             ami.followPlayer = true;
             ami.player = player;
             ami.followPlayerDistance = 4; 
             ami.followWeight = 2.0; 
             ami.detectionDistance = 60; 
-            
             this.amis.push(ami);
-            
-            const messages = [
-                "Une banane alliée vous accompagne!",
-                "Un allié rejoint le combat!"
-            ];
-            
-            this._showMessage(messages[index % messages.length], 2000);
         } catch (error) {
             console.error("Erreur lors de la création de l'ami:", error);
         }
@@ -963,7 +1053,6 @@ export class Level5 {
         if (checkpoint) {
             player.position = checkpoint.position.clone();
             console.log(`Joueur placé au checkpoint ${checkpoint.id}: ${checkpoint.name}`);
-            this._showMessage(`Checkpoint: ${checkpoint.name}`, 3000);
         }
     }
 
@@ -980,7 +1069,6 @@ export class Level5 {
             console.log(`Checkpoint ${checkpointId} sauvegardé dans la session`);
             
             // Afficher un message
-            this._showMessage(`Checkpoint atteint: ${checkpoint.name}`, 3000);
         }
     }
     

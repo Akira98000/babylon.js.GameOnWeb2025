@@ -138,7 +138,6 @@ export class MainMenu {
         };
 
         const playButton = createButton('Play');
-        const settingsButton = createButton('Settings', true);
         const creditsButton = createButton('Credits');
 
         playButton.addEventListener('click', () => {
@@ -150,7 +149,6 @@ export class MainMenu {
         });
 
         buttonsContainer.appendChild(playButton);
-        buttonsContainer.appendChild(settingsButton);
         buttonsContainer.appendChild(creditsButton);
 
         // Création du formulaire de nom d'utilisateur

@@ -4,10 +4,10 @@ export class PurpleStorm {
     constructor(scene) {
         this.scene = scene;
         this.isActive = false;
-        this.damagePerSecond = 30;
+        this.damagePerSecond = 15;
         this.initialRadius = 100;
         this.currentRadius = this.initialRadius;
-        this.finalRadius = 10;
+        this.finalRadius = 15;
         this.stormWall = null;
         this.stormParticles = null;
         this.stormCenter = new BABYLON.Vector3(0, 0, 0);
@@ -20,7 +20,7 @@ export class PurpleStorm {
         this.playerControlsEnsured = false;
         
         // Facteur d'accélération de la tempête
-        this.stormSpeedFactor = 2.0; // La tempête avance 2x plus vite
+        this.stormSpeedFactor = 1.5; // La tempête avance 1.5x plus vite
     }
     
     start() {
@@ -95,16 +95,16 @@ export class PurpleStorm {
     }
     
     _createStormParticles() {
-        this.stormParticles = new BABYLON.ParticleSystem("stormParticles", 2000, this.scene);
+        this.stormParticles = new BABYLON.ParticleSystem("stormParticles", 1500, this.scene);
         this.stormParticles.particleTexture = new BABYLON.Texture("/assets/flare.png", this.scene);
-        this.stormParticles.color1 = new BABYLON.Color4(0.5, 0, 0.5, 1.0);
-        this.stormParticles.color2 = new BABYLON.Color4(0.75, 0, 0.75, 1.0);
+        this.stormParticles.color1 = new BABYLON.Color4(0.5, 0, 0.5, 0.7);
+        this.stormParticles.color2 = new BABYLON.Color4(0.75, 0, 0.75, 0.7);
         this.stormParticles.colorDead = new BABYLON.Color4(0.5, 0, 0.5, 0);
         this.stormParticles.minSize = 0.1;
-        this.stormParticles.maxSize = 0.5;
+        this.stormParticles.maxSize = 0.4;
         this.stormParticles.minLifeTime = 0.3;
-        this.stormParticles.maxLifeTime = 1.5;
-        this.stormParticles.emitRate = 500;
+        this.stormParticles.maxLifeTime = 1.2;
+        this.stormParticles.emitRate = 400;
         this.stormParticles.blendMode = BABYLON.ParticleSystem.BLENDMODE_ADD;
         this.stormParticles.gravity = new BABYLON.Vector3(0, 0, 0);
         this.stormParticles.emitter = new BABYLON.Vector3(0, 10, 0);
@@ -132,7 +132,7 @@ export class PurpleStorm {
             // Appliquer des dégâts au joueur seulement si la tempête est active
             if (this.scene.metadata.player.takeDamage) {
                 // Doubler l'effet des dégâts appliqués par frame
-                this.scene.metadata.player.takeDamage(this.damagePerSecond / 30); // Plus de dégâts par frame
+                this.scene.metadata.player.takeDamage(this.damagePerSecond / 60); // Plus de dégâts par frame
             }
             
             // Effet visuel rouge plus intense pour indiquer les dégâts
@@ -143,14 +143,14 @@ export class PurpleStorm {
                 this._damageIndicator.style.left = "0";
                 this._damageIndicator.style.width = "100%";
                 this._damageIndicator.style.height = "100%";
-                this._damageIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.4)"; // Plus opaque (0.4 au lieu de 0.2)
+                this._damageIndicator.style.backgroundColor = "rgba(255, 0, 0, 0.25)"; // Plus opaque (0.25 au lieu de 0.4)
                 this._damageIndicator.style.pointerEvents = "none";
                 this._damageIndicator.style.zIndex = "1000";
                 document.body.appendChild(this._damageIndicator);
                 
                 // Faire apparaître progressivement
                 this._damageIndicator.style.opacity = "0";
-                this._damageIndicator.style.transition = "opacity 0.3s"; // Plus rapide (0.3s au lieu de 0.5s)
+                this._damageIndicator.style.transition = "opacity 0.5s"; // Plus rapide (0.5s au lieu de 0.3s)
                 setTimeout(() => {
                     if (this._damageIndicator) {
                         this._damageIndicator.style.opacity = "1";
@@ -172,7 +172,7 @@ export class PurpleStorm {
     _pulseEffect() {
         if (!this._damageIndicator) return;
         
-        let intensity = 0.4;
+        let intensity = 0.25;
         let increasing = false;
         
         // Créer un intervalle pour faire pulser l'effet
@@ -183,13 +183,13 @@ export class PurpleStorm {
             }
             
             if (increasing) {
-                intensity += 0.03;
-                if (intensity >= 0.6) {
+                intensity += 0.02;
+                if (intensity >= 0.4) {
                     increasing = false;
                 }
             } else {
-                intensity -= 0.03;
-                if (intensity <= 0.3) {
+                intensity -= 0.02;
+                if (intensity <= 0.2) {
                     increasing = true;
                 }
             }
