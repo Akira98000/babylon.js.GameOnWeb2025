@@ -307,7 +307,6 @@ export class PurpleStorm {
     _endStorm() {
         this.isActive = false;
         if (this.scene.metadata?.level5) {
-            this.scene.metadata.level5._showMessage("🎉 Félicitations ! Vous avez survécu à la tempête violette ! 🎉", 5000);
             setTimeout(() => {
                 if (this.scene.metadata?.level5) {
                     this.scene.metadata.level5.dispose(); 

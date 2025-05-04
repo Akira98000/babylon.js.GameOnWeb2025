@@ -152,25 +152,22 @@ export const createPlayer = async (scene, camera, canvas) => {
             console.error("Son de dégât non disponible");
         }
         
-        // Effet visuel d'écran rouge
         const redFilter = document.createElement("div");
         redFilter.style.position = "fixed";
         redFilter.style.top = "0";
         redFilter.style.left = "0";
         redFilter.style.width = "100%";
         redFilter.style.height = "100%";
-        redFilter.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; // Plus intense (0.3 -> 0.5)
+        redFilter.style.backgroundColor = "rgba(255, 0, 0, 0.5)"; 
         redFilter.style.pointerEvents = "none";
         redFilter.style.transition = "opacity 0.5s";
         redFilter.style.zIndex = "1000";
         document.body.appendChild(redFilter);
         
-        // Secouer légèrement la caméra pour un effet de hit
         if (camera) {
             const originalPosition = camera.position.clone();
             const randomShake = () => (Math.random() - 0.5) * 0.3;
             
-            // Séquence de tremblement
             setTimeout(() => {
                 camera.position.x += randomShake();
                 camera.position.y += randomShake();
