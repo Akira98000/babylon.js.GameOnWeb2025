@@ -18,6 +18,8 @@ export function setupMinimap(scene, player) {
         transition: 'all 0.3s ease'
     });
     
+    miniMapContainer.classList.add('radar-sweep', 'minimap-border');
+    
     const mapImage = document.createElement('div');
     mapImage.id = 'miniMapImage';
     Object.assign(mapImage.style, {
@@ -54,21 +56,6 @@ export function setupMinimap(scene, player) {
     });
     playerMarker.appendChild(playerIcon);
     
-    const playerDirection = document.createElement('div');
-    playerDirection.id = 'playerDirection';
-    Object.assign(playerDirection.style, {
-        position: 'absolute',
-        top: '-8px',
-        left: '50%',
-        width: '0',
-        height: '0',
-        borderLeft: '4px solid transparent',
-        borderRight: '4px solid transparent',
-        borderBottom: '8px solid rgba(0, 200, 0, 0.8)',
-        transform: 'translateX(-50%)',
-        transformOrigin: 'bottom center'
-    });
-    
     const minimapLabel = document.createElement("div");
     Object.assign(minimapLabel.style, {
         position: "absolute",
@@ -83,7 +70,6 @@ export function setupMinimap(scene, player) {
     });
     minimapLabel.textContent = "Appuyez sur M pour agrandir";
     
-    playerMarker.appendChild(playerDirection);
     miniMapContainer.appendChild(mapImage);
     miniMapContainer.appendChild(playerMarker);
     miniMapContainer.appendChild(minimapLabel);
@@ -109,16 +95,14 @@ export function setupMinimap(scene, player) {
             const clampedY = Math.max(0, Math.min(100, bgPosY));
 
             mapImage.style.backgroundPosition = `${clampedX}% ${clampedY}%`;
-            playerDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI}rad)`;
         } else if (expandedContainer) {
             const expandedMapImage = expandedContainer.querySelector('#expandedMapImage');
             const expandedPlayerMarker = expandedContainer.querySelector('#expandedPlayerMarker');
-            const expandedDirection = expandedContainer.querySelector('#expandedPlayerDirection');
             
-            if (expandedPlayerMarker && expandedDirection) {
+            if (expandedPlayerMarker) {
                 const zoomFactor = 0.5; 
-                const adjustedPosX = initialPosition.x + playerPosition.z; // Changer - à + pour corriger gauche/droite
-                const adjustedPosZ = initialPosition.z + playerPosition.x; // Garder + pour haut/bas qui est correct
+                const adjustedPosX = initialPosition.x + playerPosition.z;
+                const adjustedPosZ = initialPosition.z + playerPosition.x;
                 
                 const posX = 50 + (adjustedPosX * zoomFactor);
                 const posY = 50 + (adjustedPosZ * zoomFactor);
@@ -128,7 +112,6 @@ export function setupMinimap(scene, player) {
                 
                 expandedPlayerMarker.style.left = `${clampedPosX}%`;
                 expandedPlayerMarker.style.top = `${clampedPosY}%`;
-                expandedDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI}rad)`;
             }
         }
     };
@@ -190,21 +173,6 @@ export function setupMinimap(scene, player) {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover'
-            });
-            
-            const expandedPlayerDirection = document.createElement('div');
-            expandedPlayerDirection.id = 'expandedPlayerDirection';
-            Object.assign(expandedPlayerDirection.style, {
-                position: 'absolute',
-                top: '-10px',
-                left: '50%',
-                width: '0',
-                height: '0',
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderBottom: '12px solid rgba(0, 200, 0, 0.8)',
-                transform: 'translateX(-50%)',
-                transformOrigin: 'bottom center'
             });
             
             const mapTitle = document.createElement('div');
@@ -272,7 +240,6 @@ export function setupMinimap(scene, player) {
             });
             
             expandedPlayerMarker.appendChild(expandedPlayerIcon);
-            expandedPlayerMarker.appendChild(expandedPlayerDirection);
             expandedContainer.appendChild(expandedMapImage);
             expandedContainer.appendChild(expandedPlayerMarker);
             expandedContainer.appendChild(mapTitle);

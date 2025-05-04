@@ -141,7 +141,6 @@ html, body {
     transition: all 0.1s ease;
 }
 
-/* Styles pour les contrôles mobiles */
 #mobile-controls {
     pointer-events: none;
     user-select: none;
@@ -162,14 +161,12 @@ html, body {
     transition: transform 0.1s ease, background-color 0.1s ease;
 }
 
-/* Masquer les contrôles mobiles sur les grands écrans */
 @media (min-width: 1025px) {
     #mobile-controls {
         display: none;
     }
 }
 
-/* Ajustements pour les petits écrans */
 @media (max-width: 480px) {
     #joystick-container {
         width: 100px;
@@ -188,7 +185,6 @@ html, body {
     }
 }
 
-/* Ajustements pour le mode paysage sur mobile */
 @media (max-height: 480px) and (orientation: landscape) {
     #joystick-container {
         bottom: 10px;
@@ -215,12 +211,10 @@ html, body {
     }
 }
 
-/* Ajouter cette classe pour améliorer les transitions visuelles */
 .smooth-transition {
     transition: transform 0.1s linear;
 }
 
-/* Assurer que le personnage a un style approprié pour des animations fluides */
 canvas {
     will-change: transform;
     backface-visibility: hidden;
@@ -326,7 +320,6 @@ canvas {
     text-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
 }
 
-/* Points cardinaux principaux */
 .compass-marker-container[data-angle="0"] .compass-marker,
 .compass-marker-container[data-angle="90"] .compass-marker,
 .compass-marker-container[data-angle="180"] .compass-marker,
@@ -335,7 +328,6 @@ canvas {
     font-size: 18px;
 }
 
-/* Inter-cardinaux */
 .compass-marker-container[data-angle="45"] .compass-marker,
 .compass-marker-container[data-angle="135"] .compass-marker,
 .compass-marker-container[data-angle="225"] .compass-marker,
@@ -343,3 +335,42 @@ canvas {
     color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
 }
+
+@keyframes radarSweep {
+    0% {
+        transform: rotate(0deg);
+        opacity: 0.7;
+    }
+    100% {
+        transform: rotate(360deg);
+        opacity: 0.4;
+    }
+}
+
+.radar-sweep::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: conic-gradient(
+        rgba(0, 255, 0, 0.5) 0deg,
+        transparent 20deg,
+        transparent 340deg,
+        rgba(0, 255, 0, 0.5) 360deg
+    );
+    border-radius: 50%;
+    z-index: 1000;
+    animation: radarSweep 4s linear infinite;
+}
+
+@keyframes minimapPulse {
+    0% { box-shadow: inset 0 0 10px rgba(99, 255, 99, 0.749); }
+    50% { box-shadow: inset 0 0 15px rgb(0, 255, 0); }
+    100% { box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.69); }
+}
+
+.minimap-border {
+    animation: minimapPulse 1s ease-in-out infinite;
+} 
