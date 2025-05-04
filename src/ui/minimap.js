@@ -27,23 +27,8 @@ export function setupMinimap(scene, player) {
         backgroundSize: '400%',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        transition: 'background-position 0.2s ease',
         filter: 'brightness(0.9)'
     });
-    
-    const radarEffect = document.createElement('div');
-    radarEffect.className = 'radar-sweep';
-    Object.assign(radarEffect.style, {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        width: '100%',
-        height: '100%',
-        borderRadius: '50%',
-        zIndex: '999'
-    });
-    
-    miniMapContainer.classList.add('minimap-border');
     
     const playerMarker = document.createElement('div');
     playerMarker.id = 'playerMarker';
@@ -100,7 +85,6 @@ export function setupMinimap(scene, player) {
     
     playerMarker.appendChild(playerDirection);
     miniMapContainer.appendChild(mapImage);
-    miniMapContainer.appendChild(radarEffect);
     miniMapContainer.appendChild(playerMarker);
     miniMapContainer.appendChild(minimapLabel);
     document.body.appendChild(miniMapContainer);
@@ -108,60 +92,43 @@ export function setupMinimap(scene, player) {
     let isExpanded = false;
     let expandedContainer = null;
     
-    const mapBounds = {
-        minX: -90,
-        maxX: 90,
-        minZ: -90,
-        maxZ: 90
-    };
-    
-    const positionOffset = {
-        x: 50,
-        z: 19
-    };
-    
-    const normalizePlayerPosition = (rawPosition) => {
-        const adjustedPos = {
-            x: rawPosition.x + positionOffset.x,
-            z: rawPosition.z + positionOffset.z
-        };
-        
-        const rotatedPos = {
-            x: adjustedPos.z,
-            z: -adjustedPos.x
-        };
-        
-        const normalizedPos = {
-            x: (rotatedPos.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ),
-            y: (rotatedPos.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX)
-        };
-        
-        return normalizedPos;
+    const initialPosition = {
+        x: 24,  
+        z: 55  
     };
     
     const updateMinimap = (playerPosition, playerRotation) => {
-        const normalizedPos = normalizePlayerPosition(playerPosition);
-        
         if (!isExpanded) {
-            const bgPosX = 50 - normalizedPos.x * 100;
-            const bgPosY = 50 - normalizedPos.y * 100;
+            const zoomFactorMinimap = 0.8; 
+            const adjustedPosX = initialPosition.x + playerPosition.z; 
+            const adjustedPosZ = initialPosition.z + playerPosition.x; 
             
-            mapImage.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
-            
-            playerDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
-        }
-        else if (expandedContainer) {
+            const bgPosX = 50 + (adjustedPosX * zoomFactorMinimap);
+            const bgPosY = 50 + (adjustedPosZ * zoomFactorMinimap);
+            const clampedX = Math.max(0, Math.min(100, bgPosX));
+            const clampedY = Math.max(0, Math.min(100, bgPosY));
+
+            mapImage.style.backgroundPosition = `${clampedX}% ${clampedY}%`;
+            playerDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI}rad)`;
+        } else if (expandedContainer) {
             const expandedMapImage = expandedContainer.querySelector('#expandedMapImage');
             const expandedPlayerMarker = expandedContainer.querySelector('#expandedPlayerMarker');
             const expandedDirection = expandedContainer.querySelector('#expandedPlayerDirection');
             
             if (expandedPlayerMarker && expandedDirection) {
-                const { offsetWidth: w, offsetHeight: h } = expandedContainer;
+                const zoomFactor = 0.5; 
+                const adjustedPosX = initialPosition.x + playerPosition.z; // Changer - à + pour corriger gauche/droite
+                const adjustedPosZ = initialPosition.z + playerPosition.x; // Garder + pour haut/bas qui est correct
                 
-                expandedPlayerMarker.style.left = `${normalizedPos.x * w}px`;
-                expandedPlayerMarker.style.top = `${(1 - normalizedPos.y) * h}px`;
+                const posX = 50 + (adjustedPosX * zoomFactor);
+                const posY = 50 + (adjustedPosZ * zoomFactor);
                 
-                expandedDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
+                const clampedPosX = Math.max(5, Math.min(95, posX));
+                const clampedPosY = Math.max(5, Math.min(95, posY));
+                
+                expandedPlayerMarker.style.left = `${clampedPosX}%`;
+                expandedPlayerMarker.style.top = `${clampedPosY}%`;
+                expandedDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI}rad)`;
             }
         }
     };
@@ -359,11 +326,13 @@ export function setupMinimap(scene, player) {
             }
         }
     };
+    
     miniMapContainer.addEventListener('click', () => {
         if (!isExpanded) {
             toggleExpandedMap();
         }
     });
+    
     const handleKeyDown = (event) => {
         if (event.key.toLowerCase() === 'm') {
             toggleExpandedMap();
