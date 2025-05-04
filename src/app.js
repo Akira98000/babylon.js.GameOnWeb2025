@@ -18,6 +18,7 @@ import { WelcomePage } from "./ui/welcomePage.js";
 import { LevelSelector } from "./ui/levelSelector.js";
 import { PauseMenu } from './ui/pauseMenu.js';
 import { createHorrorMusic } from './music.js';
+import { setupMinimap } from './ui/minimap.js';
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -202,6 +203,11 @@ const initBabylon = async () => {
       const fpsDisplay = setupHUD();
       const hudControls = initializeHUDUpdates(fpsDisplay);
       const compass = setupCompass();
+      
+      // Initialiser la minimap avec le joueur
+      const minimap = setupMinimap(scene, player.hero);
+      scene.metadata.minimap = minimap;
+      
       let mouseMoved = false;
       let currentMouseX = 0;
       
@@ -267,6 +273,11 @@ const initBabylon = async () => {
         }
         if (player.hero) {
           compass.update(player.hero.rotation.y);
+          
+          // Mettre à jour la minimap avec la position et rotation du joueur
+          if (minimap) {
+            minimap.updateMinimap(player.hero.position, player.hero.rotation.y);
+          }
         }
         
         fpsDisplay.updateFPS(engine.getFps());
