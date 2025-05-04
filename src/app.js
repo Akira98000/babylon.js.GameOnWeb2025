@@ -16,6 +16,8 @@ import { LoadingScreen } from "./ui/loadingScreen.js";
 import { setupCompass } from "./ui/compass.js";
 import { WelcomePage } from "./ui/welcomePage.js";
 import { LevelSelector } from "./ui/levelSelector.js";
+import { PauseMenu } from './ui/pauseMenu.js';
+import { createHorrorMusic } from './music.js';
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -29,7 +31,7 @@ const initBabylon = async () => {
     adaptToDeviceRatio: true,
   });
 
-  const gameStarted = localStorage.getItem('gameStarted');
+  const gameStarted = sessionStorage.getItem('gameStarted');
   
   if (gameStarted === 'true') {
     startGame(canvas, engine);
@@ -38,7 +40,7 @@ const initBabylon = async () => {
     mainMenu.onPlayButtonClicked = () => {
       if (isGameLoading) return;
       isGameLoading = true;
-      localStorage.setItem('gameStarted', 'true');
+      sessionStorage.setItem('gameStarted', 'true');
       startGame(canvas, engine);
     };
   }
@@ -57,6 +59,9 @@ const initBabylon = async () => {
         loadingScreen = new LoadingScreen(canvas);
         loadingScreen.show();
       }
+      
+      const music = createHorrorMusic(scene);
+      scene.metadata.music = music;
       
       const loadingTasks = [
         { 
@@ -108,6 +113,10 @@ const initBabylon = async () => {
             levelManager.currentLevel = 0; 
             await levelManager.initCurrentLevel();
             scene.metadata.levelManager = levelManager;
+            
+            const pauseMenu = new PauseMenu(scene, levelManager);
+            scene.metadata = scene.metadata || {};
+            scene.metadata.pauseMenu = pauseMenu;
             
             return levelManager;
           }
@@ -240,8 +249,8 @@ const initBabylon = async () => {
         
         if (event.key.toLowerCase() === 'l') {
           if (event.ctrlKey) {
-            localStorage.removeItem('gameStarted');
-            alert('LocalStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
+            sessionStorage.removeItem('gameStarted');
+            alert('SessionStorage réinitialisé. Rechargez la page pour accéder au menu principal.');
           } else if (scene.metadata.levelManager) {
             const levelSelector = new LevelSelector(scene.metadata.levelManager);
             levelSelector.showModal();

@@ -85,5 +85,30 @@ export const GAME_CONFIG = {
             DISTANCE: 4,
             ANGLE_CHANGE: 0.3
         }
+    },
+    KEYBOARD: {
+        LAYOUT: 'AZERTY',
+        CONTROLS: {
+            AZERTY: {
+                FORWARD: 'z',
+                BACKWARD: 's',
+                LEFT: 'q',
+                RIGHT: 'd',
+                JUMP: ' ',
+                DANCE: 'b',
+                ACTION: 'f',
+                SPECIAL: 'k'
+            },
+            QWERTY: {
+                FORWARD: 'w',
+                BACKWARD: 's',
+                LEFT: 'a',
+                RIGHT: 'd',
+                JUMP: ' ',
+                DANCE: 'b',
+                ACTION: 'f',
+                SPECIAL: 'k'
+            }
+        }
     }
 }; 

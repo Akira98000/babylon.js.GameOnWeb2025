@@ -5,6 +5,16 @@ export function setupControls(scene, hero, animations, camera, canvas) {
     const inputMap = {};
     scene.actionManager = new BABYLON.ActionManager(scene);
 
+    // Récupérer la configuration du clavier
+    const keyboardConfig = GAME_CONFIG.KEYBOARD || {};
+    let currentLayout = keyboardConfig.LAYOUT || 'AZERTY';
+    const keyMappings = keyboardConfig.CONTROLS || {};
+
+    // Fonction pour obtenir les touches selon le layout actuel
+    const getKeyMap = () => {
+        return keyMappings[currentLayout] || keyMappings.AZERTY;
+    };
+
     const heroBaseSpeed = 0.14;
     const heroStrafeSpeed = 0.08; 
     const targetFPS = 60;
@@ -31,11 +41,26 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         return normalized;
     };
 
+    // Fonction pour changer le layout du clavier
+    const changeKeyboardLayout = (newLayout) => {
+        if (keyMappings[newLayout]) {
+            currentLayout = newLayout;
+            console.log(`Layout de clavier changé pour: ${newLayout}`);
+        } else {
+            console.warn(`Layout de clavier ${newLayout} non reconnu. Utilisation d'AZERTY par défaut.`);
+        }
+    };
+
     scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, evt => {
         const key = evt.sourceEvent.key.toLowerCase();
         if (!inputMap[key]) {
             inputMap[key] = true;
-            if (["z", "q", "s", "d"].includes(key)) {
+            
+            // Obtenir les mappings actuels
+            const keyMap = getKeyMap();
+            
+            // Vérifier les touches de mouvement
+            if ([keyMap.FORWARD, keyMap.LEFT, keyMap.BACKWARD, keyMap.RIGHT].includes(key)) {
                 handleKeyStateChange();
             }
         }
@@ -45,7 +70,12 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         const key = evt.sourceEvent.key.toLowerCase();
         if (inputMap[key]) {
             inputMap[key] = false;
-            if (["z", "q", "s", "d"].includes(key)) {
+            
+            // Obtenir les mappings actuels
+            const keyMap = getKeyMap();
+            
+            // Vérifier les touches de mouvement
+            if ([keyMap.FORWARD, keyMap.LEFT, keyMap.BACKWARD, keyMap.RIGHT].includes(key)) {
                 handleKeyStateChange();
             }
         }
@@ -164,13 +194,16 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         let forwardMovement = BABYLON.Vector3.Zero();
         let strafeMovement = BABYLON.Vector3.Zero();
 
+        // Obtenir les mappings de touches actuels
+        const keyMap = getKeyMap();
+
         // Mouvement en avant/arrière sans changer la rotation du personnage
-        if (inputMap["z"] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
-        if (inputMap["s"] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
+        if (inputMap[keyMap.FORWARD] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
+        if (inputMap[keyMap.BACKWARD] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
         
         // Mouvement latéral (strafe) sans changer la rotation du personnage
-        if (inputMap["d"] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
-        if (inputMap["q"] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
+        if (inputMap[keyMap.RIGHT] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
+        if (inputMap[keyMap.LEFT] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
 
         const now = Date.now();
         const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
@@ -198,11 +231,14 @@ export function setupControls(scene, hero, animations, camera, canvas) {
             let forwardMovement = BABYLON.Vector3.Zero();
             let strafeMovement = BABYLON.Vector3.Zero();
 
-            if (inputMap["z"] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
-            if (inputMap["s"] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
+            // Obtenir les mappings de touches actuels
+            const keyMap = getKeyMap();
+
+            if (inputMap[keyMap.FORWARD] && isActionAllowed('moveForward')) forwardMovement.subtractInPlace(forward);
+            if (inputMap[keyMap.BACKWARD] && isActionAllowed('moveBackward')) forwardMovement.addInPlace(forward);
             
-            if (inputMap["d"] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
-            if (inputMap["q"] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
+            if (inputMap[keyMap.RIGHT] && isActionAllowed('moveRight')) strafeMovement.subtractInPlace(right);
+            if (inputMap[keyMap.LEFT] && isActionAllowed('moveLeft')) strafeMovement.addInPlace(right);
 
             const isShooting = [animations.shootStandingAnim?.isPlaying, animations.shotgunAnim?.isPlaying].some(Boolean) &&
                 now - lastShootTime < shootAnimationDuration;
@@ -235,7 +271,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
                 changeAnimation(animations.idleAnim);
             }
 
-            if (inputMap["b"] && isActionAllowed('dance') && !isShooting) {
+            if (inputMap[keyMap.DANCE] && isActionAllowed('dance') && !isShooting) {
                 if (!sambaAnimating) {
                     sambaAnimating = true;
                     changeAnimation(animations.sambaAnim);
@@ -260,9 +296,12 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         const idealTarget = hero.position.add(new BABYLON.Vector3(0, 1.5, 0));
         const currentTarget = camera.getTarget().clone();
         
+        // Obtenir les mappings de touches actuels pour cette partie du code
+        const keyMap = getKeyMap();
+        
         // En cas de recul, maintenir la hauteur constante en modifiant la cible
         let newTarget;
-        if (inputMap["s"] && isActionAllowed('moveBackward')) {
+        if (inputMap[keyMap.BACKWARD] && isActionAllowed('moveBackward')) {
             // On utilise la même hauteur que la cible actuelle
             const adjustedTarget = new BABYLON.Vector3(idealTarget.x, currentTarget.y, idealTarget.z);
             newTarget = BABYLON.Vector3.Lerp(currentTarget, adjustedTarget, targetLerp);
@@ -275,7 +314,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         camera.setTarget(newTarget);
         
         // Correction de la position verticale de la caméra lors du recul
-        if (inputMap["s"] && isActionAllowed('moveBackward')) {
+        if (inputMap[keyMap.BACKWARD] && isActionAllowed('moveBackward')) {
             // Désactiver temporairement la contrainte d'angles
             const oldLowerLimit = camera.lowerBetaLimit;
             const oldUpperLimit = camera.upperBetaLimit;
@@ -307,7 +346,7 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         
         // On ne modifie pas automatiquement la rotation du héros selon la caméra 
         // quand le joueur est en train d'utiliser les touches de déplacement latéral
-        if (!(inputMap["q"] || inputMap["d"])) {
+        if (!(inputMap[keyMap.LEFT] || inputMap[keyMap.RIGHT])) {
             // Calculer l'angle entre la caméra et l'axe Z
             const cameraDirection = camera.getTarget().subtract(camera.position);
             cameraDirection.y = 0; // On ignore la composante verticale
@@ -326,5 +365,15 @@ export function setupControls(scene, hero, animations, camera, canvas) {
         scene.metadata.player?.executeShot?.(position, direction);
     };
     
-    return { inputMap, isPlayerMoving, changeAnimation, isMobile: false };
+    // Ajouter la méthode changeKeyboardLayout aux contrôles
+    const controls = { 
+        inputMap, 
+        isPlayerMoving, 
+        changeAnimation, 
+        isMobile: false,
+        changeKeyboardLayout,
+        getCurrentLayout: () => currentLayout
+    };
+    
+    return controls;
 }
