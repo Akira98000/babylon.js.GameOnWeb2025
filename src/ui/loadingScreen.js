@@ -276,45 +276,8 @@ export class LoadingScreen {
         tipContainer.appendChild(tipText);
         centerContainer.appendChild(tipContainer);
 
-        // Footer avec le titre du jeu et sous-titre
-        const footerContainer = document.createElement('div');
-        Object.assign(footerContainer.style, {
-            position: 'absolute',
-            bottom: '40px',
-            left: '0',
-            width: '100%',
-            textAlign: 'center',
-            zIndex: '10'
-        });
-
-        const gameTitle = document.createElement('h1');
-        gameTitle.textContent = 'Dreamfall';
-        Object.assign(gameTitle.style, {
-            color: 'white',
-            fontSize: '4rem',
-            marginBottom: '0.01rem',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-            background: 'linear-gradient(to right, white, #86a8e7)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-        });
-
-        const subtitle = document.createElement('h2');
-        subtitle.textContent = 'The invasion began where dreams were born !';
-        Object.assign(subtitle.style, {
-            color: 'white',
-            fontSize: '1.3rem',
-            marginTop: '0.01rem',
-            opacity: '0.9'
-        });
-
-        footerContainer.appendChild(gameTitle);
-        footerContainer.appendChild(subtitle);
-
         // Assemblage final des éléments
         this.loadingContainer.appendChild(centerContainer);
-        this.loadingContainer.appendChild(footerContainer);
         document.body.appendChild(this.loadingContainer);
 
         this.isVisible = true;
