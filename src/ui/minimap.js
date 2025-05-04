@@ -31,6 +31,20 @@ export function setupMinimap(scene, player) {
         filter: 'brightness(0.9)'
     });
     
+    const radarEffect = document.createElement('div');
+    radarEffect.className = 'radar-sweep';
+    Object.assign(radarEffect.style, {
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        width: '100%',
+        height: '100%',
+        borderRadius: '50%',
+        zIndex: '999'
+    });
+    
+    miniMapContainer.classList.add('minimap-border');
+    
     const playerMarker = document.createElement('div');
     playerMarker.id = 'playerMarker';
     Object.assign(playerMarker.style, {
@@ -86,6 +100,7 @@ export function setupMinimap(scene, player) {
     
     playerMarker.appendChild(playerDirection);
     miniMapContainer.appendChild(mapImage);
+    miniMapContainer.appendChild(radarEffect);
     miniMapContainer.appendChild(playerMarker);
     miniMapContainer.appendChild(minimapLabel);
     document.body.appendChild(miniMapContainer);
@@ -93,39 +108,46 @@ export function setupMinimap(scene, player) {
     let isExpanded = false;
     let expandedContainer = null;
     
+    const mapBounds = {
+        minX: -90,
+        maxX: 90,
+        minZ: -90,
+        maxZ: 90
+    };
+    
+    const positionOffset = {
+        x: 50,
+        z: 19
+    };
+    
+    const normalizePlayerPosition = (rawPosition) => {
+        const adjustedPos = {
+            x: rawPosition.x + positionOffset.x,
+            z: rawPosition.z + positionOffset.z
+        };
+        
+        const rotatedPos = {
+            x: adjustedPos.z,
+            z: -adjustedPos.x
+        };
+        
+        const normalizedPos = {
+            x: (rotatedPos.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ),
+            y: (rotatedPos.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX)
+        };
+        
+        return normalizedPos;
+    };
+    
     const updateMinimap = (playerPosition, playerRotation) => {
-        console.log(`Position joueur: x=${playerPosition.x.toFixed(2)}, z=${playerPosition.z.toFixed(2)}`);
-        
-        const mapBounds = {
-            minX: -90,
-            maxX: 90,
-            minZ: -90,
-            maxZ: 90
-        };
-        
-        const adjustedPosition = {
-            x: playerPosition.x + 50,
-            z: playerPosition.z + 19 
-        };
-        
-        const correctedPosition = {
-            x: adjustedPosition.z,  
-            z: -adjustedPosition.x  
-        };
-        
-        console.log(`Position corrigée: x=${correctedPosition.x.toFixed(2)}, z=${correctedPosition.z.toFixed(2)}`);
-        
-        const grandMapPosition = {
-            x: correctedPosition.x,
-            z: correctedPosition.z
-        };
+        const normalizedPos = normalizePlayerPosition(playerPosition);
         
         if (!isExpanded) {
-            const normalizedX = (grandMapPosition.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ);
-            const normalizedZ = (grandMapPosition.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX);
-            const bgPosX = 50 - normalizedX * 100; 
-            const bgPosY = 50 - normalizedZ * 100; 
+            const bgPosX = 50 - normalizedPos.x * 100;
+            const bgPosY = 50 - normalizedPos.y * 100;
+            
             mapImage.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+            
             playerDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
         }
         else if (expandedContainer) {
@@ -135,12 +157,10 @@ export function setupMinimap(scene, player) {
             
             if (expandedPlayerMarker && expandedDirection) {
                 const { offsetWidth: w, offsetHeight: h } = expandedContainer;
-                const normalizedX = (grandMapPosition.x - mapBounds.minZ) / (mapBounds.maxZ - mapBounds.minZ);
-                const normalizedZ = (grandMapPosition.z - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX);
-                const percentX = normalizedX;
-                const percentZ = 1 - normalizedZ;
-                expandedPlayerMarker.style.left = `${percentX * w}px`;
-                expandedPlayerMarker.style.top = `${percentZ * h}px`;
+                
+                expandedPlayerMarker.style.left = `${normalizedPos.x * w}px`;
+                expandedPlayerMarker.style.top = `${(1 - normalizedPos.y) * h}px`;
+                
                 expandedDirection.style.transform = `translateX(-50%) rotate(${-playerRotation + Math.PI/2}rad)`;
             }
         }
@@ -149,6 +169,13 @@ export function setupMinimap(scene, player) {
     const toggleExpandedMap = () => {
         isExpanded = !isExpanded;
         if (isExpanded) {
+            miniMapContainer.style.opacity = '0';
+            miniMapContainer.style.transform = 'scale(0.5)';
+            
+            setTimeout(() => {
+                miniMapContainer.style.display = 'none';
+            }, 300);
+            
             expandedContainer = document.createElement('div');
             expandedContainer.id = 'expandedMapContainer';
             Object.assign(expandedContainer.style, {
@@ -157,14 +184,17 @@ export function setupMinimap(scene, player) {
                 left: '50%',
                 width: '80%',
                 height: '80%',
-                transform: 'translate(-50%, -50%)',
+                transform: 'translate(-50%, -50%) scale(0.8)',
+                opacity: '0',
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 border: '2px solid rgba(255, 255, 255, 0.5)',
                 borderRadius: '10px',
                 overflow: 'hidden',
                 zIndex: '1001',
-                boxShadow: '0 0 20px rgba(0, 0, 0, 0.8)'
+                boxShadow: '0 0 20px rgba(0, 0, 0, 0.8)',
+                transition: 'all 0.3s ease'
             });
+            
             const expandedMapImage = document.createElement('img');
             expandedMapImage.id = 'expandedMapImage';
             expandedMapImage.src = '/image/map_game.png';
@@ -243,8 +273,21 @@ export function setupMinimap(scene, player) {
                 justifyContent: 'center',
                 alignItems: 'center',
                 cursor: 'pointer',
-                zIndex: '1003'
+                zIndex: '1003',
+                transition: 'all 0.2s ease',
+                border: '1px solid rgba(255, 255, 255, 0.3)'
             });
+            
+            closeButton.addEventListener('mouseover', () => {
+                closeButton.style.backgroundColor = 'rgba(255, 50, 50, 0.7)';
+                closeButton.style.transform = 'scale(1.1)';
+            });
+            
+            closeButton.addEventListener('mouseout', () => {
+                closeButton.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                closeButton.style.transform = 'scale(1)';
+            });
+            
             closeButton.addEventListener('click', toggleExpandedMap);
             
             const overlay = document.createElement('div');
@@ -256,7 +299,9 @@ export function setupMinimap(scene, player) {
                 width: '100%',
                 height: '100%',
                 backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: '1000'
+                zIndex: '1000',
+                opacity: '0',
+                transition: 'opacity 0.3s ease'
             });
             
             expandedPlayerMarker.appendChild(expandedPlayerIcon);
@@ -268,7 +313,12 @@ export function setupMinimap(scene, player) {
             
             document.body.appendChild(overlay);
             document.body.appendChild(expandedContainer);
-            miniMapContainer.style.display = 'none';
+            
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+                expandedContainer.style.opacity = '1';
+                expandedContainer.style.transform = 'translate(-50%, -50%) scale(1)';
+            }, 50);
 
             if (scene.metadata && scene.metadata.controls) {
                 expandedContainer.previousControlsEnabled = scene.metadata.controls.enabled;
@@ -276,14 +326,34 @@ export function setupMinimap(scene, player) {
             }
         } else {
             if (expandedContainer) {
-                document.body.removeChild(expandedContainer);
-                expandedContainer = null;
+                expandedContainer.style.opacity = '0';
+                expandedContainer.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                
+                setTimeout(() => {
+                    document.body.removeChild(expandedContainer);
+                    expandedContainer = null;
+                    
+                    miniMapContainer.style.display = 'block';
+                    miniMapContainer.style.opacity = '0';
+                    miniMapContainer.style.transform = 'scale(0.5)';
+                    
+                    setTimeout(() => {
+                        miniMapContainer.style.opacity = '1';
+                        miniMapContainer.style.transform = 'scale(1)';
+                    }, 50);
+                }, 300);
             }
+            
             const overlay = document.getElementById('mapOverlay');
             if (overlay) {
-                document.body.removeChild(overlay);
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(overlay)) {
+                        document.body.removeChild(overlay);
+                    }
+                }, 300);
             }
-            miniMapContainer.style.display = 'block';
+            
             if (scene.metadata && scene.metadata.controls && expandedContainer && expandedContainer.previousControlsEnabled !== undefined) {
                 scene.metadata.controls.enabled = expandedContainer.previousControlsEnabled;
             }

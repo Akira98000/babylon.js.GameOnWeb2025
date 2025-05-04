@@ -23,7 +23,7 @@ export const setupCamera = (scene, canvas) => {
     camera.rotationOffset = 0;
     camera.useNaturalPinchZoom = false;
     camera.minZ = 0.1;
-    camera.maxZ = 50;
+    camera.maxZ = 40;
 
     if (isSmallScreen) {
         camera.radius = GAME_CONFIG.CAMERA.INITIAL.RADIUS * 1.5;
