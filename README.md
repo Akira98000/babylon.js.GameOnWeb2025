@@ -1,104 +1,153 @@
 # Dreamfall
 
-A 3D action-adventure game built with BabylonJS for the Game On Web 2025 competition.
+Un jeu d'action-aventure 3D développé avec BabylonJS pour la compétition Game On Web 2025.
 
-## Overview
+## Aperçu
 
-Dreamfall is an immersive 3D adventure where players control a unicorn through various levels, battling enemies, recruiting allies, and exploring a dynamic world. The game features combat mechanics, character progression, and an engaging narrative across multiple unique levels.
+Dreamfall est une aventure immersive en 3D où les joueurs incarnent une licorne à travers différents niveaux, affrontent des ennemis, recrutent des alliés et explorent un monde dynamique. Le jeu propose des mécaniques de combat, une progression du personnage et une narration captivante à travers plusieurs niveaux uniques.
 
-## Features
+## Fonctionnalités
 
-- **Immersive 3D World**: Explore diverse environments with day/night cycles and dynamic weather effects
-- **Combat System**: Engage in battles with projectile weapons against various enemy types
-- **Ally System**: Recruit friendly characters to help you throughout your journey
-- **Progression**: Level-based gameplay with unique objectives and challenges
-- **Dynamic Environment**: Interact with NPCs, traffic systems, and changing weather conditions
-- **Boss Battles**: Face challenging enemies with special mechanics and strategies
+- Monde 3D immersif : Explorez des environnements variés avec des cycles jour/nuit et des effets météo dynamiques  
+- Système de combat : Affrontez vos ennemis à l’aide de projectiles et de mécaniques variées  
+- Système d’alliés : Recrutez des personnages amicaux pour vous aider dans votre quête  
+- Progression : Gameplay basé sur des niveaux avec des objectifs et des défis uniques  
+- Environnement dynamique : Interagissez avec des PNJ, des systèmes de circulation et une météo changeante  
+- Combats de boss : Faites face à des ennemis puissants avec des mécaniques et stratégies spécifiques  
 
-## Game Levels
+## Niveaux du jeu
 
-1. **Tutorial**: Learn basic controls and game mechanics
-2. **The Encounter**: Find and befriend Ray the dog
-3. **Exploration**: Locate bananas and make them allies
-4. **The Magician**: Find the magician to gain combat abilities
-5. **The Catastrophe**: Survive the night as zombies appear
-6. **The Threat**: Eliminate zombie hordes to save the city
-7. **The Ultimate Battle**: Final confrontation against the boss
+1. Tutoriel : Apprenez les commandes de base et les mécaniques du jeu  
+2. La Rencontre : Trouvez et devenez ami avec Ray le chien  
+3. Exploration : Trouvez les bananes et recrutez-les comme alliés  
+4. Le Magicien : Trouvez le magicien pour obtenir des capacités de combat  
+5. La Catastrophe : Survivez à la nuit alors que les zombies apparaissent  
+6. La Menace : Éliminez les hordes de zombies pour sauver la ville  
+7. Le Combat Final : Affrontez le boss ultime dans un combat épique  
 
-## Controls
+## Contrôles
 
-- **Movement**: WASD/ZQSD keys
-- **Aim/Look**: Mouse movement
-- **Shoot**: Left mouse button
-- **Interact**: E key
-- **Pause**: ESC key
+- Mouvement : Touches WASD / ZQSD  
+- Viser / Regarder autour : Mouvement de la souris  
+- Tirer : Bouton gauche de la souris  
+- Interagir : Touche E  
+- Pause : Touche ÉCHAP  
 
-## Technical Stack
+## Stack Technique
 
-- **Engine**: BabylonJS 7.5+
-- **Build System**: Vite
-- **Animation**: GSAP
-- **Physics**: BabylonJS built-in physics
-- **UI**: Custom HTML/CSS components and BabylonJS GUI
-- **Audio**: WebAudio API with spatial sound
+- Moteur : BabylonJS 7.5+  
+- Système de build : Vite  
+- Animations : GSAP  
+- Physique : Physique intégrée de BabylonJS  
+- Interface utilisateur : Composants HTML/CSS personnalisés et BabylonJS GUI  
+- Audio : WebAudio API avec son spatial  
 
-## Technical Architecture
+## Architecture Technique
 
-### Core Systems
+### Systèmes principaux
 
-- **Scene Management**: Modular level loading system with progressive asset loading
-- **Entity Component System**: Object-oriented approach for game entities
-- **Event System**: Custom event dispatcher for decoupled component communication
-- **State Machine**: Controls player and enemy animations and behavior states
-- **AI System**: Path finding and decision-making for NPCs and enemies using behavior trees
-- **Collision Detection**: Custom collision groups and filtering for optimized interaction
+- Gestion des scènes : Chargement modulaire des niveaux avec chargement progressif des assets  
+- Système ECS (Entity Component System) : Approche orientée objet pour les entités du jeu  
+- Système d’événements : Dispatcher d’événements personnalisés pour communication découplée  
+- Machine à états : Contrôle des animations et comportements du joueur et des ennemis  
+- Système d’IA : Recherche de chemin et prise de décision via des arbres de comportement  
+- Détection de collisions : Groupes et filtres personnalisés pour optimiser les interactions  
 
-### Rendering Pipeline
+### Pipeline de rendu
 
-- **Dynamic Lighting**: Point, directional, and spot lights with shadow mapping
-- **Particle Systems**: GPU-accelerated particles for visual effects (smoke, explosions, magic)
-- **Post-Processing**: Screen-space effects including bloom, depth of field, and color grading
-- **Material System**: PBR materials with normal and roughness mapping
-- **Level of Detail**: Dynamic mesh simplification based on distance
-- **Scene Optimization**: Frustum culling, instancing for similar meshes, and texture atlasing
+- Éclairage dynamique : Lumières ponctuelles, directionnelles et spots avec ombrage  
+- Systèmes de particules : Particules GPU pour effets visuels (fumée, explosions, magie)  
+- Post-traitement : Effets écran comme bloom, profondeur de champ, étalonnage des couleurs  
+- Système de matériaux : Matériaux PBR avec normal maps et roughness maps  
+- Niveaux de détail : Simplification dynamique des maillages selon la distance  
+- Optimisation des scènes : Frustum culling, instancing et texture atlasing  
 
-### Performance Optimizations
+### Optimisations des performances
 
-- **Asset Loading**: Asynchronous loading with prioritization and caching
-- **Memory Management**: Mesh disposal and texture compression
-- **WebGL Optimization**: Minimized draw calls through mesh combining
-- **Worker Threads**: Background processing for physics calculations
-- **Shader Optimization**: Custom shaders for specific visual effects with minimal overhead
+- Chargement des assets : Chargement asynchrone avec priorisation et mise en cache  
+- Gestion mémoire : Libération des meshes et compression des textures  
+- Optimisation WebGL : Réduction des draw calls via combinaison de meshes  
+- Threads de fond : Calculs physiques en arrière-plan  
+- Optimisation des shaders : Shaders personnalisés pour effets visuels spécifiques  
 
 ## Installation
 
 ```bash
-# Clone the repository
+# Cloner le dépôt
 git clone https://github.com/your-username/dreamfall.git
 
-# Navigate to project directory
+# Se rendre dans le dossier du projet
 cd dreamfall
 
-# Install dependencies
+# Installer les dépendances
 npm install
 
-# Start development server
+# Lancer le serveur de développement
 npm run dev
 
-# Build for production
+# Construire pour la production
 npm run build
 ```
 
-## Requirements
+## Prérequis
 
-- Modern web browser with WebGL support
-- Keyboard and mouse
-- Recommended: Dedicated graphics card for optimal performance
+- Navigateur moderne avec support WebGL (Chrome recommandé !!!!!)
+- Clavier et souris
+- Avoir un bon Ordinateur et surtout récent !
 
-## Team
 
-Dreamfall was created by Team Babygame for the Game On Web 2025 competition.
+## Assets
+### Modèles GLB – Personnages
+
+- **Banane** : [https://poly.pizza/m/TFlEjNafR1](https://poly.pizza/m/TFlEjNafR1)  
+- **Dog** : [https://poly.pizza/m/1gXKv15ik8](https://poly.pizza/m/1gXKv15ik8)  
+- **Licorne** : [https://poly.pizza/m/TLsBUOdTr7](https://poly.pizza/m/TLsBUOdTr7)  
+- **Cuisse de poulet** : [https://poly.pizza/m/JdkTgIzJZX](https://poly.pizza/m/JdkTgIzJZX)  
+- **Cool Egg** : [https://poly.pizza/m/WnzvqAXBVK](https://poly.pizza/m/WnzvqAXBVK)  
+- **Poo (caca)** : [https://poly.pizza/m/03djWQlJue](https://poly.pizza/m/03djWQlJue)  
+- **Magicien** : [https://poly.pizza/m/dEuyzEgrF4](https://poly.pizza/m/dEuyzEgrF4)  
+- **Reine** : [https://poly.pizza/m/MecWbYSEVe](https://poly.pizza/m/MecWbYSEVe)  
+- **Ennemi IA** : [https://poly.pizza/m/EMoKrFEBkc](https://poly.pizza/m/EMoKrFEBkc)  
+- **BigBoss** : [https://poly.pizza/m/Q0ZWVssZCg](https://poly.pizza/m/Q0ZWVssZCg)
+
+### Modèles GLB – Bâtiments
+
+- **Building A** : [https://poly.pizza/m/EL3ePInr1N](https://poly.pizza/m/EL3ePInr1N)  
+- **Building B** : [https://poly.pizza/m/5XG9i3QzlT](https://poly.pizza/m/5XG9i3QzlT)  
+- **Building C** : [https://poly.pizza/m/g15lpKh4li](https://poly.pizza/m/g15lpKh4li)  
+- **Building D** : [https://poly.pizza/m/bbH2Bg73qM](https://poly.pizza/m/bbH2Bg73qM)  
+- **Building E** : [https://poly.pizza/m/otRsYa6pan](https://poly.pizza/m/otRsYa6pan)  
+- **Building F** : [https://poly.pizza/m/qOhhGLftam](https://poly.pizza/m/qOhhGLftam)  
+- **Building G** : [https://poly.pizza/m/7lMEpT2ICD](https://poly.pizza/m/7lMEpT2ICD)  
+- **Building H** : [https://poly.pizza/m/g15lpKh4li](https://poly.pizza/m/g15lpKh4li)  
+- **Building I** : [https://poly.pizza/m/T3oyvK6VEU](https://poly.pizza/m/T3oyvK6VEU)
+
+### Modèles GLB – Objets dans le jeu
+
+- **Traffic Light** : [https://poly.pizza/m/aYC3t5ymln](https://poly.pizza/m/aYC3t5ymln)  
+- **Dumpster** : [https://poly.pizza/m/QmYKHtUnxb](https://poly.pizza/m/QmYKHtUnxb)  
+- **Fence** : [https://poly.pizza/m/aE3GIx8jIH](https://poly.pizza/m/aE3GIx8jIH)  
+- **Route** : [https://poly.pizza/m/5BPCPOycxC](https://poly.pizza/m/5BPCPOycxC)  
+- **Cage** : [https://poly.pizza/m/TAqDCvxcxd](https://poly.pizza/m/TAqDCvxcxd)
+
+### Modèles GLB – Véhicules
+
+- **Taxi** : [https://poly.pizza/m/u5PhZQ35XG](https://poly.pizza/m/u5PhZQ35XG)  
+- **Voiture verte** : [https://poly.pizza/m/vTTTjDoxhV](https://poly.pizza/m/vTTTjDoxhV)  
+- **Voiture de police** : [https://poly.pizza/m/Uj7i2vlmir](https://poly.pizza/m/Uj7i2vlmir)
+
+### Sons
+
+- **Epic War** : [https://pixabay.com/music/main-title-epic-war-background-music-333128/](https://pixabay.com/music/main-title-epic-war-background-music-333128/)  
+- **Honey Chill Lofi** : [https://pixabay.com/music/beats-honey-chill-lofi-309227/](https://pixabay.com/music/beats-honey-chill-lofi-309227/)
+
+### Images
+
+Toutes les images ont été générées par **ChatGPT**.
+
+## Équipe
+
+Dreamfall a été créé par l’équipe Babygame pour la compétition Game On Web 2025.
 
 ## License
-
-All rights reserved © 2025 Babygame
+Tous droits réservés © 2025 Babygame & UniCA
