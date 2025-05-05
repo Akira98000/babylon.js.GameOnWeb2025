@@ -1,39 +1,104 @@
-# Hack Niveau 5 - Guide d'utilisation
+# Dreamfall
 
-Ce module contient un outil pour faciliter le passage du niveau 5 en accélérant ou en contournant certaines étapes.
+A 3D action-adventure game built with BabylonJS for the Game On Web 2025 competition.
 
-## Comment utiliser le hack
+## Overview
 
-1. Une fois dans le niveau 5, un bouton "HACK NIVEAU 5" apparaît en haut à droite de l'écran
-2. Cliquez sur ce bouton pour ouvrir le menu des options de hack
-3. Utilisez l'une des fonctionnalités disponibles pour accélérer votre progression
+Dreamfall is an immersive 3D adventure where players control a unicorn through various levels, battling enemies, recruiting allies, and exploring a dynamic world. The game features combat mechanics, character progression, and an engaging narrative across multiple unique levels.
 
-## Fonctionnalités disponibles
+## Features
 
-### Terminer les 3 quartiers
-- Élimine instantanément tous les ennemis
-- Marque tous les quartiers comme complétés
-- Lance automatiquement la tempête violette
+- **Immersive 3D World**: Explore diverse environments with day/night cycles and dynamic weather effects
+- **Combat System**: Engage in battles with projectile weapons against various enemy types
+- **Ally System**: Recruit friendly characters to help you throughout your journey
+- **Progression**: Level-based gameplay with unique objectives and challenges
+- **Dynamic Environment**: Interact with NPCs, traffic systems, and changing weather conditions
+- **Boss Battles**: Face challenging enemies with special mechanics and strategies
 
-### Démarrer la tempête
-- Lance directement la phase de tempête violette sans attendre de terminer les quartiers
-- Fait apparaître la reine à libérer
+## Game Levels
 
-### Libérer la reine
-- Libère instantanément la reine sans avoir à appuyer sur la touche 'K'
-- Requiert que la tempête soit déjà active
+1. **Tutorial**: Learn basic controls and game mechanics
+2. **The Encounter**: Find and befriend Ray the dog
+3. **Exploration**: Locate bananas and make them allies
+4. **The Magician**: Find the magician to gain combat abilities
+5. **The Catastrophe**: Survive the night as zombies appear
+6. **The Threat**: Eliminate zombie hordes to save the city
+7. **The Ultimate Battle**: Final confrontation against the boss
 
-### Terminer le niveau
-- Complète immédiatement le niveau 5
-- Passe automatiquement au niveau suivant après 5 secondes
+## Controls
 
-### Téléporter aux quartiers
-- Ouvre un menu permettant de se téléporter instantanément à n'importe quel quartier
+- **Movement**: WASD/ZQSD keys
+- **Aim/Look**: Mouse movement
+- **Shoot**: Left mouse button
+- **Interact**: E key
+- **Pause**: ESC key
 
-## Raccourci clavier
+## Technical Stack
 
-- **Ctrl+H** : Affiche/masque le bouton de hack
+- **Engine**: BabylonJS 7.5+
+- **Build System**: Vite
+- **Animation**: GSAP
+- **Physics**: BabylonJS built-in physics
+- **UI**: Custom HTML/CSS components and BabylonJS GUI
+- **Audio**: WebAudio API with spatial sound
 
-## Note
+## Technical Architecture
 
-Ce hack est conçu uniquement pour les tests et le débogage. Il est recommandé de jouer normalement pour profiter pleinement de l'expérience de jeu. 
+### Core Systems
+
+- **Scene Management**: Modular level loading system with progressive asset loading
+- **Entity Component System**: Object-oriented approach for game entities
+- **Event System**: Custom event dispatcher for decoupled component communication
+- **State Machine**: Controls player and enemy animations and behavior states
+- **AI System**: Path finding and decision-making for NPCs and enemies using behavior trees
+- **Collision Detection**: Custom collision groups and filtering for optimized interaction
+
+### Rendering Pipeline
+
+- **Dynamic Lighting**: Point, directional, and spot lights with shadow mapping
+- **Particle Systems**: GPU-accelerated particles for visual effects (smoke, explosions, magic)
+- **Post-Processing**: Screen-space effects including bloom, depth of field, and color grading
+- **Material System**: PBR materials with normal and roughness mapping
+- **Level of Detail**: Dynamic mesh simplification based on distance
+- **Scene Optimization**: Frustum culling, instancing for similar meshes, and texture atlasing
+
+### Performance Optimizations
+
+- **Asset Loading**: Asynchronous loading with prioritization and caching
+- **Memory Management**: Mesh disposal and texture compression
+- **WebGL Optimization**: Minimized draw calls through mesh combining
+- **Worker Threads**: Background processing for physics calculations
+- **Shader Optimization**: Custom shaders for specific visual effects with minimal overhead
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/dreamfall.git
+
+# Navigate to project directory
+cd dreamfall
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## Requirements
+
+- Modern web browser with WebGL support
+- Keyboard and mouse
+- Recommended: Dedicated graphics card for optimal performance
+
+## Team
+
+Dreamfall was created by Team Babygame for the Game On Web 2025 competition.
+
+## License
+
+All rights reserved © 2025 Babygame
