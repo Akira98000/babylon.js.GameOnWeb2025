@@ -17,13 +17,13 @@ Dreamfall est une aventure immersive en 3D où les joueurs incarnent une licorne
 
 ## Niveaux du jeu
 
-1. Tutoriel : Apprenez les commandes de base et les mécaniques du jeu  
+1. Tutoriel : Apprenez les commandes de base et les mécaniques du jeu (important de faire le tutoriel sinon les controls ne fonctionnement pas !!!)
 2. La Rencontre : Trouvez et devenez ami avec Ray le chien  
 3. Exploration : Trouvez les bananes et recrutez-les comme alliés  
-4. Le Magicien : Trouvez le magicien pour obtenir des capacités de combat  
-5. La Catastrophe : Survivez à la nuit alors que les zombies apparaissent  
-6. La Menace : Éliminez les hordes de zombies pour sauver la ville  
-7. Le Combat Final : Affrontez le boss ultime dans un combat épique  
+4. Le Magicien : Trouvez le magicien pour obtenir le pouvoir magique (de pouvoir tirer des balles)
+5. La Catastrophe : La reine est kidnappé, les couleurs de la villes ont disparu, le peuple est malheureux, recuperer les couleurs pour rendre une situation stable sur la ville
+6. La Menace : Éliminez les pizzas pour sauver la ville  
+7. Le Combat Final : Ville ravagé par la tempête, il faut donc construire une fusée.
 
 ## Contrôles
 
@@ -40,35 +40,28 @@ Dreamfall est une aventure immersive en 3D où les joueurs incarnent une licorne
 - Animations : GSAP  
 - Physique : Physique intégrée de BabylonJS  
 - Interface utilisateur : Composants HTML/CSS personnalisés et BabylonJS GUI  
-- Audio : WebAudio API avec son spatial  
+- Audio : WebAudio API
 
 ## Architecture Technique
 
 ### Systèmes principaux
-
 - Gestion des scènes : Chargement modulaire des niveaux avec chargement progressif des assets  
-- Système ECS (Entity Component System) : Approche orientée objet pour les entités du jeu  
-- Système d’événements : Dispatcher d’événements personnalisés pour communication découplée  
-- Machine à états : Contrôle des animations et comportements du joueur et des ennemis  
-- Système d’IA : Recherche de chemin et prise de décision via des arbres de comportement  
-- Détection de collisions : Groupes et filtres personnalisés pour optimiser les interactions  
-
-### Pipeline de rendu
-
-- Éclairage dynamique : Lumières ponctuelles, directionnelles et spots avec ombrage  
-- Systèmes de particules : Particules GPU pour effets visuels (fumée, explosions, magie)  
-- Post-traitement : Effets écran comme bloom, profondeur de champ, étalonnage des couleurs  
-- Système de matériaux : Matériaux PBR avec normal maps et roughness maps  
-- Niveaux de détail : Simplification dynamique des maillages selon la distance  
-- Optimisation des scènes : Frustum culling, instancing et texture atlasing  
+- Système de balle + tir 
+- Système d’IA (wander + seek)
+- Détection de collisions  
 
 ### Optimisations des performances
-
 - Chargement des assets : Chargement asynchrone avec priorisation et mise en cache  
-- Gestion mémoire : Libération des meshes et compression des textures  
-- Optimisation WebGL : Réduction des draw calls via combinaison de meshes  
-- Threads de fond : Calculs physiques en arrière-plan  
-- Optimisation des shaders : Shaders personnalisés pour effets visuels spécifiques  
+- Gestion mémoire : Libération des meshes
+- Optimisation des glbs sur Blender
+- Suppression des particules inutiles
+- Reduction de la distance des caméras : 30
+
+### La v1 de notre jeu sans optimisation : 
+Lien : 
+
+### Lien jeu final ici :
+Lien : 
 
 ## Installation
 
@@ -82,11 +75,8 @@ cd dreamfall
 # Installer les dépendances
 npm install
 
-# Lancer le serveur de développement
+# Lancer le jeu
 npm run dev
-
-# Construire pour la production
-npm run build
 ```
 
 ## Prérequis
