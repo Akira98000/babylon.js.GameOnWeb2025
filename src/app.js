@@ -208,6 +208,11 @@ const initBabylon = async () => {
       const minimap = setupMinimap(scene, player.hero);
       scene.metadata.minimap = minimap;
       
+      // Lier la minimap au gestionnaire de niveaux
+      if (levelManager) {
+        levelManager.setMinimapInstance(minimap);
+      }
+      
       let mouseMoved = false;
       let currentMouseX = 0;
       

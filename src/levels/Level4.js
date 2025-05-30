@@ -21,6 +21,10 @@ export class Level4 {
             console.error("Player not found in scene metadata");
             return;
         }
+        
+        // Positionner le joueur à la position spécifiée
+        this._positionnerJoueur();
+        
         const positionsEnnemis = [
             new BABYLON.Vector3(0, 0, -15),
             new BABYLON.Vector3(5, 0, -12),
@@ -253,5 +257,18 @@ export class Level4 {
         // Le niveau 4 n'a pas besoin de vérifier la proximité
         // Cette méthode est ajoutée pour maintenir la cohérence avec les autres niveaux
         return;
+    }
+
+    _positionnerJoueur() {
+        try {
+            const player = this.scene.metadata.player.hero;
+            if (player && player.position) {
+                player.position = new BABYLON.Vector3(0, 0.10, 0);
+            } else {
+                console.error("Impossible de positionner le joueur - référence manquante");
+            }
+        } catch (error) {
+            console.error("Erreur lors du positionnement du joueur:", error);
+        }
     }
 } 

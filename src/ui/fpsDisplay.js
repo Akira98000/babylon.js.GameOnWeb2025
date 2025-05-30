@@ -55,66 +55,11 @@ export function setupHUD() {
     });
     fpsContainer.appendChild(fpsValue);
 
-    const pingContainer = document.createElement("div");
-    Object.assign(pingContainer.style, {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px"
-    });
-
-    const networkBars = document.createElement("div");
-    Object.assign(networkBars.style, {
-        display: "flex",
-        alignItems: "flex-end",
-        gap: "2px",
-        height: "15px",
-        minWidth: "16px"
-    });
-
-    for (let i = 0; i < 4; i++) {
-        const bar = document.createElement("div");
-        const height = (i + 1) * 3 + 3;
-        Object.assign(bar.style, {
-            width: "3px",
-            height: height + "px",
-            backgroundColor: "rgba(255, 255, 255, 0.3)",
-            borderRadius: "1px",
-            transition: "background-color 0.3s ease",
-            minWidth: "3px",
-            display: "block",
-            flexShrink: "0"
-        });
-        bar.id = `network-bar-${i}`;
-        networkBars.appendChild(bar);
-    }
-    pingContainer.appendChild(networkBars);
-
-    const pingValue = document.createElement("div");
-    pingValue.id = "ping-value";
-    pingValue.textContent = "-- ms";
-    Object.assign(pingValue.style, {
-        fontWeight: "bold",
-        minWidth: "55px"
-    });
-    pingContainer.appendChild(pingValue);
-
     hudContainer.appendChild(fpsContainer);
-    hudContainer.appendChild(pingContainer);
-
-    const separator = document.createElement("div");
-    Object.assign(separator.style, {
-        width: "1px",
-        height: "15px",
-        backgroundColor: "rgba(255, 255, 255, 0.3)",
-        margin: "0 5px"
-    });
-    hudContainer.insertBefore(separator, pingContainer);
 
     document.body.appendChild(hudContainer);
 
     hudContainer.fpsValue = fpsValue;
-    hudContainer.pingValue = pingValue;
-    hudContainer.networkBars = Array.from(networkBars.children);
 
     hudContainer.updateFPS = function(fps) {
         fpsValue.textContent = `${Math.round(fps)} FPS`;
@@ -127,69 +72,13 @@ export function setupHUD() {
         }
     };
 
-    hudContainer.updatePing = function(ping) {
-        if (ping === undefined || ping === null) {
-            pingValue.textContent = "-- ms";
-            this.networkBars.forEach(bar => {
-                bar.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
-            });
-            return;
-        }
 
-        ping = Number(ping);
-        pingValue.textContent = `${ping} ms`;
-
-        let pingColor;
-        let activeBars = 0;
-
-        if (ping < 50) {
-            pingColor = "#7FFF7F";
-            activeBars = 4;
-        } else if (ping < 100) {
-            pingColor = "#BFFF7F";
-            activeBars = 3;
-        } else if (ping < 150) {
-            pingColor = "#FFFF7F";
-            activeBars = 2;
-        } else if (ping < 200) {
-            pingColor = "#FFBF7F";
-            activeBars = 1;
-        } else {
-            pingColor = "#FF7F7F";
-            activeBars = 0;
-        }
-
-        pingValue.style.color = pingColor;
-
-        this.networkBars.forEach((bar, index) => {
-            bar.style.backgroundColor = index < activeBars ? pingColor : "rgba(255, 255, 255, 0.3)";
-        });
-    };
 
     return hudContainer;
 }
 
 export function initializeHUDUpdates(hud) {
-    let lastPingUpdate = 0;
-    let currentPing = null;
-
-    function getNetworkPing() {
-        const now = performance.now();
-        if (now - lastPingUpdate > 2000) {
-            lastPingUpdate = now;
-            currentPing = Math.floor(Math.random() * 180) + 20;
-        }
-        return currentPing;
-    }
-
-    const pingUpdateInterval = setInterval(() => {
-        const ping = getNetworkPing();
-        hud.updatePing(ping);
-    }, 2000);
-
     return {
-        setFPS: (value) => hud.updateFPS(value),
-        setPing: (value) => hud.updatePing(value),
-        stop: () => clearInterval(pingUpdateInterval)
+        setFPS: (value) => hud.updateFPS(value)
     };
 }

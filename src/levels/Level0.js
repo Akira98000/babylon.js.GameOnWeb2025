@@ -253,36 +253,7 @@ export class Level0 {
         progressBarContainer.appendChild(progressBar);
         this.tutorialContainer.appendChild(progressBarContainer);
 
-        const skipButton = document.createElement('button');
-        skipButton.textContent = 'Passer le tutoriel';
-        skipButton.id = 'skipTutorialButton';
-        skipButton.classList.add('skip-tutorial');
-        Object.assign(skipButton.style, {
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-            border: 'none',
-            padding: '10px 20px',
-            color: 'white',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            transition: 'background-color 0.3s',
-            fontSize: '14px',
-            marginTop: '5px',
-            width: '100%'
-        });
 
-        skipButton.addEventListener('mouseenter', () => {
-            skipButton.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-        });
-
-        skipButton.addEventListener('mouseleave', () => {
-            skipButton.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-        });
-
-        skipButton.addEventListener('click', () => {
-            this._complete();
-        });
-
-        this.tutorialContainer.appendChild(skipButton);
         document.body.appendChild(this.tutorialContainer);
     }
 

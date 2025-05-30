@@ -56,18 +56,12 @@ export class Level3 {
     
     _createColorCollectibles() {
         const positions = [
-            //new BABYLON.Vector3(100, 1, 100),  
-            //new BABYLON.Vector3(-100, 1, 100),
-            //new BABYLON.Vector3(-100, 1, -100),
-            //new BABYLON.Vector3(100, 1, -100), 
-            //new BABYLON.Vector3(0, 1, 100),   
-            //new BABYLON.Vector3(0, 1, -100)
-            new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(0, 0, 1),
-            new BABYLON.Vector3(0, 0, 2),
-            new BABYLON.Vector3(0, 0, 3),
-            new BABYLON.Vector3(0, 0, 4),
-            new BABYLON.Vector3(0, 0, 5)
+            new BABYLON.Vector3(-119.13, 0, -84.04),
+            new BABYLON.Vector3(-82.74, 0, 0.05),
+            new BABYLON.Vector3(-61.83, 0, -32.81),
+            new BABYLON.Vector3(-52.35, 0, 43.03),
+            new BABYLON.Vector3(8.42, 0, 16.16),
+            new BABYLON.Vector3(-24.84, 0, -48.70)
         ];
         
         const colors = [
@@ -446,6 +440,15 @@ export class Level3 {
                 
                 if (distance < 2) {
                     collectible.collected = true;
+                    
+                    // Supprimer le marqueur de la carte avant de disposer du mesh
+                    if (this.scene.metadata && this.scene.metadata.minimap && this.scene.metadata.minimap.removeMarkerByPosition) {
+                        this.scene.metadata.minimap.removeMarkerByPosition({
+                            x: collectible.mesh.position.x,
+                            z: collectible.mesh.position.z
+                        });
+                    }
+                    
                     collectible.mesh.dispose();
                     this.collectedColors.push(collectible.color);
                     

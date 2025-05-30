@@ -20,7 +20,7 @@ export class Level1 {
             this.dog = dogResult.meshes[0];
             this.dog.name = 'levelDog';
             this.dog.scaling.set(1.3, 1.3, 1.3);
-            this.dog.position.set(0, 0, 6);
+            this.dog.position.set(-67.99, 0.10, -4.70);
             
             this.dogAnimations = this._getDogAnimations();
             

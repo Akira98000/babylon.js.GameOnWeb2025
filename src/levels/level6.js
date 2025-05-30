@@ -380,33 +380,24 @@ export class Level6 {
         if (distance < 3 && this.completedRocket) {
             this.isPlayerInRocket = true;
             
-            // Cacher le joueur
+            // Positionner le joueur à la position spécifiée et masquer le modèle
+            const viewingPosition = new Vector3(-3.18, 4.10, 4.01);
+            
             if (this.scene.metadata?.player?.hero) {
+                this.scene.metadata.player.hero.position = viewingPosition;
+                // Masquer le modèle du joueur
                 this.scene.metadata.player.hero.setEnabled(false);
+                
+                // Désactiver les contrôles du joueur pour empêcher tout mouvement
+                if (this.scene.metadata.player.controller) {
+                    this.scene.metadata.player.controller.setEnabled(false);
+                }
             }
             
-            // Configurer la caméra pour voir la fusée de loin
+            // Inverser la caméra pour regarder de l'autre côté
             const camera = this.scene.activeCamera;
             if (camera) {
-                // Détacher la caméra de son parent actuel si elle en a un
-                if (camera.parent) {
-                    camera.parent = null;
-                }
-                
-                // Créer un noeud parent pour la caméra à distance de la fusée
-                const cameraParent = new TransformNode("cameraParent", this.scene);
-                // Positionner la caméra à distance, sur le côté et un peu en hauteur
-                cameraParent.position = new Vector3(-15, 3, -15);
-                cameraParent.parent = this.completedRocket;
-                
-                // Attacher la caméra au noeud parent
-                camera.parent = cameraParent;
-                camera.setTarget(this.completedRocket.position);
-                
-                // Désactiver les contrôles de la caméra
-                if (camera.inputs) {
-                    camera.inputs.clear();
-                }
+                camera.rotation.y = Math.PI; // Rotation de 180 degrés
             }
             
             // Créer et démarrer le compte à rebours
@@ -435,30 +426,6 @@ export class Level6 {
         this.isCountdownActive = true;
         this.countdownValue = 10;
         this.countdownElement.textContent = this.countdownValue;
-        const camera = this.scene.activeCamera;
-        const initialY = camera.parent ? camera.parent.position.y : 0;
-        
-        if (camera && camera.parent) {
-            const cameraRotation = new Animation(
-                "cameraRotation",
-                "rotation.y",
-                10,  
-                Animation.ANIMATIONTYPE_FLOAT,
-                Animation.ANIMATIONLOOPMODE_CYCLE
-            );
-            
-            const rotationKeyFrames = [
-                { frame: 0, value: 0 },
-                { frame: 100, value:0 }  // 2π = 360°
-            ];
-            
-            cameraRotation.setKeys(rotationKeyFrames);
-            camera.parent.animations = [cameraRotation];
-            camera.parent.position.y += 3;
-            
-            // Démarrer l'animation de rotation
-            this.scene.beginAnimation(camera.parent, 0, 100, true);  // true = boucle
-        }
         
         const countdownInterval = setInterval(() => {
             this.countdownValue--;
@@ -467,16 +434,6 @@ export class Level6 {
             if (this.countdownValue <= 0) {
                 clearInterval(countdownInterval);
                 this.isCountdownActive = false;
-                
-                // Arrêter l'animation panoramique mais garder la caméra attachée à la fusée
-                if (camera && camera.parent) {
-                    this.scene.stopAnimation(camera.parent);
-                    
-                    // Garder la rotation à 0 mais conserver l'élévation pour une meilleure vue
-                    camera.parent.rotation.y = 0;
-                    // Ne pas ramener la caméra à sa position initiale - on garde l'élévation
-                }
-                
                 this._launchRocket();
             }
         }, 1000);
@@ -489,8 +446,11 @@ export class Level6 {
             this.countdownElement = null;
         }
         this._showMessage("Décollage !", 3000);
+        
         if (this.completedRocket) {
             const frameRate = 30;
+            
+            // Animation de la fusée qui décolle
             const rocketAnimation = new Animation(
                 "rocketLaunch",
                 "position.y",
@@ -499,40 +459,15 @@ export class Level6 {
                 Animation.ANIMATIONLOOPMODE_CONSTANT
             );
             
-            const keyFrames = [
+            const rocketKeyFrames = [
                 { frame: 0, value: this.completedRocket.position.y },
                 { frame: frameRate * 4, value: this.completedRocket.position.y + 30 }
             ];
             
-            rocketAnimation.setKeys(keyFrames);
+            rocketAnimation.setKeys(rocketKeyFrames);
             this.completedRocket.animations = [rocketAnimation];
             
-            // La caméra est déjà attachée à la fusée et positionnée pour voir la fusée au loin
-            // Elle va naturellement suivre la fusée pendant le décollage
-            const camera = this.scene.activeCamera;
-            if (camera && camera.parent) {
-                // Ajouter une légère rotation de la caméra pour plus de dynamisme pendant le décollage
-                const cameraRotation = new Animation(
-                    "cameraRotation",
-                    "position.x",
-                    frameRate,
-                    Animation.ANIMATIONTYPE_FLOAT,
-                    Animation.ANIMATIONLOOPMODE_CONSTANT
-                );
-                
-                const rotationKeyFrames = [
-                    { frame: 0, value: camera.parent.position.x },
-                    { frame: frameRate * 4, value: camera.parent.position.x + 5 }
-                ];
-                
-                cameraRotation.setKeys(rotationKeyFrames);
-                camera.parent.animations = [cameraRotation];
-                
-                // Lancer l'animation de la caméra
-                this.scene.beginAnimation(camera.parent, 0, frameRate * 4, false);
-            }
-            
-            // Lancer l'animation
+            // Lancer l'animation de la fusée
             this.scene.beginAnimation(this.completedRocket, 0, frameRate * 4, false, 1, () => {
                 // Animation terminée, fin du jeu
                 this.isGameOver = true;
@@ -637,6 +572,14 @@ export class Level6 {
     }
 
     dispose() {
+        // Réactiver le joueur et ses contrôles si nécessaire
+        if (this.scene.metadata?.player?.hero) {
+            this.scene.metadata.player.hero.setEnabled(true);
+        }
+        if (this.scene.metadata?.player?.controller) {
+            this.scene.metadata.player.controller.setEnabled(true);
+        }
+        
         for (const part of this.rocketParts) {
             if (part) {
                 part.dispose();

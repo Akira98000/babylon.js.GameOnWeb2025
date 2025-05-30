@@ -14,9 +14,9 @@ export class Level2 {
 
     async init() {
         const positions = [
-            new BABYLON.Vector3(0, 0, 0),
-            new BABYLON.Vector3(0, 0, 1),
-            new BABYLON.Vector3(0, 0, 2),
+            new BABYLON.Vector3(7.30, 0.10, 16.13),
+            new BABYLON.Vector3(-123.26, 0.10, 11.07),
+            new BABYLON.Vector3(-39.77, 0.10, -87.75),
         ];
         
         // Suppression de l'affichage du message d'introduction
