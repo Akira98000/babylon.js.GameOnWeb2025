@@ -19,6 +19,7 @@ import { LevelSelector } from "./ui/levelSelector.js";
 import { PauseMenu } from './ui/pauseMenu.js';
 import { createHorrorMusic } from './music.js';
 import { setupMinimap } from './ui/minimap.js';
+import { createControlsOverlay } from './ui/controlsOverlay.js';
 
 let mainMenu = null;
 let loadingScreen = null;
@@ -212,6 +213,11 @@ const initBabylon = async () => {
       if (levelManager) {
         levelManager.setMinimapInstance(minimap);
       }
+      
+      // Initialiser l'overlay des contrôles
+      const controlsOverlay = createControlsOverlay();
+      controlsOverlay.init();
+      scene.metadata.controlsOverlay = controlsOverlay;
       
       let mouseMoved = false;
       let currentMouseX = 0;

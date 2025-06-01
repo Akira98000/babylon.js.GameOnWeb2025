@@ -48,14 +48,14 @@ export class Level0 {
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             },
             {
-                instruction: "Utilisez la touche H pour vous téléporter si jamais vous êtes bloqué",
-                key: ["H"],
-                checkComplete: (inputMap) => inputMap["h"]
+                instruction: "Utilisez la touche T pour vous téléporter si jamais vous êtes bloqué",
+                key: ["T"],
+                checkComplete: (inputMap) => inputMap["t"]
             },
             {
                 instruction: "Pour agrandir la map, appuyez sur M. Pour la réduire vous pouvez a nouveau appuyer sur M. Consultez la grande map souvent pour trouver des objets ou des ennemis",
                 key: ["M"],
-                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
+                checkComplete: (inputMap) => inputMap[" "] || inputMap["m"]
             },
             {
                 instruction: "Pour tirer il faudra cliquer sur le cote gauche de la souris. PS : Vous pouvez tirer une fois que vous avez fini le tutoriel du Magicien '2b' (Appuyez sur ESPACE pour continuer)",
@@ -69,8 +69,6 @@ export class Level0 {
     async init() {
         this.show();
         this._addInputListeners();
-        
-        // Assigner ce tutoriel à scene.metadata.tutorial pour les contrôles
         this.scene.metadata.tutorial = this;
     }
 

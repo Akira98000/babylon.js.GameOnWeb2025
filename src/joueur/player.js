@@ -576,7 +576,7 @@ export const createPlayer = async (scene, camera, canvas) => {
     };
 
     document.addEventListener('keydown', (event) => {
-        if (event.key.toLowerCase() === 'h' && !hero.isDead) {
+        if (event.key.toLowerCase() === 't' && !hero.isDead) {
             console.log("Téléportation du joueur vers (0,0,0)");
             hero.position = new BABYLON.Vector3(0, 0, 0);
             
