@@ -53,6 +53,11 @@ export class Level0 {
                 checkComplete: (inputMap) => inputMap["h"]
             },
             {
+                instruction: "Pour agrandir la map, appuyez sur M. Pour la réduire vous pouvez a nouveau appuyer sur M. Consultez la grande map souvent pour trouver des objets ou des ennemis",
+                key: ["M"],
+                checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
+            },
+            {
                 instruction: "Pour tirer il faudra cliquer sur le cote gauche de la souris. PS : Vous pouvez tirer une fois que vous avez fini le tutoriel du Magicien '2b' (Appuyez sur ESPACE pour continuer)",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
