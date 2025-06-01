@@ -43,7 +43,7 @@ export class Level0 {
                 checkComplete: (inputMap) => inputMap["d"]
             },
             {
-                instruction: "Bougez la souris pour regarder autour de vous (Appuyez sur ESPACE si compris)",
+                instruction: "Bougez la souris pour orienter le personnage. Si vous voulez vous déplacer avec le personnage, appuyez sur z et orientez la souris vers la direction souhaitée (Appuyez sur ESPACE si compris)",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             },
