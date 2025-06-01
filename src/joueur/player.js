@@ -575,6 +575,42 @@ export const createPlayer = async (scene, camera, canvas) => {
         }
     };
 
+    document.addEventListener('keydown', (event) => {
+        if (event.key.toLowerCase() === 'h' && !hero.isDead) {
+            console.log("Téléportation du joueur vers (0,0,0)");
+            hero.position = new BABYLON.Vector3(0, 0, 0);
+            
+            const teleportEffect = new BABYLON.ParticleSystem("teleportEffect", 100, scene);
+            teleportEffect.particleTexture = new BABYLON.Texture("/assets/flare.png", scene);
+            teleportEffect.emitter = hero.position.clone();
+            teleportEffect.minEmitBox = new BABYLON.Vector3(-1, 0, -1);
+            teleportEffect.maxEmitBox = new BABYLON.Vector3(1, 2, 1);
+            teleportEffect.color1 = new BABYLON.Color4(0, 0.5, 1, 1.0);
+            teleportEffect.color2 = new BABYLON.Color4(0.5, 0.8, 1, 1.0);
+            teleportEffect.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
+            teleportEffect.minSize = 0.3;
+            teleportEffect.maxSize = 0.8;
+            teleportEffect.minLifeTime = 0.5;
+            teleportEffect.maxLifeTime = 1.2;
+            teleportEffect.emitRate = 150;
+            teleportEffect.gravity = new BABYLON.Vector3(0, -2, 0);
+            teleportEffect.direction1 = new BABYLON.Vector3(-1, 1, -1);
+            teleportEffect.direction2 = new BABYLON.Vector3(1, 3, 1);
+            teleportEffect.minEmitPower = 2;
+            teleportEffect.maxEmitPower = 5;
+            teleportEffect.updateSpeed = 0.01;
+            
+            teleportEffect.start();
+            
+            setTimeout(() => {
+                teleportEffect.stop();
+                setTimeout(() => {
+                    teleportEffect.dispose();
+                }, 1000);
+            }, 500);
+        }
+    });
+
     const handleShooting = (animations) => {
         animationsRef = animations;
         if (!controlsRef && animations.transitionToAnimation && scene.metadata?.controls) {

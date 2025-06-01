@@ -48,7 +48,12 @@ export class Level0 {
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             },
             {
-                instruction: "Cliquez pour tirer (Appuyez sur ESPACE si compris)",
+                instruction: "Utilisez la touche H pour vous téléporter si jamais vous êtes bloqué",
+                key: ["H"],
+                checkComplete: (inputMap) => inputMap["h"]
+            },
+            {
+                instruction: "Pour tirer il faudra cliquer sur le cote gauche de la souris. PS : Vous pouvez tirer une fois que vous avez fini le tutoriel du Magicien '2b' (Appuyez sur ESPACE pour continuer)",
                 key: ["ESPACE"],
                 checkComplete: (inputMap) => inputMap[" "] || inputMap["space"]
             }
